@@ -46,16 +46,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             title: '配置数据',
             path: '/admin/dashboard/config',
             icon: '⚙️',
-            subItems: [
-                { title: '处理器', path: '/admin/dashboard/config/cpu' },
-                { title: '主板', path: '/admin/dashboard/config/motherboard' },
-                { title: '内存', path: '/admin/dashboard/config/ram' },
-                { title: '显卡', path: '/admin/dashboard/config/gpu' },
-                { title: '存储', path: '/admin/dashboard/config/storage' },
-                { title: '电源', path: '/admin/dashboard/config/psu' },
-                { title: '机箱', path: '/admin/dashboard/config/case' },
-                { title: '散热', path: '/admin/dashboard/config/cooling' },
-            ],
         },
     ];
 
@@ -89,23 +79,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                 <span className="text-xl">{item.icon}</span>
                                 {!isSidebarCollapsed && <span className="ml-3">{item.title}</span>}
                             </Link>
-
-                            {/* 二级菜单 */}
-                            {item.subItems && !isSidebarCollapsed && (
-                                <div className="bg-gray-900">
-                                    {item.subItems.map((subItem) => (
-                                        <Link
-                                            key={subItem.path}
-                                            href={subItem.path}
-                                            className={`flex items-center px-8 py-2 hover:bg-gray-700 transition-colors text-sm ${
-                                                pathname === subItem.path ? 'bg-gray-700' : ''
-                                            }`}
-                                        >
-                                            {subItem.title}
-                                        </Link>
-                                    ))}
-                                </div>
-                            )}
                         </div>
                     ))}
                 </nav>

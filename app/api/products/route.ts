@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import pool from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 // 测试产品数据 (用于数据库连接失败或没有数据时的fallback)
 const MOCK_PRODUCTS = [
@@ -49,29 +49,25 @@ export async function GET(request: NextRequest) {
         const category = searchParams.get('category');
         const search = searchParams.get('search');
 
-        let query = 'SELECT * FROM products WHERE 1=1';
-        const params: (string | number)[] = [];
-        let paramCount = 1;
+        let query = supabase.from('products').select('*').order('created_at', { ascending: false });
 
         if (category) {
-            query += ` AND category = $${paramCount}`;
-            params.push(category);
-            paramCount++;
+            query = query.eq('category', category);
         }
 
         if (search) {
-            query += ` AND name ILIKE $${paramCount}`;
-            params.push(`%${search}%`);
-            paramCount++;
+            query = query.ilike('name', `%${search}%`);
         }
 
-        query += ' ORDER BY created_at DESC';
+        const { data, error } = await query;
 
-        const result = await pool.query(query, params);
+        if (error) {
+            throw error;
+        }
 
         return NextResponse.json({
             success: true,
-            data: result.rows,
+            data: data,
         });
     } catch (error) {
         console.error('Get products error:', error);
@@ -110,17 +106,20 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: '产品类别、名称和价格不能为空' }, { status: 400 });
         }
 
-        const result = await pool.query(
-            `INSERT INTO products (category, name, price)
-             VALUES ($1, $2, $3)
-             RETURNING *`,
-            [category, name, price]
-        );
+        const { data, error } = await supabase
+            .from('products')
+            .insert([{ category, name, price }])
+            .select()
+            .single();
+
+        if (error) {
+            throw error;
+        }
 
         return NextResponse.json({
             success: true,
             message: '产品创建成功',
-            data: result.rows[0],
+            data: data,
         });
     } catch (error) {
         console.error('Create product error:', error);

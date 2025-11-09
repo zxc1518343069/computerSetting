@@ -1,307 +1,311 @@
 // components/PCPartsTable.tsx
-"use client"
-import React, {useState, useEffect} from 'react';
+'use client';
+import EditablePackageTable, {
+    EditablePartRow,
+} from '@/app/admin/dashboard/packages/_components/EditablePackageTable';
+import { PACKAGE_CATEGORIES } from '@/const';
+import React, { useState, useEffect } from 'react';
 
-// 定义配件类别枚举
-enum PartCategory {
-    CPU = 'CPU',
-    Motherboard = 'Motherboard',
-    RAM = 'RAM',
-    GPU = 'GPU',
-    Storage = 'Storage',
-    PSU = 'PSU',
-    Case = 'Case',
-    Cooling = 'Cooling'
-}
-
-// 定义类别显示名称映射
-const categoryDisplayNames: Record<PartCategory, string> = {
-    [PartCategory.CPU]: '处理器',
-    [PartCategory.Motherboard]: '主板',
-    [PartCategory.RAM]: '内存',
-    [PartCategory.GPU]: '显卡',
-    [PartCategory.Storage]: '存储',
-    [PartCategory.PSU]: '电源',
-    [PartCategory.Case]: '机箱',
-    [PartCategory.Cooling]: '散热'
-};
-
-// 定义产品接口
-interface Product {
-    id: number;
-    name: string;
-    price: number;
-}
-
-// 定义配件行数据接口
-interface PartRow {
-    id: number;
-    category: PartCategory;
-    productId: number | null;
-    name: string;
-    price: number;
-    quantity: number;
-}
-
-// 定义所有产品数据接口
-type AllProducts = Record<PartCategory, Product[]>;
-
-// 定义溢价配置接口
-interface PricingConfig {
-    unifiedPricing: boolean;
-    unifiedRate: number;
-    cpu: number;
-    motherboard: number;
-    ram: number;
-    gpu: number;
-    storage: number;
-    psu: number;
-    case: number;
-    cooling: number;
-}
-
-// 类别到localStorage key的映射
-const categoryToStorageKey: Record<PartCategory, string> = {
-    [PartCategory.CPU]: 'cpu',
-    [PartCategory.Motherboard]: 'motherboard',
-    [PartCategory.RAM]: 'ram',
-    [PartCategory.GPU]: 'gpu',
-    [PartCategory.Storage]: 'storage',
-    [PartCategory.PSU]: 'psu',
-    [PartCategory.Case]: 'case',
-    [PartCategory.Cooling]: 'cooling',
-};
-
-// 所有可选产品数据（默认数据）
-const initProducts: AllProducts = {
-    [PartCategory.CPU]: [
-        {id: 1, name: 'Intel Core i9-13900K', price: 589.99},
-        {id: 2, name: 'AMD Ryzen 9 7950X', price: 549.99},
-        {id: 3, name: 'Intel Core i7-13700K', price: 419.99},
-    ],
-    [PartCategory.Motherboard]: [
-        {id: 4, name: 'ASUS ROG Maximus Z790 Hero', price: 599.99},
-        {id: 5, name: 'MSI MEG X670E ACE', price: 499.99},
-        {id: 6, name: 'Gigabyte B650 AORUS Elite AX', price: 229.99},
-    ],
-    [PartCategory.RAM]: [
-        {id: 7, name: 'Corsair Dominator Platinum RGB 32GB DDR5 6000MHz', price: 249.99},
-        {id: 8, name: 'G.Skill Trident Z5 RGB 32GB DDR5 6000MHz', price: 219.99},
-        {id: 9, name: 'Kingston Fury Beast 32GB DDR5 5200MHz', price: 149.99},
-    ],
-    [PartCategory.GPU]: [
-        {id: 10, name: 'NVIDIA GeForce RTX 4090 Founders Edition', price: 1599.99},
-        {id: 11, name: 'AMD Radeon RX 7900 XTX', price: 999.99},
-        {id: 12, name: 'NVIDIA GeForce RTX 4080', price: 1199.99},
-    ],
-    [PartCategory.Storage]: [
-        {id: 13, name: 'Samsung 990 Pro 2TB NVMe SSD', price: 249.99},
-        {id: 14, name: 'WD Black SN850X 2TB NVMe SSD', price: 229.99},
-        {id: 15, name: 'Crucial P5 Plus 2TB NVMe SSD', price: 199.99},
-    ],
-    [PartCategory.PSU]: [
-        {id: 16, name: 'Corsair HX1200 Platinum 1200W', price: 299.99},
-        {id: 17, name: 'Seasonic PRIME TX-1000 1000W', price: 279.99},
-        {id: 18, name: 'EVGA SuperNOVA 850 G6 850W', price: 159.99},
-    ],
-    [PartCategory.Case]: [
-        {id: 19, name: 'Lian Li PC-O11 Dynamic', price: 149.99},
-        {id: 20, name: 'Fractal Design Torrent', price: 199.99},
-        {id: 21, name: 'NZXT H7 Flow', price: 129.99},
-    ],
-    [PartCategory.Cooling]: [
-        {id: 22, name: 'NZXT Kraken Z73 RGB 360mm', price: 279.99},
-        {id: 23, name: 'Corsair iCUE H150i ELITE LCD', price: 249.99},
-        {id: 24, name: 'Noctua NH-D15 chromax.black', price: 109.99},
-    ],
-};
-
-const initialParts: PartRow[] = Object.values(PartCategory).map((category, index) => ({
-    id: index + 1,
-    category,
-    productId: null,
-    name: '',
-    price: 0,
+// 初始化items数据
+const initialItems: EditablePartRow[] = PACKAGE_CATEGORIES.map((cat) => ({
+    category: cat.key,
+    product_id: 0,
     quantity: 1,
 }));
 
+interface PackageItem {
+    id: number;
+    product_id: number;
+    quantity: number;
+    product_name: string;
+    product_price: number;
+    product_category: string;
+}
+
+interface Package {
+    id: number;
+    name: string;
+    description: string;
+    total_price: number;
+    items: PackageItem[];
+}
+
 const PCPartsTable: React.FC = () => {
-    // 初始配件数据
-    const [parts, setParts] = useState<PartRow[]>(initialParts);
-    const [allProducts, setAllProducts] = useState<AllProducts>(initProducts);
-    const [pricingConfig, setPricingConfig] = useState<PricingConfig>({
-        unifiedPricing: true,
-        unifiedRate: 0,
-        cpu: 0,
-        motherboard: 0,
-        ram: 0,
-        gpu: 0,
-        storage: 0,
-        psu: 0,
-        case: 0,
-        cooling: 0,
-    });
+    const [items, setItems] = useState<EditablePartRow[]>(initialItems);
+    const [packages, setPackages] = useState<Package[]>([]);
+    const [loadingPackages, setLoadingPackages] = useState(true);
 
-    // 从localStorage加载产品数据和溢价配置
+    // 获取推荐套餐
     useEffect(() => {
-        const loadedProducts: AllProducts = {...initProducts};
-        let hasCustomProducts = false;
-
-        // 加载每个类别的产品数据
-        Object.values(PartCategory).forEach((category) => {
-            const storageKey = categoryToStorageKey[category];
-            const savedProducts = localStorage.getItem(`products_${storageKey}`);
-            if (savedProducts) {
-                try {
-                    const parsed = JSON.parse(savedProducts);
-                    if (parsed && parsed.length > 0) {
-                        loadedProducts[category] = parsed;
-                        hasCustomProducts = true;
-                    }
-                } catch (e) {
-                    console.error(`Failed to parse products for ${category}:`, e);
-                }
-            }
-        });
-
-        if (hasCustomProducts) {
-            setAllProducts(loadedProducts);
-        }
-
-        // 加载溢价配置
-        const savedPricingConfig = localStorage.getItem('pricingConfig');
-        if (savedPricingConfig) {
+        const fetchPackages = async () => {
             try {
-                setPricingConfig(JSON.parse(savedPricingConfig));
-            } catch (e) {
-                console.error('Failed to parse pricing config:', e);
+                const response = await fetch('/api/packages');
+                const result = await response.json();
+                if (result.success && result.data) {
+                    setPackages(result.data);
+                }
+            } catch (error) {
+                console.error('获取套餐失败:', error);
+            } finally {
+                setLoadingPackages(false);
             }
-        }
+        };
+
+        fetchPackages();
     }, []);
 
-    // 应用溢价到价格
-    const applyPricing = (category: PartCategory, basePrice: number): number => {
-        if (pricingConfig.unifiedPricing) {
-            return basePrice * (1 + pricingConfig.unifiedRate / 100);
-        } else {
-            const categoryKey = categoryToStorageKey[category];
-            const rate = pricingConfig[categoryKey as keyof PricingConfig] as number;
-            return basePrice * (1 + rate / 100);
-        }
-    };
-
-    // 处理Excel文件上传 (完整解析逻辑)
-
-
     // 处理产品选择变化
-    const handleProductChange = (id: number, category: PartCategory, e: React.ChangeEvent<HTMLSelectElement>) => {
-        const productId = e.target.value ? parseInt(e.target.value) : null;
-
-        if (!productId) {
-            // 清空选择
-            setParts(parts.map(part =>
-                part.id === id ? {...part, productId: null, name: '', price: 0} : part
-            ));
-            return;
-        }
-
-        const selectedProduct = allProducts[category].find(p => p.id === productId);
-        if (!selectedProduct) return;
-
-        // 应用溢价
-        const finalPrice = applyPricing(category, selectedProduct.price);
-
-        setParts(parts.map(part =>
-            part.id === id ? {
-                ...part,
-                productId: selectedProduct.id,
-                name: selectedProduct.name,
-                price: finalPrice
-            } : part
-        ));
+    const handleProductChange = (category: string, productId: number) => {
+        setItems((prev) =>
+            prev.map((item) =>
+                item.category === category ? { ...item, product_id: productId } : item
+            )
+        );
     };
 
     // 处理数量变化
-    const handleQuantityChange = (id: number, e: React.ChangeEvent<HTMLInputElement>) => {
-        const quantity = parseInt(e.target.value) || 0;
-        setParts(parts.map(part =>
-            part.id === id ? {...part, quantity} : part
-        ));
+    const handleQuantityChange = (category: string, quantity: number) => {
+        setItems((prev) =>
+            prev.map((item) => (item.category === category ? { ...item, quantity } : item))
+        );
     };
 
-    // 计算总价
-    const totalPrice = parts.reduce((sum, part) => sum + (part.price * part.quantity), 0);
+    // 重置表单
+    const handleReset = () => {
+        setItems(initialItems);
+    };
+
+    // 应用套餐
+    const applyPackage = (pkg: Package) => {
+        const newItems = PACKAGE_CATEGORIES.map((cat) => {
+            // 找到该分类对应的套餐项
+            const packageItem = pkg.items.find((item) => item.product_category === cat.key);
+
+            if (packageItem) {
+                return {
+                    category: cat.key,
+                    product_id: packageItem.product_id,
+                    quantity: packageItem.quantity,
+                };
+            }
+
+            // 如果套餐中没有该分类，返回初始值
+            return {
+                category: cat.key,
+                product_id: 0,
+                quantity: 1,
+            };
+        });
+
+        setItems(newItems);
+    };
+
+    // 获取核心配件描述（CPU、显卡、主板）
+    const getCoreSpecs = (pkg: Package) => {
+        const coreCategories = ['cpu', 'gpu', 'motherboard'];
+        const coreItems = pkg.items.filter((item) => coreCategories.includes(item.product_category));
+
+        const categoryIcons: Record<string, string> = {
+            cpu: '🖥️',
+            gpu: '🎮',
+            motherboard: '⚡',
+        };
+
+        return coreItems.map((item) => ({
+            ...item,
+            icon: categoryIcons[item.product_category] || '•',
+        }));
+    };
 
     return (
-        <div className="p-6 max-w-4xl mx-auto">
-            <h1 className="text-2xl font-bold text-gray-800 mb-6">电脑配件报价单</h1>
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-6">
+            <div className="max-w-7xl mx-auto">
+                {/* 页面标题 */}
+                <div className="mb-8 text-center">
+                    <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
+                        电脑配件报价系统
+                    </h1>
+                    <p className="text-gray-600">选择配件，实时计算价格</p>
+                </div>
 
-            <div className="overflow-x-auto shadow-md rounded-lg">
-                <table className="w-full text-sm text-left text-gray-500 table-fixed">
-                    <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-                    <tr>
-                        <th scope="col" className="px-6 py-3 w-[15%]">类型分类</th>
-                        <th scope="col" className="px-6 py-3 w-[45%]">产品名称</th>
-                        <th scope="col" className="px-6 py-3 w-[15%]">数量</th>
-                        <th scope="col" className="px-6 py-3 w-[25%]">价格</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {parts.map((part) => (
-                        <tr key={part.id} className="bg-white border-b hover:bg-gray-50">
-                            <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
-                                {categoryDisplayNames[part.category]}
-                            </td>
-                            <td className="px-6 py-4">
-                                <select
-                                    className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2 w-full"
-                                    value={part.productId || ''}
-                                    onChange={(e) => handleProductChange(part.id, part.category, e)}
+                {/* 推荐套餐区域 */}
+                {!loadingPackages && packages.length > 0 && (
+                    <div className="mb-8">
+                        <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mr-3 shadow-lg">
+                                <svg
+                                    className="w-5 h-5 text-white"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
                                 >
-                                    <option value="">选择{categoryDisplayNames[part.category]}</option>
-                                    {allProducts[part.category].map(product => {
-                                        const displayPrice = applyPricing(part.category, product.price);
-                                        return (
-                                            <option key={product.id} value={product.id}>
-                                                {product.name} (${displayPrice.toFixed(2)})
-                                            </option>
-                                        );
-                                    })}
-                                </select>
-                            </td>
-                            <td className="px-6 py-4">
-                                <input
-                                    type="number"
-                                    min="1"
-                                    className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2 w-20"
-                                    value={part.quantity}
-                                    onChange={(e) => handleQuantityChange(part.id, e)}
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+                                    />
+                                </svg>
+                            </div>
+                            推荐套餐配置
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                            {packages.map((pkg) => {
+                                const coreSpecs = getCoreSpecs(pkg);
+                                return (
+                                    <div
+                                        key={pkg.id}
+                                        className="group relative border-2 border-gray-200 rounded-2xl p-6 hover:border-blue-500 transition-all hover:shadow-xl cursor-pointer bg-white overflow-hidden"
+                                        onClick={() => applyPackage(pkg)}
+                                    >
+                                        {/* 背景装饰 */}
+                                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                                        <div className="relative">
+                                            {/* 标题和价格 */}
+                                            <div className="flex justify-between items-start mb-4">
+                                                <h3 className="font-bold text-gray-900 text-lg pr-2">
+                                                    {pkg.name}
+                                                </h3>
+                                                <div className="flex flex-col items-end">
+                                                    <span className="text-blue-600 font-bold text-xl">
+                                                        ¥{pkg.total_price.toFixed(2)}
+                                                    </span>
+                                                    <span className="text-xs text-gray-500 mt-1">
+                                                        含{pkg.items.length}件配件
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {/* 核心配件信息 */}
+                                            <div className="space-y-3 mb-4">
+                                                {coreSpecs.map((spec) => (
+                                                    <div
+                                                        key={spec.id}
+                                                        className="flex items-start gap-2 text-sm"
+                                                    >
+                                                        <span className="text-lg">{spec.icon}</span>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-gray-700 truncate font-medium">
+                                                                {spec.product_name}
+                                                            </p>
+                                                            <p className="text-xs text-gray-500">
+                                                                ¥{spec.product_price.toFixed(2)} × {spec.quantity}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            {/* 按钮 */}
+                                            <button className="w-full py-3 px-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all shadow-md hover:shadow-lg group-hover:scale-[1.02]">
+                                                <span className="flex items-center justify-center">
+                                                    <svg
+                                                        className="w-5 h-5 mr-2"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            strokeWidth={2}
+                                                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                                                        />
+                                                    </svg>
+                                                    使用此配置
+                                                </span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                {/* 配件选择表格 */}
+                <div className="bg-white shadow-xl rounded-2xl p-6 mb-6">
+                    <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <svg
+                            className="w-6 h-6 mr-2 text-blue-600"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+                            />
+                        </svg>
+                        配件清单
+                    </h2>
+                    <EditablePackageTable
+                        items={items}
+                        onProductChange={handleProductChange}
+                        onQuantityChange={handleQuantityChange}
+                        pricing={true}
+                    />
+                </div>
+
+                {/* 说明和操作 */}
+                <div className="flex justify-between items-center">
+                    <div className="text-sm text-gray-600 space-y-1">
+                        <p className="flex items-center">
+                            <svg
+                                className="w-4 h-4 mr-1 text-blue-600"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                            >
+                                <path
+                                    fillRule="evenodd"
+                                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                    clipRule="evenodd"
                                 />
-                            </td>
-                            <td className="px-6 py-4 font-medium text-nowrap overflow-x-auto">
-                                ${(part.price * part.quantity).toFixed(2)}
-                            </td>
-                        </tr>
-                    ))}
-                    <tr className="bg-gray-100 font-semibold">
-                        <td className="px-6 py-4" colSpan={3}>总价</td>
-                        <td className="px-6 py-4 text-nowrap overflow-x-auto">${totalPrice.toFixed(2)}</td>
-                    </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <div className="mt-4 text-sm text-gray-500">
-                <p>* 选择产品并设置数量后，价格会自动计算</p>
-            </div>
-
-            <div className="mt-6 flex justify-end gap-6">
-                <button
-                    onClick={() => setParts(initialParts)}
-                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
-                >
-                    重置
-                </button>
+                            </svg>
+                            选择产品并设置数量，价格自动计算
+                        </p>
+                        {packages.length > 0 && (
+                            <p className="flex items-center">
+                                <svg
+                                    className="w-4 h-4 mr-1 text-blue-600"
+                                    fill="currentColor"
+                                    viewBox="0 0 20 20"
+                                >
+                                    <path
+                                        fillRule="evenodd"
+                                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                        clipRule="evenodd"
+                                    />
+                                </svg>
+                                点击推荐套餐可快速填充配件信息
+                            </p>
+                        )}
+                    </div>
+                    <button
+                        onClick={handleReset}
+                        className="px-6 py-3 bg-gradient-to-r from-gray-500 to-gray-600 text-white font-medium rounded-xl hover:from-gray-600 hover:to-gray-700 transition-all shadow-md hover:shadow-lg"
+                    >
+                        <span className="flex items-center">
+                            <svg
+                                className="w-5 h-5 mr-2"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                />
+                            </svg>
+                            重置
+                        </span>
+                    </button>
+                </div>
             </div>
         </div>
     );

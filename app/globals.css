@@ -69,6 +69,22 @@ body {
     animation: slideDown 0.3s ease-out;
 }
 
+/* Toast 滑入动画 */
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.animate-slide-in-right {
+    animation: slideInRight 0.3s ease-out;
+}
+
 /* 文本截断 */
 .line-clamp-2 {
     display: -webkit-box;

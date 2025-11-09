@@ -1,13 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import pool from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 // GET - 获取溢价配置
 export async function GET() {
     try {
-        const result = await pool.query('SELECT * FROM pricing_config ORDER BY id DESC LIMIT 1');
+        const { data, error } = await supabase
+            .from('pricing_config')
+            .select('*')
+            .order('id', { ascending: false })
+            .limit(1)
+            .single();
 
-        if (result.rows.length === 0) {
-            // 如果没有配置，返回默认值
+        if (error && error.code !== 'PGRST116') {
+            // PGRST116 是 "no rows returned" 错误
+            throw error;
+        }
+
+        if (!data) {
+            // 如果没有配置,返回默认值
             return NextResponse.json({
                 unifiedPricing: true,
                 unifiedRate: 0,
@@ -22,19 +32,17 @@ export async function GET() {
             });
         }
 
-        const config = result.rows[0];
-
         return NextResponse.json({
-            unifiedPricing: config.unified_pricing,
-            unifiedRate: parseFloat(config.unified_rate),
-            cpu: parseFloat(config.cpu_rate),
-            motherboard: parseFloat(config.motherboard_rate),
-            ram: parseFloat(config.ram_rate),
-            gpu: parseFloat(config.gpu_rate),
-            storage: parseFloat(config.storage_rate),
-            psu: parseFloat(config.psu_rate),
-            case: parseFloat(config.case_rate),
-            cooling: parseFloat(config.cooling_rate),
+            unifiedPricing: data.unified_pricing,
+            unifiedRate: parseFloat(data.unified_rate),
+            cpu: parseFloat(data.cpu_rate),
+            motherboard: parseFloat(data.motherboard_rate),
+            ram: parseFloat(data.ram_rate),
+            gpu: parseFloat(data.gpu_rate),
+            storage: parseFloat(data.storage_rate),
+            psu: parseFloat(data.psu_rate),
+            case: parseFloat(data.case_rate),
+            cooling: parseFloat(data.cooling_rate),
         });
     } catch (error) {
         console.error('Get pricing config error:', error);
@@ -61,68 +69,66 @@ export async function POST(request: NextRequest) {
         } = config;
 
         // 检查是否已存在配置
-        const existingConfig = await pool.query(
-            'SELECT id FROM pricing_config ORDER BY id DESC LIMIT 1'
-        );
+        const { data: existingConfig } = await supabase
+            .from('pricing_config')
+            .select('id')
+            .order('id', { ascending: false })
+            .limit(1)
+            .single();
 
         let result;
-        if (existingConfig.rows.length > 0) {
+        if (existingConfig) {
             // 更新现有配置
-            result = await pool.query(
-                `UPDATE pricing_config
-                 SET unified_pricing = $1,
-                     unified_rate = $2,
-                     cpu_rate = $3,
-                     motherboard_rate = $4,
-                     ram_rate = $5,
-                     gpu_rate = $6,
-                     storage_rate = $7,
-                     psu_rate = $8,
-                     case_rate = $9,
-                     cooling_rate = $10,
-                     updated_at = CURRENT_TIMESTAMP
-                 WHERE id = $11
-                 RETURNING *`,
-                [
-                    unifiedPricing,
-                    unifiedRate,
-                    cpu,
-                    motherboard,
-                    ram,
-                    gpu,
-                    storage,
-                    psu,
-                    caseRate,
-                    cooling,
-                    existingConfig.rows[0].id,
-                ]
-            );
+            const { data, error } = await supabase
+                .from('pricing_config')
+                .update({
+                    unified_pricing: unifiedPricing,
+                    unified_rate: unifiedRate,
+                    cpu_rate: cpu,
+                    motherboard_rate: motherboard,
+                    ram_rate: ram,
+                    gpu_rate: gpu,
+                    storage_rate: storage,
+                    psu_rate: psu,
+                    case_rate: caseRate,
+                    cooling_rate: cooling,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', existingConfig.id)
+                .select()
+                .single();
+
+            if (error) throw error;
+            result = data;
         } else {
             // 创建新配置
-            result = await pool.query(
-                `INSERT INTO pricing_config
-                 (unified_pricing, unified_rate, cpu_rate, motherboard_rate, ram_rate, gpu_rate, storage_rate, psu_rate, case_rate, cooling_rate)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-                 RETURNING *`,
-                [
-                    unifiedPricing,
-                    unifiedRate,
-                    cpu,
-                    motherboard,
-                    ram,
-                    gpu,
-                    storage,
-                    psu,
-                    caseRate,
-                    cooling,
-                ]
-            );
+            const { data, error } = await supabase
+                .from('pricing_config')
+                .insert([
+                    {
+                        unified_pricing: unifiedPricing,
+                        unified_rate: unifiedRate,
+                        cpu_rate: cpu,
+                        motherboard_rate: motherboard,
+                        ram_rate: ram,
+                        gpu_rate: gpu,
+                        storage_rate: storage,
+                        psu_rate: psu,
+                        case_rate: caseRate,
+                        cooling_rate: cooling,
+                    },
+                ])
+                .select()
+                .single();
+
+            if (error) throw error;
+            result = data;
         }
 
         return NextResponse.json({
             success: true,
             message: '溢价配置已保存',
-            data: result.rows[0],
+            data: result,
         });
     } catch (error) {
         console.error('Update pricing config error:', error);

@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import PackageItemsTable, { PackageItem } from './PackageItemsTable';
 
 interface PackageData {
@@ -16,12 +16,90 @@ interface PackageDetailModalProps {
     onClose: () => void;
 }
 
+interface PricingConfigData {
+    unifiedPricing: boolean;
+    unifiedRate: number;
+    cpu: number;
+    motherboard: number;
+    ram: number;
+    gpu: number;
+    storage: number;
+    psu: number;
+    case: number;
+    cooling: number;
+}
+
 export default function PackageDetailModal({
     package: pkg,
     isOpen,
     onClose,
 }: PackageDetailModalProps) {
+    const [pricingConfig, setPricingConfig] = useState<PricingConfigData | null>(null);
+
+    useEffect(() => {
+        if (isOpen) {
+            loadPricingConfig();
+        }
+    }, [isOpen]);
+
+    const loadPricingConfig = async () => {
+        try {
+            const response = await fetch('/api/pricing');
+            const data = await response.json();
+            if (data) {
+                setPricingConfig({
+                    unifiedPricing: data.unifiedPricing,
+                    unifiedRate: 1 + data.unifiedRate / 100,
+                    cpu: 1 + data.cpu / 100,
+                    motherboard: 1 + data.motherboard / 100,
+                    ram: 1 + data.ram / 100,
+                    gpu: 1 + data.gpu / 100,
+                    storage: 1 + data.storage / 100,
+                    psu: 1 + data.psu / 100,
+                    case: 1 + data.case / 100,
+                    cooling: 1 + data.cooling / 100,
+                });
+            }
+        } catch (error) {
+            console.error('加载溢价配置失败:', error);
+        }
+    };
+
+    const getPricingRate = useCallback(
+        (category: string): number => {
+            if (!pricingConfig) return 1;
+
+            if (pricingConfig.unifiedPricing) {
+                return pricingConfig.unifiedRate;
+            }
+
+            const rateMap: Record<string, number> = {
+                cpu: pricingConfig.cpu,
+                motherboard: pricingConfig.motherboard,
+                ram: pricingConfig.ram,
+                gpu: pricingConfig.gpu,
+                storage: pricingConfig.storage,
+                psu: pricingConfig.psu,
+                case: pricingConfig.case,
+                cooling: pricingConfig.cooling,
+            };
+            return rateMap[category] || 1;
+        },
+        [pricingConfig]
+    );
+
+    const calculateTotalPrice = useCallback(() => {
+        if (!pkg?.items) return 0;
+        return pkg.items.reduce((total, item) => {
+            const rate = getPricingRate(item.product_category);
+            const salePrice = item.product_price * rate;
+            return total + salePrice * item.quantity;
+        }, 0);
+    }, [pkg, getPricingRate]);
+
     if (!isOpen || !pkg) return null;
+
+    const totalSalePrice = calculateTotalPrice();
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm animate-fadeIn">
@@ -68,9 +146,9 @@ export default function PackageDetailModal({
                             共 {pkg.items?.length || 0} 个配件
                         </div>
                         <div className="text-right">
-                            <div className="text-sm text-gray-600 mb-1">套餐总价</div>
+                            <div className="text-sm text-gray-600 mb-1">套餐售价</div>
                             <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
-                                ${parseFloat(pkg.total_price?.toString() || '0').toFixed(2)}
+                                ${totalSalePrice.toFixed(2)}
                             </div>
                         </div>
                     </div>

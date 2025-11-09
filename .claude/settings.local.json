@@ -8,7 +8,15 @@
       "Bash(npm run build)",
       "Bash(if exist .next rmdir /s /q .next)",
       "Bash(npm run dev)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(git checkout:*)",
+      "Bash(npm run db:init)",
+      "Bash(if exist \"app\\api\\auth\" rmdir /s /q \"app\\api\\auth\")",
+      "Bash(if exist \"database\\init.ts\" del \"database\\init.ts\")",
+      "Bash(\"E:\\project\\computer\\app\\api\\packages\\[id]\\route.ts\")",
+      "Bash(timeout:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []

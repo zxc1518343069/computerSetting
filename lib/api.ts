@@ -36,15 +36,6 @@ async function request<T>(url: string, options: RequestInit = {}): Promise<ApiRe
     }
 }
 
-// Auth API
-export const authApi = {
-    login: (username: string, password: string) =>
-        request('/auth/login', {
-            method: 'POST',
-            body: JSON.stringify({ username, password }),
-        }),
-};
-
 // Pricing API
 export const pricingApi = {
     get: () => request('/pricing'),

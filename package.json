@@ -7,10 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "db:init": "ts-node -P tsconfig.json database/init.ts",
-    "db:test-package": "ts-node -P tsconfig.json scripts/create-test-package.ts"
+    "db:init": "ts-node -P tsconfig.node.json database/init.ts",
+    "db:test-package": "ts-node -P tsconfig.node.json scripts/create-test-package.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.80.0",
     "@types/bcryptjs": "^3.0.0",
     "@types/pg": "^8.15.6",
     "bcryptjs": "^3.0.3",
@@ -32,6 +33,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.2.4",
     "tailwindcss": "^4",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
   }
 }
