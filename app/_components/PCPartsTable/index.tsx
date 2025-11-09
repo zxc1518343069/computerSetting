@@ -1,8 +1,6 @@
 // components/PCPartsTable.tsx
 "use client"
-import React, {useState} from 'react';
-import * as XLSX from 'xlsx';
-import {saveAs} from 'file-saver';
+import React, {useState, useEffect} from 'react';
 
 // 定义配件类别枚举
 enum PartCategory {
@@ -48,7 +46,33 @@ interface PartRow {
 // 定义所有产品数据接口
 type AllProducts = Record<PartCategory, Product[]>;
 
-// 所有可选产品数据
+// 定义溢价配置接口
+interface PricingConfig {
+    unifiedPricing: boolean;
+    unifiedRate: number;
+    cpu: number;
+    motherboard: number;
+    ram: number;
+    gpu: number;
+    storage: number;
+    psu: number;
+    case: number;
+    cooling: number;
+}
+
+// 类别到localStorage key的映射
+const categoryToStorageKey: Record<PartCategory, string> = {
+    [PartCategory.CPU]: 'cpu',
+    [PartCategory.Motherboard]: 'motherboard',
+    [PartCategory.RAM]: 'ram',
+    [PartCategory.GPU]: 'gpu',
+    [PartCategory.Storage]: 'storage',
+    [PartCategory.PSU]: 'psu',
+    [PartCategory.Case]: 'case',
+    [PartCategory.Cooling]: 'cooling',
+};
+
+// 所有可选产品数据（默认数据）
 const initProducts: AllProducts = {
     [PartCategory.CPU]: [
         {id: 1, name: 'Intel Core i9-13900K', price: 589.99},
@@ -104,89 +128,69 @@ const initialParts: PartRow[] = Object.values(PartCategory).map((category, index
 const PCPartsTable: React.FC = () => {
     // 初始配件数据
     const [parts, setParts] = useState<PartRow[]>(initialParts);
-    const [allProducts, setAllProducts] = useState<AllProducts>(initProducts)
-    const downloadExcelTemplate = () => {
-        const workbook = XLSX.utils.book_new();
+    const [allProducts, setAllProducts] = useState<AllProducts>(initProducts);
+    const [pricingConfig, setPricingConfig] = useState<PricingConfig>({
+        unifiedPricing: true,
+        unifiedRate: 0,
+        cpu: 0,
+        motherboard: 0,
+        ram: 0,
+        gpu: 0,
+        storage: 0,
+        psu: 0,
+        case: 0,
+        cooling: 0,
+    });
 
-        Object.values(PartCategory).forEach(category => {
-            const products = allProducts[category];
-            const worksheetData = [
-                ['产品名称', '产品价格'], // 表头
-                ...products.map(product => [product.name, product.price])
-            ];
+    // 从localStorage加载产品数据和溢价配置
+    useEffect(() => {
+        const loadedProducts: AllProducts = {...initProducts};
+        let hasCustomProducts = false;
 
-            const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
-            XLSX.utils.book_append_sheet(workbook, worksheet, categoryDisplayNames[category]);
+        // 加载每个类别的产品数据
+        Object.values(PartCategory).forEach((category) => {
+            const storageKey = categoryToStorageKey[category];
+            const savedProducts = localStorage.getItem(`products_${storageKey}`);
+            if (savedProducts) {
+                try {
+                    const parsed = JSON.parse(savedProducts);
+                    if (parsed && parsed.length > 0) {
+                        loadedProducts[category] = parsed;
+                        hasCustomProducts = true;
+                    }
+                } catch (e) {
+                    console.error(`Failed to parse products for ${category}:`, e);
+                }
+            }
         });
 
-        const excelBuffer = XLSX.write(workbook, {bookType: 'xlsx', type: 'array'});
-        const data = new Blob([excelBuffer], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-        saveAs(data, '电脑配件模板.xlsx');
+        if (hasCustomProducts) {
+            setAllProducts(loadedProducts);
+        }
+
+        // 加载溢价配置
+        const savedPricingConfig = localStorage.getItem('pricingConfig');
+        if (savedPricingConfig) {
+            try {
+                setPricingConfig(JSON.parse(savedPricingConfig));
+            } catch (e) {
+                console.error('Failed to parse pricing config:', e);
+            }
+        }
+    }, []);
+
+    // 应用溢价到价格
+    const applyPricing = (category: PartCategory, basePrice: number): number => {
+        if (pricingConfig.unifiedPricing) {
+            return basePrice * (1 + pricingConfig.unifiedRate / 100);
+        } else {
+            const categoryKey = categoryToStorageKey[category];
+            const rate = pricingConfig[categoryKey as keyof PricingConfig] as number;
+            return basePrice * (1 + rate / 100);
+        }
     };
 
     // 处理Excel文件上传 (完整解析逻辑)
-    const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const data = new Uint8Array(e.target?.result as ArrayBuffer);
-                const workbook = XLSX.read(data, {type: 'array'});
-
-                const newProducts: AllProducts = {...allProducts};
-                let hasChanges = false;
-
-                // 遍历所有分类
-                Object.values(PartCategory).forEach(category => {
-                    const sheetName = categoryDisplayNames[category];
-                    const worksheet = workbook.Sheets[sheetName];
-
-                    if (worksheet) {
-                        const jsonData: never[] = XLSX.utils.sheet_to_json(worksheet);
-                        if (jsonData.length > 0) {
-                            // 解析Excel数据
-                            const parsedProducts = jsonData
-                                .filter(row => row['产品名称'] && row['产品价格'])
-                                .map((row, index) => ({
-                                    id: index + 1, // 生成新ID
-                                    name: String(row['产品名称']),
-                                    price: Number(row['产品价格']) || 0
-                                }));
-
-                            if (parsedProducts.length > 0) {
-                                newProducts[category] = parsedProducts;
-                                hasChanges = true;
-                            }
-                        }
-                    }
-                });
-
-                if (hasChanges) {
-                    setAllProducts(newProducts);
-                    // 重置表单以反映新数据
-                    setParts(initialParts);
-                    alert('Excel数据已成功导入并覆盖原有产品数据！');
-                } else {
-                    alert('未找到有效数据，请检查Excel格式是否符合模板要求');
-                }
-            } catch (error) {
-                console.error('Excel解析错误:', error);
-                alert('Excel解析失败，请检查文件格式');
-            } finally {
-                // 重置input值，允许重复上传同一文件
-                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                // @ts-expect-error
-                if (e?.target?.value) {
-                    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                    // @ts-expect-error
-                    e.target.value = undefined;
-                }
-            }
-        };
-        reader.readAsArrayBuffer(file);
-    };
 
 
     // 处理产品选择变化
@@ -204,12 +208,15 @@ const PCPartsTable: React.FC = () => {
         const selectedProduct = allProducts[category].find(p => p.id === productId);
         if (!selectedProduct) return;
 
+        // 应用溢价
+        const finalPrice = applyPricing(category, selectedProduct.price);
+
         setParts(parts.map(part =>
             part.id === id ? {
                 ...part,
                 productId: selectedProduct.id,
                 name: selectedProduct.name,
-                price: selectedProduct.price
+                price: finalPrice
             } : part
         ));
     };
@@ -252,11 +259,14 @@ const PCPartsTable: React.FC = () => {
                                     onChange={(e) => handleProductChange(part.id, part.category, e)}
                                 >
                                     <option value="">选择{categoryDisplayNames[part.category]}</option>
-                                    {allProducts[part.category].map(product => (
-                                        <option key={product.id} value={product.id}>
-                                            {product.name} (${product.price.toFixed(2)})
-                                        </option>
-                                    ))}
+                                    {allProducts[part.category].map(product => {
+                                        const displayPrice = applyPricing(part.category, product.price);
+                                        return (
+                                            <option key={product.id} value={product.id}>
+                                                {product.name} (${displayPrice.toFixed(2)})
+                                            </option>
+                                        );
+                                    })}
                                 </select>
                             </td>
                             <td className="px-6 py-4">
@@ -286,25 +296,6 @@ const PCPartsTable: React.FC = () => {
             </div>
 
             <div className="mt-6 flex justify-end gap-6">
-                <label
-                    className="px-4 py-2 bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200 transition-colors cursor-pointer">
-                    上传Excel
-                    <input
-                        type="file"
-                        className="hidden"
-                        accept=".xlsx,.xls"
-                        onChange={handleExcelUpload}
-                    />
-                </label>
-
-                {/* 下载模板按钮 */}
-                <button
-                    onClick={downloadExcelTemplate}
-                    className="px-4 py-2 bg-green-100 text-green-800 rounded-lg hover:bg-green-200 transition-colors"
-                >
-                    下载Excel模板
-                </button>
-
                 <button
                     onClick={() => setParts(initialParts)}
                     className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"

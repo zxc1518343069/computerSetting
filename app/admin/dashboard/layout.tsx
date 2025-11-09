@@ -1,0 +1,130 @@
+'use client';
+import React, { useState, useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import Link from 'next/link';
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+    const router = useRouter();
+    const pathname = usePathname();
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+    useEffect(() => {
+        // 检查登录状态
+        const isLoggedIn = sessionStorage.getItem('adminLoggedIn');
+        if (isLoggedIn !== 'true') {
+            router.push('/admin');
+        }
+    }, [router]);
+
+    const handleLogout = () => {
+        sessionStorage.removeItem('adminLoggedIn');
+        router.push('/admin');
+    };
+
+    const menuItems = [
+        {
+            title: '返回配置',
+            path: '/',
+            icon: '',
+        },
+        {
+            title: '溢价控制',
+            path: '/admin/dashboard/pricing',
+            icon: '💰',
+        },
+        {
+            title: '配件套餐',
+            path: '/admin/dashboard/packages',
+            icon: '📦',
+        },
+        {
+            title: '导入数据',
+            path: '/admin/dashboard/import',
+            icon: '📦',
+        },
+        {
+            title: '配置数据',
+            path: '/admin/dashboard/config',
+            icon: '⚙️',
+            subItems: [
+                { title: '处理器', path: '/admin/dashboard/config/cpu' },
+                { title: '主板', path: '/admin/dashboard/config/motherboard' },
+                { title: '内存', path: '/admin/dashboard/config/ram' },
+                { title: '显卡', path: '/admin/dashboard/config/gpu' },
+                { title: '存储', path: '/admin/dashboard/config/storage' },
+                { title: '电源', path: '/admin/dashboard/config/psu' },
+                { title: '机箱', path: '/admin/dashboard/config/case' },
+                { title: '散热', path: '/admin/dashboard/config/cooling' },
+            ],
+        },
+    ];
+
+    return (
+        <div className="flex h-screen bg-gray-100">
+            {/* 侧边栏 */}
+            <aside
+                className={`bg-gray-800 text-white transition-all duration-300 ${
+                    isSidebarCollapsed ? 'w-16' : 'w-64'
+                }`}
+            >
+                <div className="flex items-center justify-between p-4 border-b border-gray-700">
+                    {!isSidebarCollapsed && <h2 className="text-xl font-bold">后台管理</h2>}
+                    <button
+                        onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                        className="text-white hover:bg-gray-700 p-2 rounded"
+                    >
+                        {isSidebarCollapsed ? '☰' : '✕'}
+                    </button>
+                </div>
+
+                <nav className="mt-4">
+                    {menuItems.map((item) => (
+                        <div key={item.path}>
+                            <Link
+                                href={item.path}
+                                className={`flex items-center px-4 py-3 hover:bg-gray-700 transition-colors ${
+                                    pathname === item.path ? 'bg-gray-700' : ''
+                                }`}
+                            >
+                                <span className="text-xl">{item.icon}</span>
+                                {!isSidebarCollapsed && <span className="ml-3">{item.title}</span>}
+                            </Link>
+
+                            {/* 二级菜单 */}
+                            {item.subItems && !isSidebarCollapsed && (
+                                <div className="bg-gray-900">
+                                    {item.subItems.map((subItem) => (
+                                        <Link
+                                            key={subItem.path}
+                                            href={subItem.path}
+                                            className={`flex items-center px-8 py-2 hover:bg-gray-700 transition-colors text-sm ${
+                                                pathname === subItem.path ? 'bg-gray-700' : ''
+                                            }`}
+                                        >
+                                            {subItem.title}
+                                        </Link>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </nav>
+
+                <div className="absolute bottom-0 w-full border-t border-gray-700">
+                    <button
+                        onClick={handleLogout}
+                        className="flex items-center px-4 py-3 hover:bg-gray-700 transition-colors w-full"
+                    >
+                        <span className="text-xl">🚪</span>
+                        {!isSidebarCollapsed && <span className="ml-3">退出登录</span>}
+                    </button>
+                </div>
+            </aside>
+
+            {/* 主内容区域 */}
+            <main className="flex-1 overflow-auto">
+                <div className="p-8">{children}</div>
+            </main>
+        </div>
+    );
+}

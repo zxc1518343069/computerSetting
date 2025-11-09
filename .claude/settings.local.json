@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(nul)",
+      "Bash(findstr:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run build)",
+      "Bash(if exist .next rmdir /s /q .next)",
+      "Bash(npm run dev)",
+      "Bash(npm install:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
