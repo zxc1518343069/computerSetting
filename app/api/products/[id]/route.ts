@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
 // GET - 获取单个产品详情
-export async function GET(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         const { id: idParam } = await params;
         const id = parseInt(idParam);
@@ -30,10 +27,7 @@ export async function GET(
 }
 
 // PUT - 更新产品
-export async function PUT(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         const { id: idParam } = await params;
         const id = parseInt(idParam);
