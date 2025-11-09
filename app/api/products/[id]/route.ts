@@ -2,15 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
 // GET - 获取单个产品详情
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
     try {
-        const id = parseInt(params.id);
+        const { id: idParam } = await params;
+        const id = parseInt(idParam);
 
-        const { data, error } = await supabase
-            .from('products')
-            .select('*')
-            .eq('id', id)
-            .single();
+        const { data, error } = await supabase.from('products').select('*').eq('id', id).single();
 
         if (error) {
             if (error.code === 'PGRST116') {
@@ -30,9 +30,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 // PUT - 更新产品
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
     try {
-        const id = parseInt(params.id);
+        const { id: idParam } = await params;
+        const id = parseInt(idParam);
         const { category, name, price } = await request.json();
 
         if (!category || !name || price === undefined) {
@@ -70,9 +74,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 }
 
 // DELETE - 删除产品
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
     try {
-        const id = parseInt(params.id);
+        const { id: idParam } = await params;
+        const id = parseInt(idParam);
 
         // 检查产品是否存在
         const { data: product, error: productError } = await supabase
@@ -121,9 +129,10 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
                 .join('、');
 
             const moreCount = packageItems.length > 3 ? packageItems.length - 3 : 0;
-            const message = moreCount > 0
-                ? `无法删除产品"${product.name}"，该产品正在被 ${packageItems.length} 个套餐使用（${packageNames} 等${moreCount}个）。请先删除或修改相关套餐后再试。`
-                : `无法删除产品"${product.name}"，该产品正在被以下套餐使用：${packageNames}。请先删除或修改相关套餐后再试。`;
+            const message =
+                moreCount > 0
+                    ? `无法删除产品"${product.name}"，该产品正在被 ${packageItems.length} 个套餐使用（${packageNames} 等${moreCount}个）。请先删除或修改相关套餐后再试。`
+                    : `无法删除产品"${product.name}"，该产品正在被以下套餐使用：${packageNames}。请先删除或修改相关套餐后再试。`;
 
             return NextResponse.json(
                 {

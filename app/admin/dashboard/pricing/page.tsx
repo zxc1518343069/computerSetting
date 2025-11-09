@@ -223,9 +223,16 @@ export default function PricingPage() {
                                                     min="0"
                                                     max="100"
                                                     className="w-full px-3 py-2 pr-10 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-lg font-semibold"
-                                                    value={config[cat.key as keyof PricingConfig] as number}
+                                                    value={
+                                                        config[
+                                                            cat.key as keyof PricingConfig
+                                                        ] as number
+                                                    }
                                                     onChange={(e) =>
-                                                        handleCategoryRateChange(cat.key, e.target.value)
+                                                        handleCategoryRateChange(
+                                                            cat.key,
+                                                            e.target.value
+                                                        )
                                                     }
                                                 />
                                                 <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-lg font-bold text-blue-600">
@@ -307,7 +314,8 @@ export default function PricingPage() {
                     <li className="flex items-start gap-2">
                         <span className="text-blue-600 font-bold">•</span>
                         <span>
-                            <strong>统一溢价模式：</strong>所有类型的产品使用相同的溢价比例，设置简单快捷
+                            <strong>统一溢价模式：</strong>
+                            所有类型的产品使用相同的溢价比例，设置简单快捷
                         </span>
                     </li>
                     <li className="flex items-start gap-2">
