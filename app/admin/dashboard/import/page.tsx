@@ -14,6 +14,7 @@ const categoryMapping: Record<PartCategory, string> = {
     [PartCategory.PSU]: 'psu',
     [PartCategory.Case]: 'case',
     [PartCategory.Cooling]: 'cooling',
+    [PartCategory.Monitor]: 'monitor',
 };
 
 export default function Import() {
