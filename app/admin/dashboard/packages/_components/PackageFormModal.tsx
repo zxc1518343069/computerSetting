@@ -43,7 +43,7 @@ export default function PackageFormModal({
                 setDescription(pkg.description || '');
 
                 // 初始化每个类别的选择
-                const initialItems: EditablePartRow[] = PACKAGE_CATEGORIES.map((cat, index) => {
+                const initialItems: EditablePartRow[] = PACKAGE_CATEGORIES.map((cat) => {
                     const existingItem = pkg.items?.find(
                         (item) => item.product_category === cat.key
                     );
