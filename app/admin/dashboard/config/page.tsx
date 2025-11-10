@@ -32,6 +32,7 @@ const categoryOptions = [
     { value: 'psu', label: 'PSU(电源)' },
     { value: 'case', label: 'Case(机箱)' },
     { value: 'cooling', label: 'Cooling(散热)' },
+    { value: 'monitor', label: 'Monitor(显示器)' },
 ];
 
 const categoryDisplayMap: Record<string, string> = {
@@ -43,6 +44,7 @@ const categoryDisplayMap: Record<string, string> = {
     psu: 'PSU(电源)',
     case: 'Case(机箱)',
     cooling: 'Cooling(散热)',
+    monitor: 'Monitor(显示器)',
 };
 
 // 分页配置

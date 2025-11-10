@@ -83,7 +83,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     ))}
                 </nav>
 
-                <div className="absolute bottom-0 w-full border-t border-gray-700">
+                <div
+                    className={`absolute bottom-0  border-t border-gray-700 ${
+                        isSidebarCollapsed ? 'w-16' : 'w-64'
+                    } `}
+                >
                     <button
                         onClick={handleLogout}
                         className="flex items-center px-4 py-3 hover:bg-gray-700 transition-colors w-full"

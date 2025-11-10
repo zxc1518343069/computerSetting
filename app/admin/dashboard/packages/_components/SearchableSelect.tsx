@@ -1,0 +1,290 @@
+'use client';
+
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+
+interface Option {
+    value: number;
+    label: string;
+}
+
+interface SearchableSelectProps {
+    value: number;
+    onChange: (value: number) => void;
+    options: Option[];
+    placeholder?: string;
+    disabled?: boolean;
+    className?: string;
+}
+
+export default function SearchableSelect({
+    value,
+    onChange,
+    options,
+    placeholder = '请选择',
+    disabled = false,
+    className = '',
+}: SearchableSelectProps) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [highlightedIndex, setHighlightedIndex] = useState(-1);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // 过滤选项（模糊搜索）
+    const filteredOptions = useMemo(() => {
+        if (!searchQuery.trim()) return options;
+        const query = searchQuery.toLowerCase();
+        return options.filter((option) =>
+            option.label.toLowerCase().includes(query)
+        );
+    }, [options, searchQuery]);
+
+    // 选中的选项
+    const selectedOption = options.find((opt) => opt.value === value);
+
+    // 点击外部关闭下拉框
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (
+                containerRef.current &&
+                !containerRef.current.contains(event.target as Node)
+            ) {
+                setIsOpen(false);
+                setSearchQuery('');
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // 当下拉框打开时，自动滚动到选中项
+    useEffect(() => {
+        if (isOpen && dropdownRef.current && selectedOption) {
+            const selectedIndex = filteredOptions.findIndex(
+                (opt) => opt.value === value
+            );
+            if (selectedIndex !== -1) {
+                setHighlightedIndex(selectedIndex);
+                const optionElement = dropdownRef.current.children[
+                    selectedIndex
+                ] as HTMLElement;
+                if (optionElement) {
+                    optionElement.scrollIntoView({ block: 'nearest' });
+                }
+            }
+        }
+    }, [isOpen, selectedOption, value, filteredOptions]);
+
+    // 键盘导航
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (disabled) return;
+
+        switch (e.key) {
+            case 'Enter':
+                e.preventDefault();
+                if (isOpen && highlightedIndex >= 0) {
+                    handleSelect(filteredOptions[highlightedIndex].value);
+                } else {
+                    setIsOpen(true);
+                }
+                break;
+            case 'ArrowDown':
+                e.preventDefault();
+                if (!isOpen) {
+                    setIsOpen(true);
+                } else {
+                    setHighlightedIndex((prev) =>
+                        prev < filteredOptions.length - 1 ? prev + 1 : prev
+                    );
+                }
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                if (isOpen) {
+                    setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : 0));
+                }
+                break;
+            case 'Escape':
+                e.preventDefault();
+                setIsOpen(false);
+                setSearchQuery('');
+                break;
+            case 'Tab':
+                setIsOpen(false);
+                setSearchQuery('');
+                break;
+        }
+    };
+
+    // 自动滚动到高亮项
+    useEffect(() => {
+        if (highlightedIndex >= 0 && dropdownRef.current) {
+            const optionElement = dropdownRef.current.children[
+                highlightedIndex
+            ] as HTMLElement;
+            if (optionElement) {
+                optionElement.scrollIntoView({ block: 'nearest' });
+            }
+        }
+    }, [highlightedIndex]);
+
+    const handleSelect = (optionValue: number) => {
+        onChange(optionValue);
+        setIsOpen(false);
+        setSearchQuery('');
+        setHighlightedIndex(-1);
+    };
+
+    const handleToggle = () => {
+        if (disabled) return;
+        if (!isOpen) {
+            setIsOpen(true);
+            // 延迟聚焦，确保输入框已渲染
+            setTimeout(() => inputRef.current?.focus(), 0);
+        } else {
+            setIsOpen(false);
+            setSearchQuery('');
+        }
+    };
+
+    return (
+        <div
+            ref={containerRef}
+            className={`relative ${className}`}
+            onKeyDown={handleKeyDown}
+        >
+            {/* 选择框主体 */}
+            <div
+                className={`
+                    w-full px-3 py-2 text-sm text-gray-900 border rounded-lg bg-white
+                    transition-all cursor-pointer
+                    ${
+                        disabled
+                            ? 'bg-gray-100 cursor-not-allowed opacity-50'
+                            : 'hover:border-blue-400'
+                    }
+                    ${
+                        isOpen
+                            ? 'border-blue-500 ring-2 ring-blue-500'
+                            : 'border-gray-300'
+                    }
+                `}
+                onClick={handleToggle}
+            >
+                <div className="flex items-center justify-between">
+                    {isOpen ? (
+                        <input
+                            ref={inputRef}
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => {
+                                setSearchQuery(e.target.value);
+                                setHighlightedIndex(0);
+                            }}
+                            placeholder={selectedOption?.label || placeholder}
+                            className="flex-1 outline-none bg-transparent"
+                            onClick={(e) => e.stopPropagation()}
+                            disabled={disabled}
+                        />
+                    ) : (
+                        <span
+                            className={
+                                selectedOption ? 'text-gray-900' : 'text-gray-400'
+                            }
+                        >
+                            {selectedOption?.label || placeholder}
+                        </span>
+                    )}
+                    {/* 下拉箭头 */}
+                    <svg
+                        className={`w-4 h-4 text-gray-400 transition-transform ${
+                            isOpen ? 'rotate-180' : ''
+                        }`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                        />
+                    </svg>
+                </div>
+            </div>
+
+            {/* 下拉菜单 */}
+            {isOpen && (
+                <div
+                    ref={dropdownRef}
+                    className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto"
+                >
+                    {filteredOptions.length > 0 ? (
+                        filteredOptions.map((option, index) => (
+                            <div
+                                key={option.value}
+                                className={`
+                                    px-3 py-2 text-sm cursor-pointer transition-colors
+                                    ${
+                                        option.value === value
+                                            ? 'bg-blue-50 text-blue-600 font-medium'
+                                            : 'text-gray-700'
+                                    }
+                                    ${
+                                        index === highlightedIndex
+                                            ? 'bg-gray-100'
+                                            : 'hover:bg-gray-50'
+                                    }
+                                `}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSelect(option.value);
+                                }}
+                                onMouseEnter={() => setHighlightedIndex(index)}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <span>{option.label}</span>
+                                    {option.value === value && (
+                                        <svg
+                                            className="w-4 h-4 text-blue-600"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M5 13l4 4L19 7"
+                                            />
+                                        </svg>
+                                    )}
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="px-3 py-8 text-sm text-center text-gray-400">
+                            <svg
+                                className="w-12 h-12 mx-auto mb-2 text-gray-300"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                />
+                            </svg>
+                            <p>无匹配结果</p>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}

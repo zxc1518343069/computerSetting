@@ -29,9 +29,11 @@ export async function GET() {
                 psu: 0,
                 case: 0,
                 cooling: 0,
+                monitor: 0,
             });
         }
 
+        console.log('data', data);
         return NextResponse.json({
             unifiedPricing: data.unified_pricing,
             unifiedRate: parseFloat(data.unified_rate),
@@ -43,6 +45,7 @@ export async function GET() {
             psu: parseFloat(data.psu_rate),
             case: parseFloat(data.case_rate),
             cooling: parseFloat(data.cooling_rate),
+            monitor: parseFloat(data.monitor_rate),
         });
     } catch (error) {
         console.error('Get pricing config error:', error);

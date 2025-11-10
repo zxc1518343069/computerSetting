@@ -12,6 +12,7 @@ interface PricingConfig {
     psu: number;
     case: number;
     cooling: number;
+    monitor: number;
 }
 
 const categoryConfig = [
@@ -23,6 +24,7 @@ const categoryConfig = [
     { key: 'psu', name: '电源 (PSU)', icon: '⚡', color: 'orange' },
     { key: 'case', name: '机箱 (Case)', icon: '📦', color: 'gray' },
     { key: 'cooling', name: '散热 (Cooling)', icon: '❄️', color: 'cyan' },
+    { key: 'monitor', name: '显示器 (Monitor)', icon: '🖥️ ', color: 'cyan' },
 ];
 
 export default function PricingPage() {
@@ -37,6 +39,7 @@ export default function PricingPage() {
         psu: 0,
         case: 0,
         cooling: 0,
+        monitor: 0,
     });
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);

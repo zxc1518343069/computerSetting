@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { PACKAGE_CATEGORIES } from '@/const';
+import SearchableSelect from './SearchableSelect';
 
 export interface Product {
     id: number;
@@ -11,6 +12,7 @@ export interface Product {
 }
 
 export interface EditablePartRow {
+    id: string; // 唯一标识符，用于支持同类别多行
     category: string;
     product_id: number;
     quantity: number;
@@ -27,12 +29,15 @@ interface PricingConfigData {
     psu: number;
     case: number;
     cooling: number;
+    monitor: number;
 }
 
 interface EditablePackageTableProps {
     items: EditablePartRow[];
-    onProductChange: (category: string, productId: number) => void;
-    onQuantityChange: (category: string, quantity: number) => void;
+    onProductChange: (id: string, productId: number) => void;
+    onQuantityChange: (id: string, quantity: number) => void;
+    onAddRow?: (category: string) => void; // 添加新行
+    onRemoveRow?: (id: string) => void; // 删除行
     disabled?: boolean;
     pricing?: boolean; // true: 显示溢价后价格，false: 显示原价+售价两列
 }
@@ -41,9 +46,13 @@ export default function EditablePackageTable({
     items,
     onProductChange,
     onQuantityChange,
+    onAddRow,
+    onRemoveRow,
     disabled = false,
     pricing = false,
 }: EditablePackageTableProps) {
+    // 支持多选的类别
+    const multiSelectCategories = ['ram', 'storage', 'cooling', 'monitor'];
     const [products, setProducts] = useState<Product[]>([]);
     const [pricingConfig, setPricingConfig] = useState<PricingConfigData | null>(null);
     const [loading, setLoading] = useState(false);
@@ -79,6 +88,7 @@ export default function EditablePackageTable({
                         psu: 1 + pricingData.psu / 100,
                         case: 1 + pricingData.case / 100,
                         cooling: 1 + pricingData.cooling / 100,
+                        monitor: 1 + pricingData.monitor / 100,
                     });
                 }
             } catch (err) {
@@ -118,6 +128,7 @@ export default function EditablePackageTable({
                 psu: pricingConfig.psu,
                 case: pricingConfig.case,
                 cooling: pricingConfig.cooling,
+                monitor: pricingConfig.monitor,
             };
             return rateMap[category] || 1;
         },
@@ -160,138 +171,66 @@ export default function EditablePackageTable({
         <div className="overflow-x-auto">
             <table className="w-full">
                 <thead>
-                    <tr className="border-b-2 border-gray-200">
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                            类型
+                    <tr className="bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-300">
+                        <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                            <div className="flex items-center gap-2">
+                                <svg
+                                    className="w-4 h-4 text-blue-600"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                                    />
+                                </svg>
+                                类型
+                            </div>
                         </th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                            产品名称
+                        <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                            <div className="flex items-center gap-2">
+                                <svg
+                                    className="w-4 h-4 text-purple-600"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                                    />
+                                </svg>
+                                产品名称
+                            </div>
                         </th>
-                        <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">
+                        <th className="px-4 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
                             数量
                         </th>
                         {pricing ? (
                             // 溢价模式：只显示溢价后的单价
-                            <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">
+                            <th className="px-4 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">
                                 单价
                             </th>
                         ) : (
                             // 原价+售价模式：显示原价和售价两列
                             <>
-                                <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">
+                                <th className="px-4 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">
                                     原价
                                 </th>
-                                <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">
+                                <th className="px-4 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">
                                     售价
                                 </th>
                             </>
                         )}
-                        <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">
-                            小计
-                        </th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                    {PACKAGE_CATEGORIES.map((cat) => {
-                        const item = items.find((i) => i.category === cat.key);
-                        const categoryProducts = productsByCategory[cat.key] || [];
-                        const itemPrice = item ? getItemPrice(item) : 0;
-                        const selectedProduct = item?.product_id
-                            ? products.find((p) => p.id === item.product_id)
-                            : null;
-
-                        return (
-                            <tr
-                                key={cat.key}
-                                className="hover:bg-gray-50 transition-colors duration-150"
-                            >
-                                <td className="px-4 py-3">
-                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                        {cat.name}
-                                    </span>
-                                </td>
-                                <td className="px-4 py-3">
-                                    <select
-                                        className="w-full px-3 py-2 text-sm text-gray-900 border border-gray-300 rounded-lg bg-white hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all cursor-pointer disabled:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
-                                        value={item?.product_id || 0}
-                                        onChange={(e) =>
-                                            onProductChange(cat.key, parseInt(e.target.value))
-                                        }
-                                        disabled={disabled}
-                                    >
-                                        <option value={0}>选择{cat.name}</option>
-                                        {categoryProducts.map((product) => (
-                                            <option key={product.id} value={product.id}>
-                                                {product.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </td>
-                                <td className="px-4 py-3 text-center">
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        className="w-16 h-9 text-center text-sm font-medium text-gray-900 border border-gray-300 rounded-lg bg-white hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
-                                        value={item?.quantity || 1}
-                                        onChange={(e) =>
-                                            onQuantityChange(cat.key, parseInt(e.target.value) || 1)
-                                        }
-                                        disabled={disabled || !item?.product_id}
-                                    />
-                                </td>
-                                {pricing ? (
-                                    // 溢价模式：只显示溢价后价格
-                                    <td className="px-4 py-3 text-right text-sm text-gray-700">
-                                        {selectedProduct ? (
-                                            <span className="font-medium text-gray-900">
-                                                ${getProductPrice(selectedProduct).toFixed(2)}
-                                            </span>
-                                        ) : (
-                                            <span className="text-gray-400">-</span>
-                                        )}
-                                    </td>
-                                ) : (
-                                    // 原价+售价模式：显示两列
-                                    <>
-                                        <td className="px-4 py-3 text-right text-sm text-gray-700">
-                                            {selectedProduct ? (
-                                                <span className="font-medium text-gray-600">
-                                                    ${selectedProduct.price.toFixed(2)}
-                                                </span>
-                                            ) : (
-                                                <span className="text-gray-400">-</span>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3 text-right text-sm text-gray-700">
-                                            {selectedProduct ? (
-                                                <span className="font-semibold text-green-600">
-                                                    ${getProductPrice(selectedProduct).toFixed(2)}
-                                                </span>
-                                            ) : (
-                                                <span className="text-gray-400">-</span>
-                                            )}
-                                        </td>
-                                    </>
-                                )}
-                                <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">
-                                    {itemPrice > 0 ? (
-                                        <span className="inline-flex items-center px-3 py-1 rounded-md bg-green-50 text-green-700">
-                                            ${itemPrice.toFixed(2)}
-                                        </span>
-                                    ) : (
-                                        <span className="text-gray-400">-</span>
-                                    )}
-                                </td>
-                            </tr>
-                        );
-                    })}
-                </tbody>
-                <tfoot>
-                    <tr className="bg-gradient-to-r from-blue-50 to-purple-50 border-t-2 border-gray-200">
-                        <td className="px-4 py-4" colSpan={pricing ? 4 : 5}>
-                            <div className="flex items-center gap-2">
+                        <th className="px-4 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">
+                            <div className="flex items-center justify-end gap-2">
                                 <svg
-                                    className="w-5 h-5 text-blue-600"
+                                    className="w-4 h-4 text-green-600"
                                     fill="none"
                                     stroke="currentColor"
                                     viewBox="0 0 24 24"
@@ -303,14 +242,293 @@ export default function EditablePackageTable({
                                         d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
                                     />
                                 </svg>
-                                <span className="text-sm font-semibold text-gray-700">
-                                    套餐总价
+                                小计
+                            </div>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                    {PACKAGE_CATEGORIES.map((cat) => {
+                        // 获取该类别的所有行
+                        const categoryItems = items.filter((i) => i.category === cat.key);
+                        const categoryProducts = productsByCategory[cat.key] || [];
+                        const isMultiSelect = multiSelectCategories.includes(cat.key);
+
+                        // 如果该类别没有行,创建一个空行
+                        const rowsToRender = categoryItems.length > 0 ? categoryItems : [null];
+
+                        return rowsToRender.map((item, index) => {
+                            const itemPrice = item ? getItemPrice(item) : 0;
+                            const selectedProduct = item?.product_id
+                                ? products.find((p) => p.id === item.product_id)
+                                : null;
+                            const isFirstRow = index === 0;
+                            const canRemove = isMultiSelect && categoryItems.length > 1;
+
+                            return (
+                                <tr
+                                    key={item?.id || `${cat.key}-empty`}
+                                    className="hover:bg-gray-50 transition-colors duration-150"
+                                >
+                                    <td className="px-4 py-3">
+                                        <div className="flex items-center gap-2">
+                                            {isFirstRow && (
+                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                    {cat.name}
+                                                </span>
+                                            )}
+                                            {!isFirstRow && (
+                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                                    {cat.name} #{index + 1}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <div className="flex items-center gap-2">
+                                            <SearchableSelect
+                                                value={item?.product_id || 0}
+                                                onChange={(value) =>
+                                                    item && onProductChange(item.id, value)
+                                                }
+                                                options={[
+                                                    ...categoryProducts.map((product) => ({
+                                                        value: product.id,
+                                                        label: product.name,
+                                                    })),
+                                                ]}
+                                                placeholder={`选择${cat.name}`}
+                                                disabled={disabled}
+                                                className="flex-1"
+                                            />
+                                            {/* 操作按钮 */}
+                                            {isMultiSelect && (
+                                                <div className="flex items-center gap-1">
+                                                    {/* 添加按钮 - 只在第一行显示 */}
+                                                    {isFirstRow && onAddRow && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => onAddRow(cat.key)}
+                                                            disabled={disabled}
+                                                            className="p-1.5 rounded-lg bg-green-100 text-green-600 hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            title={`添加${cat.name}`}
+                                                        >
+                                                            <svg
+                                                                className="w-4 h-4"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={2}
+                                                                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                                                                />
+                                                            </svg>
+                                                        </button>
+                                                    )}
+                                                    {/* 删除按钮 - 在非第一行或有多行时显示 */}
+                                                    {canRemove && onRemoveRow && item && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => onRemoveRow(item.id)}
+                                                            disabled={disabled}
+                                                            className="p-1.5 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            title={`删除此${cat.name}`}
+                                                        >
+                                                            <svg
+                                                                className="w-4 h-4"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={2}
+                                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                                                />
+                                                            </svg>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3 text-center">
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            className="w-16 h-9 text-center text-sm font-medium text-gray-900 border border-gray-300 rounded-lg bg-white hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                            value={item?.quantity || 1}
+                                            onChange={(e) =>
+                                                item &&
+                                                onQuantityChange(
+                                                    item.id,
+                                                    parseInt(e.target.value) || 1
+                                                )
+                                            }
+                                            disabled={disabled || !item?.product_id}
+                                        />
+                                    </td>
+                                    {pricing ? (
+                                        // 溢价模式：只显示溢价后价格
+                                        <td className="px-4 py-3 text-right text-sm text-gray-700">
+                                            {selectedProduct ? (
+                                                Number(getProductPrice(selectedProduct)) === 0 ? (
+                                                    <span className="text-amber-600 font-medium">
+                                                        暂无价格
+                                                    </span>
+                                                ) : (
+                                                    <span className="font-semibold text-gray-900">
+                                                        ¥
+                                                        {getProductPrice(selectedProduct).toFixed(
+                                                            2
+                                                        )}
+                                                    </span>
+                                                )
+                                            ) : (
+                                                <span className="text-gray-400">-</span>
+                                            )}
+                                        </td>
+                                    ) : (
+                                        // 原价+售价模式：显示两列
+                                        <>
+                                            <td className="px-4 py-3 text-right text-sm text-gray-700">
+                                                {selectedProduct ? (
+                                                    <span className="font-medium text-gray-600 line-through">
+                                                        ¥{selectedProduct.price.toFixed(2)}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-gray-400">-</span>
+                                                )}
+                                            </td>
+                                            <td className="px-4 py-3 text-right text-sm text-gray-700">
+                                                {selectedProduct ? (
+                                                    <span className="font-bold text-green-600">
+                                                        ¥
+                                                        {getProductPrice(selectedProduct).toFixed(
+                                                            2
+                                                        )}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-gray-400">-</span>
+                                                )}
+                                            </td>
+                                        </>
+                                    )}
+                                    <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">
+                                        {itemPrice > 0 ? (
+                                            <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 font-semibold border border-green-200">
+                                                ¥{itemPrice.toFixed(2)}
+                                            </span>
+                                        ) : (
+                                            <span className="text-gray-400">-</span>
+                                        )}
+                                    </td>
+                                </tr>
+                            );
+                        });
+                    }).flat()}
+
+                    {/* 其他项目行 */}
+                    <tr className="hover:bg-amber-50 transition-colors duration-150 border-t-2 border-amber-200">
+                        <td className="px-4 py-3">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                                <svg
+                                    className="w-3 h-3 mr-1"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                                    />
+                                </svg>
+                                其他
+                            </span>
+                        </td>
+                        <td className="px-4 py-3" colSpan={pricing ? 4 : 5}>
+                            <input
+                                type="text"
+                                placeholder="输入其他配件或服务（如：装机服务费、延保等）"
+                                className="w-full px-3 py-2 text-sm border border-amber-300 rounded-lg bg-white hover:border-amber-400 focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all placeholder:text-gray-400"
+                                disabled={disabled}
+                            />
+                        </td>
+                    </tr>
+
+                    {/* 赠品行 */}
+                    <tr className="hover:bg-pink-50 transition-colors duration-150">
+                        <td className="px-4 py-3">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-pink-100 text-pink-800">
+                                <svg
+                                    className="w-3 h-3 mr-1"
+                                    fill="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5.5-2.5l7.51-3.49L17.5 6.5 9.99 9.99 6.5 17.5zm5.5-6.6c.61 0 1.1.49 1.1 1.1s-.49 1.1-1.1 1.1-1.1-.49-1.1-1.1.49-1.1 1.1-1.1z" />
+                                </svg>
+                                赠品
+                            </span>
+                        </td>
+                        <td className="px-4 py-3" colSpan={pricing ? 4 : 5}>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="text"
+                                    placeholder="输入赠品信息（如：鼠标垫、清洁套装、游戏激活码等）"
+                                    className="flex-1 px-3 py-2 text-sm border border-pink-300 rounded-lg bg-white hover:border-pink-400 focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all placeholder:text-gray-400"
+                                    disabled={disabled}
+                                />
+                                <span className="inline-flex items-center px-2 py-1 rounded-md bg-pink-100 text-pink-700 text-xs font-medium whitespace-nowrap">
+                                    免费
                                 </span>
                             </div>
                         </td>
-                        <td className="px-4 py-4 text-right">
-                            <div className="inline-flex items-center px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-                                <span className="text-xl font-bold">${totalPrice.toFixed(2)}</span>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 border-t-4 border-indigo-200">
+                        <td className="px-4 py-5" colSpan={pricing ? 4 : 5}>
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg">
+                                    <svg
+                                        className="w-5 h-5 text-white"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                                        />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-600 mb-0.5">配置</p>
+                                    <p className="text-base font-bold text-gray-800">总价</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td className="px-4 py-5 text-right">
+                            <div className="inline-flex flex-col items-end gap-1">
+                                <div className="inline-flex items-baseline px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white shadow-lg hover:shadow-xl transition-shadow">
+                                    <span className="text-sm font-medium mr-1">¥</span>
+                                    <span className="text-2xl font-bold tracking-tight">
+                                        {totalPrice.toFixed(2)}
+                                    </span>
+                                </div>
+                                {totalPrice > 0 && (
+                                    <span className="text-xs text-gray-500 font-medium">
+                                        含溢价和税费
+                                    </span>
+                                )}
                             </div>
                         </td>
                     </tr>

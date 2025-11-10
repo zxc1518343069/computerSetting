@@ -8,6 +8,7 @@ export enum PartCategory {
     PSU = 'PSU',
     Case = 'Case',
     Cooling = 'Cooling',
+    Monitor = 'Monitor',
 }
 // 定义产品接口
 export interface Product {
@@ -59,6 +60,11 @@ export const exampleData: AllProducts = {
         { id: 23, name: 'Corsair iCUE H150i ELITE LCD', price: 249.99 },
         { id: 24, name: 'Noctua NH-D15 chromax.black', price: 109.99 },
     ],
+    [PartCategory.Monitor]: [
+        { id: 25, name: 'NZXT Kraken Z73 RGB 360mm', price: 279.99 },
+        { id: 26, name: 'Corsair iCUE H150i ELITE LCD', price: 249.99 },
+        { id: 27, name: 'Noctua NH-D15 chromax.black', price: 109.99 },
+    ],
 };
 
 // 定义类别显示名称映射
@@ -71,6 +77,7 @@ export const categoryDisplayNames: Record<PartCategory, string> = {
     [PartCategory.PSU]: '电源',
     [PartCategory.Case]: '机箱',
     [PartCategory.Cooling]: '散热',
+    [PartCategory.Monitor]: '显示器',
 };
 
 // Packages相关的常量
@@ -83,6 +90,7 @@ export const PACKAGE_CATEGORIES = [
     { key: 'psu', name: '电源' },
     { key: 'case', name: '机箱' },
     { key: 'cooling', name: '散热' },
+    { key: 'monitor', name: '显示器' },
 ] as const;
 
 // 类别显示名称映射 (小写key版本，用于packages)
@@ -95,6 +103,7 @@ export const packageCategoryDisplayNames: Record<string, string> = {
     psu: '电源',
     case: '机箱',
     cooling: '散热',
+    monitor: '显示器',
 };
 
 // 带category字段的Product接口
