@@ -39,7 +39,6 @@ const PCPartsTable: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [currentTime, setCurrentTime] = useState('');
 
-    const [isExporting, setIsExporting] = useState(false);
     const exportRef = useRef<HTMLDivElement>(null);
     const tableExportRef = useRef<HTMLDivElement>(null);
 
@@ -85,17 +84,13 @@ const PCPartsTable: React.FC = () => {
     // 处理产品选择变化
     const handleProductChange = (id: string, productId: number) => {
         setItems((prev) =>
-            prev.map((item) =>
-                item.id === id ? { ...item, product_id: productId } : item
-            )
+            prev.map((item) => (item.id === id ? { ...item, product_id: productId } : item))
         );
     };
 
     // 处理数量变化
     const handleQuantityChange = (id: string, quantity: number) => {
-        setItems((prev) =>
-            prev.map((item) => (item.id === id ? { ...item, quantity } : item))
-        );
+        setItems((prev) => prev.map((item) => (item.id === id ? { ...item, quantity } : item)));
     };
 
     // 添加新行
@@ -114,7 +109,7 @@ const PCPartsTable: React.FC = () => {
             };
 
             // 插入到该类别的最后一行之后
-            const lastIndex = prev.map(item => item.category).lastIndexOf(category);
+            const lastIndex = prev.map((item) => item.category).lastIndexOf(category);
             const newItems = [...prev];
             newItems.splice(lastIndex + 1, 0, newRow);
 
@@ -136,7 +131,7 @@ const PCPartsTable: React.FC = () => {
     const applyPackage = (pkg: Package) => {
         // 按类别分组套餐项
         const itemsByCategory: Record<string, PackageItem[]> = {};
-        pkg.items.forEach(item => {
+        pkg.items.forEach((item) => {
             if (!itemsByCategory[item.product_category]) {
                 itemsByCategory[item.product_category] = [];
             }
@@ -206,122 +201,6 @@ const PCPartsTable: React.FC = () => {
         return pkg.items.some((item) => item.product_name.toLowerCase().includes(query));
     });
 
-    const handleExportImage = async () => {
-        if (!tableExportRef.current) return;
-
-        setIsExporting(true);
-
-        try {
-            // 使用 html2canvas
-            const html2canvas = (await import('html2canvas')).default;
-
-            // 创建一个包装元素用于导出
-            const wrapper = document.createElement('div');
-            wrapper.style.cssText = `
-                position: absolute;
-                left: -9999px;
-                top: 0;
-                background: white;
-                padding: 40px;
-                width: ${tableExportRef.current.offsetWidth}px;
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            `;
-
-            // 添加标题
-            const header = document.createElement('div');
-            header.style.cssText = `
-                margin-bottom: 30px;
-                text-align: center;
-                padding: 20px;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                border-radius: 12px;
-                color: white;
-            `;
-            header.innerHTML = `
-                <h1 style="font-size: 28px; font-weight: bold; margin-bottom: 10px;">
-                    巩义明远 DIY装机报价系统
-                </h1>
-                <p style="font-size: 14px; opacity: 0.9;">
-                    ${currentTime || ''}
-                </p>
-            `;
-
-            wrapper.appendChild(header);
-
-            // 递归函数：复制元素并内联样式
-            const cloneWithStyles = (source: Element): HTMLElement => {
-                const clone = source.cloneNode(false) as HTMLElement;
-                const computedStyle = window.getComputedStyle(source);
-
-                // 复制所有计算后的样式
-                Array.from(computedStyle).forEach((key) => {
-                    const value = computedStyle.getPropertyValue(key);
-                    // 跳过 oklch 颜色
-                    if (value && !value.includes('oklch')) {
-                        try {
-                            clone.style.setProperty(key, value);
-                        } catch (e) {
-                            // 某些属性可能无法设置，忽略
-                        }
-                    } else if (value && value.includes('oklch')) {
-                        // 对于 oklch 颜色，使用备用颜色
-                        if (key === 'color') {
-                            clone.style.color = '#1f2937'; // gray-800
-                        } else if (key === 'background-color') {
-                            clone.style.backgroundColor = '#ffffff';
-                        } else if (key.includes('border') && key.includes('color')) {
-                            clone.style.setProperty(key, '#e5e7eb'); // gray-200
-                        }
-                    }
-                });
-
-                // 递归处理子元素
-                Array.from(source.children).forEach((child) => {
-                    clone.appendChild(cloneWithStyles(child));
-                });
-
-                // 复制文本节点
-                Array.from(source.childNodes).forEach((node) => {
-                    if (node.nodeType === Node.TEXT_NODE) {
-                        clone.appendChild(node.cloneNode(true));
-                    }
-                });
-
-                return clone;
-            };
-
-            // 克隆表格并内联样式
-            const cloned = cloneWithStyles(tableExportRef.current);
-            wrapper.appendChild(cloned);
-            document.body.appendChild(wrapper);
-
-            // 等待渲染
-            await new Promise((resolve) => setTimeout(resolve, 300));
-
-            // 使用html2canvas渲染
-            const canvas = await html2canvas(wrapper, {
-                scale: 2,
-                useCORS: true,
-                allowTaint: true,
-                backgroundColor: '#ffffff',
-                logging: false,
-            });
-
-            // 移除临时元素
-            document.body.removeChild(wrapper);
-
-            // 下载图片
-            const link = document.createElement('a');
-            link.download = `电脑配置_${new Date().getTime()}.png`;
-            link.href = canvas.toDataURL('image/png', 1.0);
-            link.click();
-        } catch (error) {
-            console.error('导出图片失败:', error);
-            alert(`导出图片失败: ${(error as Error).message}`);
-        } finally {
-            setIsExporting(false);
-        }
-    };
 
     return (
         <div

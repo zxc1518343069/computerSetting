@@ -4,15 +4,9 @@ import React from 'react';
 
 interface ContactInfoProps {
     phone?: string;
-    douyinQrCode?: string;
-    wechatQrCode?: string;
 }
 
-export default function ContactInfo({
-    phone = '138-0000-0000',
-    douyinQrCode = '/images/douyin-qr.png',
-    wechatQrCode = '/images/wechat-qr.png',
-}: ContactInfoProps) {
+export default function ContactInfo({ phone = '138-0000-0000' }: ContactInfoProps) {
     return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky top-6">
             <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center">

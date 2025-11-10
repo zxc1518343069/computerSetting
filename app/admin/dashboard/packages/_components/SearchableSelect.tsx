@@ -35,9 +35,7 @@ export default function SearchableSelect({
     const filteredOptions = useMemo(() => {
         if (!searchQuery.trim()) return options;
         const query = searchQuery.toLowerCase();
-        return options.filter((option) =>
-            option.label.toLowerCase().includes(query)
-        );
+        return options.filter((option) => option.label.toLowerCase().includes(query));
     }, [options, searchQuery]);
 
     // 选中的选项
@@ -46,10 +44,7 @@ export default function SearchableSelect({
     // 点击外部关闭下拉框
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (
-                containerRef.current &&
-                !containerRef.current.contains(event.target as Node)
-            ) {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
                 setIsOpen(false);
                 setSearchQuery('');
             }
@@ -62,14 +57,10 @@ export default function SearchableSelect({
     // 当下拉框打开时，自动滚动到选中项
     useEffect(() => {
         if (isOpen && dropdownRef.current && selectedOption) {
-            const selectedIndex = filteredOptions.findIndex(
-                (opt) => opt.value === value
-            );
+            const selectedIndex = filteredOptions.findIndex((opt) => opt.value === value);
             if (selectedIndex !== -1) {
                 setHighlightedIndex(selectedIndex);
-                const optionElement = dropdownRef.current.children[
-                    selectedIndex
-                ] as HTMLElement;
+                const optionElement = dropdownRef.current.children[selectedIndex] as HTMLElement;
                 if (optionElement) {
                     optionElement.scrollIntoView({ block: 'nearest' });
                 }
@@ -121,9 +112,7 @@ export default function SearchableSelect({
     // 自动滚动到高亮项
     useEffect(() => {
         if (highlightedIndex >= 0 && dropdownRef.current) {
-            const optionElement = dropdownRef.current.children[
-                highlightedIndex
-            ] as HTMLElement;
+            const optionElement = dropdownRef.current.children[highlightedIndex] as HTMLElement;
             if (optionElement) {
                 optionElement.scrollIntoView({ block: 'nearest' });
             }
@@ -150,11 +139,7 @@ export default function SearchableSelect({
     };
 
     return (
-        <div
-            ref={containerRef}
-            className={`relative ${className}`}
-            onKeyDown={handleKeyDown}
-        >
+        <div ref={containerRef} className={`relative ${className}`} onKeyDown={handleKeyDown}>
             {/* 选择框主体 */}
             <div
                 className={`
@@ -165,11 +150,7 @@ export default function SearchableSelect({
                             ? 'bg-gray-100 cursor-not-allowed opacity-50'
                             : 'hover:border-blue-400'
                     }
-                    ${
-                        isOpen
-                            ? 'border-blue-500 ring-2 ring-blue-500'
-                            : 'border-gray-300'
-                    }
+                    ${isOpen ? 'border-blue-500 ring-2 ring-blue-500' : 'border-gray-300'}
                 `}
                 onClick={handleToggle}
             >
@@ -189,11 +170,7 @@ export default function SearchableSelect({
                             disabled={disabled}
                         />
                     ) : (
-                        <span
-                            className={
-                                selectedOption ? 'text-gray-900' : 'text-gray-400'
-                            }
-                        >
+                        <span className={selectedOption ? 'text-gray-900' : 'text-gray-400'}>
                             {selectedOption?.label || placeholder}
                         </span>
                     )}
