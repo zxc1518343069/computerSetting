@@ -43,11 +43,12 @@ export default function PackageFormModal({
                 setDescription(pkg.description || '');
 
                 // 初始化每个类别的选择
-                const initialItems: EditablePartRow[] = PACKAGE_CATEGORIES.map((cat) => {
+                const initialItems: EditablePartRow[] = PACKAGE_CATEGORIES.map((cat, index) => {
                     const existingItem = pkg.items?.find(
                         (item) => item.product_category === cat.key
                     );
                     return {
+                        id: cat.key,
                         category: cat.key,
                         product_id: existingItem?.product_id || 0,
                         quantity: existingItem?.quantity || 1,
@@ -63,6 +64,7 @@ export default function PackageFormModal({
                 setDescription('');
                 const initialItems: EditablePartRow[] = PACKAGE_CATEGORIES.map((cat) => ({
                     category: cat.key,
+                    id: cat.key,
                     product_id: 0,
                     quantity: 1,
                 }));
