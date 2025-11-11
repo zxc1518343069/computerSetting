@@ -76,16 +76,32 @@ export default function PackageFormModal({
 
     if (!isOpen) return null;
 
-    const handleProductChange = (category: string, productId: number) => {
+    const handleProductChange = (id: string, productId: number) => {
         setItems(
             items.map((item) =>
-                item.category === category ? { ...item, product_id: productId } : item
+                item.id === id ? { ...item, product_id: productId } : item
             )
         );
     };
 
-    const handleQuantityChange = (category: string, quantity: number) => {
-        setItems(items.map((item) => (item.category === category ? { ...item, quantity } : item)));
+    const handleQuantityChange = (id: string, quantity: number) => {
+        setItems(items.map((item) => (item.id === id ? { ...item, quantity } : item)));
+    };
+
+    const handleCustomNameChange = (id: string, name: string) => {
+        setItems(
+            items.map((item) =>
+                item.id === id ? { ...item, custom_name: name } : item
+            )
+        );
+    };
+
+    const handleCustomPriceChange = (id: string, price: number) => {
+        setItems(
+            items.map((item) =>
+                item.id === id ? { ...item, custom_price: price } : item
+            )
+        );
     };
 
     const handleSubmit = async () => {
@@ -238,10 +254,13 @@ export default function PackageFormModal({
                                     items={items}
                                     onProductChange={handleProductChange}
                                     onQuantityChange={handleQuantityChange}
+                                    onCustomNameChange={handleCustomNameChange}
+                                    onCustomPriceChange={handleCustomPriceChange}
                                     disabled={submitting}
                                 />
                                 <div className="mt-4 text-sm text-gray-500">
                                     <p>* 在表格中直接选择产品并设置数量，价格会自动计算</p>
+                                    <p>* 支持自定义输入产品名称和价格（输入后按回车确认）</p>
                                 </div>
                             </>
                         )}

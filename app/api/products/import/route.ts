@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
                 { status: 400 }
             );
         }
-
+        await supabase.from('products').delete().neq('id', 0); // 清空表数据
         // 批量插入产品
         const { data, error } = await supabase.from('products').insert(validProducts).select();
 

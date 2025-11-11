@@ -6,7 +6,7 @@ interface ContactInfoProps {
     phone?: string;
 }
 
-export default function ContactInfo({ phone = '138-0000-0000' }: ContactInfoProps) {
+export default function ContactInfo({ phone = '13137733019' }: ContactInfoProps) {
     return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky top-6">
             <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center">

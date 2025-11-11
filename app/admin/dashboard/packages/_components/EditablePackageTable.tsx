@@ -16,6 +16,8 @@ export interface EditablePartRow {
     category: string;
     product_id: number;
     quantity: number;
+    custom_name?: string; // 自定义产品名称（当 product_id 为 0 时使用）
+    custom_price?: number; // 自定义产品单价（当 product_id 为 0 时使用）
 }
 
 interface PricingConfigData {
@@ -38,8 +40,14 @@ interface EditablePackageTableProps {
     onQuantityChange: (id: string, quantity: number) => void;
     onAddRow?: (category: string) => void; // 添加新行
     onRemoveRow?: (id: string) => void; // 删除行
+    onCustomNameChange?: (id: string, name: string) => void; // 自定义产品名称变化
+    onCustomPriceChange?: (id: string, price: number) => void; // 自定义产品价格变化
     disabled?: boolean;
     pricing?: boolean; // true: 显示溢价后价格，false: 显示原价+售价两列
+
+    showDiscountedPrice?: boolean; // 是否显示优惠后价格行
+    discountedPrice?: number; // 优惠后价格
+    onDiscountedPriceChange?: (price: number) => void; // 优惠后价格变化回调
 }
 
 export default function EditablePackageTable({
@@ -48,8 +56,13 @@ export default function EditablePackageTable({
     onQuantityChange,
     onAddRow,
     onRemoveRow,
+    onCustomNameChange,
+    onCustomPriceChange,
     disabled = false,
     pricing = false,
+    showDiscountedPrice = false,
+    discountedPrice,
+    onDiscountedPriceChange,
 }: EditablePackageTableProps) {
     // 支持多选的类别
     const multiSelectCategories = ['ram', 'storage', 'cooling', 'monitor'];
@@ -146,6 +159,11 @@ export default function EditablePackageTable({
     // 计算行项目小计
     const getItemPrice = useCallback(
         (item: EditablePartRow): number => {
+            // 如果是自定义产品（product_id 为 0）
+            if (item.product_id === 0 && item.custom_price !== undefined) {
+                return item.custom_price * item.quantity;
+            }
+            // 如果是普通产品
             if (!item.product_id) return 0;
             const product = products.find((p) => p.id === item.product_id);
             return product ? getProductPrice(product) * item.quantity : 0;
@@ -300,6 +318,13 @@ export default function EditablePackageTable({
                                                 placeholder={`选择${cat.name}`}
                                                 disabled={disabled}
                                                 className="flex-1"
+                                                allowCustomInput={true}
+                                                customInputValue={item?.custom_name || ''}
+                                                onCustomInputChange={(name) => {
+                                                    if (item && onCustomNameChange) {
+                                                        onCustomNameChange(item.id, name);
+                                                    }
+                                                }}
                                             />
                                             {/* 操作按钮 */}
                                             {isMultiSelect && (
@@ -369,13 +394,38 @@ export default function EditablePackageTable({
                                                     parseInt(e.target.value) || 1
                                                 )
                                             }
-                                            disabled={disabled || !item?.product_id}
+                                            disabled={
+                                                disabled ||
+                                                (!item?.product_id && !item?.custom_name)
+                                            }
                                         />
                                     </td>
                                     {pricing ? (
                                         // 溢价模式：只显示溢价后价格
                                         <td className="px-4 py-3 text-right text-sm text-gray-700">
-                                            {selectedProduct ? (
+                                            {item?.product_id === 0 ? (
+                                                // 自定义产品：显示可编辑的价格输入框
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <span className="text-gray-600">¥</span>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.01"
+                                                        className="w-24 h-9 text-right text-sm font-medium text-gray-900 border border-green-300 rounded-lg bg-green-50 hover:border-green-400 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all disabled:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                                        value={item?.custom_price || 0}
+                                                        onChange={(e) => {
+                                                            if (item && onCustomPriceChange) {
+                                                                onCustomPriceChange(
+                                                                    item.id,
+                                                                    parseFloat(e.target.value) || 0
+                                                                );
+                                                            }
+                                                        }}
+                                                        placeholder="输入单价"
+                                                        disabled={disabled}
+                                                    />
+                                                </div>
+                                            ) : selectedProduct ? (
                                                 Number(getProductPrice(selectedProduct)) === 0 ? (
                                                     <span className="text-amber-600 font-medium">
                                                         暂无价格
@@ -396,7 +446,10 @@ export default function EditablePackageTable({
                                         // 原价+售价模式：显示两列
                                         <>
                                             <td className="px-4 py-3 text-right text-sm text-gray-700">
-                                                {selectedProduct ? (
+                                                {item?.product_id === 0 ? (
+                                                    // 自定义产品：原价列显示 "-"
+                                                    <span className="text-gray-400">-</span>
+                                                ) : selectedProduct ? (
                                                     <span className="font-medium text-gray-600 line-through">
                                                         ¥{selectedProduct.price.toFixed(2)}
                                                     </span>
@@ -405,7 +458,31 @@ export default function EditablePackageTable({
                                                 )}
                                             </td>
                                             <td className="px-4 py-3 text-right text-sm text-gray-700">
-                                                {selectedProduct ? (
+                                                {item?.product_id === 0 ? (
+                                                    // 自定义产品：显示可编辑的价格输入框
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <span className="text-gray-600">¥</span>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.01"
+                                                            className="w-24 h-9 text-right text-sm font-medium text-gray-900 border border-green-300 rounded-lg bg-green-50 hover:border-green-400 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all disabled:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                                            value={item?.custom_price || 0}
+                                                            onChange={(e) => {
+                                                                if (item && onCustomPriceChange) {
+                                                                    onCustomPriceChange(
+                                                                        item.id,
+                                                                        parseFloat(
+                                                                            e.target.value
+                                                                        ) || 0
+                                                                    );
+                                                                }
+                                                            }}
+                                                            placeholder="输入单价"
+                                                            disabled={disabled}
+                                                        />
+                                                    </div>
+                                                ) : selectedProduct ? (
                                                     <span className="font-bold text-green-600">
                                                         ¥
                                                         {getProductPrice(selectedProduct).toFixed(
@@ -492,8 +569,9 @@ export default function EditablePackageTable({
                     </tr>
                 </tbody>
                 <tfoot>
+                    {/* 自动计算总价行 */}
                     <tr className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 border-t-4 border-indigo-200">
-                        <td className="px-4 py-5" colSpan={pricing ? 4 : 5}>
+                        <td className="px-4 py-4" colSpan={pricing ? 4 : 5}>
                             <div className="flex items-center gap-3">
                                 <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg">
                                     <svg
@@ -516,22 +594,102 @@ export default function EditablePackageTable({
                                 </div>
                             </div>
                         </td>
-                        <td className="px-4 py-5 text-right">
+                        <td className="px-4 py-4 text-right">
                             <div className="inline-flex flex-col items-end gap-1">
-                                <div className="inline-flex items-baseline px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white shadow-lg hover:shadow-xl transition-shadow">
+                                <div
+                                    className={`inline-flex items-baseline px-5 py-2.5 rounded-xl ${
+                                        discountedPrice && discountedPrice > 0
+                                            ? 'bg-gray-400 text-white'
+                                            : 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white shadow-lg hover:shadow-xl'
+                                    } transition-all`}
+                                >
                                     <span className="text-sm font-medium mr-1">¥</span>
-                                    <span className="text-2xl font-bold tracking-tight">
+                                    <span
+                                        className={`text-2xl font-bold tracking-tight ${
+                                            discountedPrice && discountedPrice > 0
+                                                ? 'line-through'
+                                                : ''
+                                        }`}
+                                    >
                                         {totalPrice.toFixed(2)}
                                     </span>
                                 </div>
-                                {totalPrice > 0 && (
-                                    <span className="text-xs text-gray-500 font-medium">
-                                        含溢价和税费
-                                    </span>
+                                {discountedPrice && discountedPrice > 0 && (
+                                    <span className="text-xs text-gray-500 font-medium">原价</span>
                                 )}
                             </div>
                         </td>
                     </tr>
+
+                    {/* 优惠后价格行 */}
+                    {showDiscountedPrice && (
+                        <tr className="bg-gradient-to-r from-green-50 via-emerald-50 to-teal-50 border-t-2 border-green-200">
+                            <td className="px-4 py-4" colSpan={pricing ? 4 : 5}>
+                                <div className="flex items-center gap-3">
+                                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 shadow-lg">
+                                        <svg
+                                            className="w-5 h-5 text-white"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                            />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-gray-600 mb-0.5">优惠</p>
+                                        <p className="text-base font-bold text-gray-800">
+                                            实付价格
+                                        </p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td className="px-4 py-4 text-right">
+                                <div className="inline-flex flex-col items-end gap-2">
+                                    {/* 优惠后价格输入框 */}
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium text-gray-600">¥</span>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value={discountedPrice || ''}
+                                            onChange={(e) => {
+                                                const value = parseFloat(e.target.value) || 0;
+                                                onDiscountedPriceChange?.(value);
+                                            }}
+                                            placeholder="输入优惠价"
+                                            disabled={disabled}
+                                            className="w-40 px-4 py-2.5 text-right text-xl font-bold text-green-700 border-2 border-green-300 rounded-xl bg-white hover:border-green-400 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all disabled:bg-gray-100 disabled:cursor-not-allowed placeholder:text-gray-400 placeholder:text-base placeholder:font-normal"
+                                        />
+                                    </div>
+                                    {!!discountedPrice && discountedPrice > 0 && totalPrice > 0 && (
+                                        <div className="flex items-center gap-2 text-xs">
+                                            <span className="px-2 py-1 rounded-full bg-red-100 text-red-600 font-semibold">
+                                                优惠 ¥{(totalPrice - discountedPrice).toFixed(2)}
+                                            </span>
+                                            <span className="px-2 py-1 rounded-full bg-green-100 text-green-600 font-semibold">
+                                                {((1 - discountedPrice / totalPrice) * 100).toFixed(
+                                                    1
+                                                )}
+                                                % OFF
+                                            </span>
+                                        </div>
+                                    )}
+                                    {(!discountedPrice || discountedPrice === 0) && (
+                                        <span className="text-xs text-gray-500">
+                                            可选：输入优惠后价格
+                                        </span>
+                                    )}
+                                </div>
+                            </td>
+                        </tr>
+                    )}
                 </tfoot>
             </table>
         </div>

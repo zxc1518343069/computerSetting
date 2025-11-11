@@ -38,6 +38,7 @@ const PCPartsTable: React.FC = () => {
     const [loadingPackages, setLoadingPackages] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [currentTime, setCurrentTime] = useState('');
+    const [discountedPrice, setDiscountedPrice] = useState<number>(0);
 
     const exportRef = useRef<HTMLDivElement>(null);
     const tableExportRef = useRef<HTMLDivElement>(null);
@@ -93,6 +94,20 @@ const PCPartsTable: React.FC = () => {
         setItems((prev) => prev.map((item) => (item.id === id ? { ...item, quantity } : item)));
     };
 
+    // 处理自定义产品名称变化
+    const handleCustomNameChange = (id: string, name: string) => {
+        setItems((prev) =>
+            prev.map((item) => (item.id === id ? { ...item, custom_name: name } : item))
+        );
+    };
+
+    // 处理自定义产品价格变化
+    const handleCustomPriceChange = (id: string, price: number) => {
+        setItems((prev) =>
+            prev.map((item) => (item.id === id ? { ...item, custom_price: price } : item))
+        );
+    };
+
     // 添加新行
     const handleAddRow = (category: string) => {
         setItems((prev) => {
@@ -125,6 +140,7 @@ const PCPartsTable: React.FC = () => {
     // 重置表单
     const handleReset = () => {
         setItems(initialItems);
+        setDiscountedPrice(0);
     };
 
     // 应用套餐
@@ -201,26 +217,24 @@ const PCPartsTable: React.FC = () => {
         return pkg.items.some((item) => item.product_name.toLowerCase().includes(query));
     });
 
-
     return (
         <div
-            className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-6"
+            className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4 sm:p-6"
             ref={exportRef}
         >
             <div className="max-w-[1800px] mx-auto">
-                {/* 页面标题和时间 */}
-                <div className="max-w-6xl mx-auto px-6 py-10 animate-fadeIn">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-                        {/* 左侧：标题 + 时间 */}
-                        <div className="space-y-6">
-                            <h1 className="text-5xl font-extrabold bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-clip-text text-transparent tracking-tight drop-shadow-lg">
-                                巩义明远
-                                <br />
-                                DIY装机报价系统
-                            </h1>
+                {/* 页面标题 */}
+                <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10 animate-fadeIn">
+                    <div className="text-center space-y-4">
+                        {/* 标题 */}
+                        <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-clip-text text-transparent tracking-tight drop-shadow-lg">
+                            巩义明远 DIY装机报价系统
+                        </h1>
 
-                            {currentTime && (
-                                <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-sm shadow-md animate-pulse">
+                        {/* 时间显示 */}
+                        {currentTime && (
+                            <div className="flex justify-center">
+                                <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-sm shadow-md">
                                     <svg
                                         className="w-4 h-4"
                                         fill="none"
@@ -236,45 +250,18 @@ const PCPartsTable: React.FC = () => {
                                     </svg>
                                     {currentTime}
                                 </span>
-                            )}
-                        </div>
-
-                        {/* 右侧：价格说明卡片 */}
-                        <div className="bg-white/80 backdrop-blur-md border border-gray-200 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
-                            <div className="flex items-start">
-                                <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 text-white shadow-md">
-                                    <svg
-                                        className="w-6 h-6"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                                        />
-                                    </svg>
-                                </div>
-                                <div className="ml-4">
-                                    <p className="font-semibold text-gray-800 text-lg">价格说明</p>
-                                    <p className="text-sm text-gray-600 leading-relaxed mt-1">
-                                        以上价格为预估溢价后的售价，实际购买价格可能会因市场波动有所不同，请以最终结算价格为准。
-                                    </p>
-                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 </div>
 
-                {/* 主要内容区域：左中右三栏布局 */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* 主要内容区域：响应式布局 */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
                     {/* 左侧：推荐套餐区域 */}
                     {!loadingPackages && packages.length > 0 && (
-                        <div className="lg:col-span-2 xl:col-span-2 order-2 lg:order-1">
-                            <div className="bg-white shadow-xl rounded-2xl p-5 lg:sticky lg:top-6">
-                                <h2 className="text-lg lg:text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <div className="lg:col-span-3 xl:col-span-3 order-2 lg:order-1">
+                            <div className="bg-white shadow-xl rounded-2xl p-4 sm:p-5 lg:sticky lg:top-6">
+                                <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
                                     <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mr-2 shadow-lg">
                                         <svg
                                             className="w-4 h-4 text-white"
@@ -380,23 +367,25 @@ const PCPartsTable: React.FC = () => {
                                                         </div>
 
                                                         {/* 核心配件信息 */}
-                                                        <div className="space-y-2 mb-3">
-                                                            {coreSpecs.map((spec) => (
-                                                                <div
-                                                                    key={spec.id}
-                                                                    className="flex items-start gap-2 text-xs"
-                                                                >
-                                                                    <span className="text-base">
-                                                                        {spec.icon}
-                                                                    </span>
-                                                                    <div className="flex-1 min-w-0">
-                                                                        <p className="text-gray-700 truncate font-medium">
-                                                                            {spec.product_name}
-                                                                        </p>
+                                                        {coreSpecs.length > 0 && (
+                                                            <div className="space-y-2 mb-3">
+                                                                {coreSpecs.map((spec) => (
+                                                                    <div
+                                                                        key={spec.id}
+                                                                        className="flex items-start gap-2 text-xs"
+                                                                    >
+                                                                        <span className="text-base">
+                                                                            {spec.icon}
+                                                                        </span>
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <p className="text-gray-700 truncate font-medium">
+                                                                                {spec.product_name}
+                                                                            </p>
+                                                                        </div>
                                                                     </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
 
                                                         {/* 按钮 */}
                                                         <button className="w-full py-2 px-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs sm:text-sm font-medium rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-sm hover:shadow-md group-hover:scale-[1.02] transform">
@@ -444,16 +433,32 @@ const PCPartsTable: React.FC = () => {
                         </div>
                     )}
 
+                    {/* 加载套餐数据时的占位 */}
+                    {loadingPackages && (
+                        <div className="lg:col-span-3 xl:col-span-3 order-2 lg:order-1">
+                            <div className="bg-white shadow-xl rounded-2xl p-5 lg:sticky lg:top-6">
+                                <div className="flex flex-col items-center justify-center py-12">
+                                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                                    <p className="text-gray-600 font-medium text-sm">
+                                        加载套餐中...
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* 中间：配件选择表格 */}
                     <div
                         className={`${
                             !loadingPackages && packages.length > 0
-                                ? 'lg:col-span-8 xl:col-span-8 order-1 lg:order-2'
-                                : 'lg:col-span-11 xl:col-span-11 order-1 lg:order-2'
+                                ? 'lg:col-span-7 xl:col-span-7 order-1 lg:order-2'
+                                : loadingPackages
+                                  ? 'lg:col-span-7 xl:col-span-7 order-1 lg:order-2'
+                                  : 'lg:col-span-10 xl:col-span-10 order-1 lg:order-2'
                         }`}
                     >
                         <div
-                            className="bg-white shadow-xl rounded-2xl p-5 lg:p-6 mb-6"
+                            className="bg-white shadow-xl rounded-2xl p-4 sm:p-5 lg:p-6 mb-6"
                             ref={tableExportRef}
                         >
                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
@@ -473,64 +478,20 @@ const PCPartsTable: React.FC = () => {
                                     </svg>
                                     配件清单
                                 </h2>
-
-                                {/*/!* 导出图片按钮 *!/*/}
-                                {/*<button*/}
-                                {/*    onClick={handleExportImage}*/}
-                                {/*    disabled={isExporting}*/}
-                                {/*    className="flex items-center justify-center gap-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base w-full sm:w-auto"*/}
-                                {/*>*/}
-                                {/*    {isExporting ? (*/}
-                                {/*        <>*/}
-                                {/*            <svg*/}
-                                {/*                className="animate-spin h-5 w-5"*/}
-                                {/*                fill="none"*/}
-                                {/*                viewBox="0 0 24 24"*/}
-                                {/*            >*/}
-                                {/*                <circle*/}
-                                {/*                    className="opacity-25"*/}
-                                {/*                    cx="12"*/}
-                                {/*                    cy="12"*/}
-                                {/*                    r="10"*/}
-                                {/*                    stroke="currentColor"*/}
-                                {/*                    strokeWidth="4"*/}
-                                {/*                ></circle>*/}
-                                {/*                <path*/}
-                                {/*                    className="opacity-75"*/}
-                                {/*                    fill="currentColor"*/}
-                                {/*                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"*/}
-                                {/*                ></path>*/}
-                                {/*            </svg>*/}
-                                {/*            <span className="text-sm">导出中...</span>*/}
-                                {/*        </>*/}
-                                {/*    ) : (*/}
-                                {/*        <>*/}
-                                {/*            <svg*/}
-                                {/*                className="w-5 h-5"*/}
-                                {/*                fill="none"*/}
-                                {/*                stroke="currentColor"*/}
-                                {/*                viewBox="0 0 24 24"*/}
-                                {/*            >*/}
-                                {/*                <path*/}
-                                {/*                    strokeLinecap="round"*/}
-                                {/*                    strokeLinejoin="round"*/}
-                                {/*                    strokeWidth={2}*/}
-                                {/*                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"*/}
-                                {/*                />*/}
-                                {/*            </svg>*/}
-                                {/*            <span className="text-sm font-medium">导出图片</span>*/}
-                                {/*        </>*/}
-                                {/*    )}*/}
-                                {/*</button>*/}
                             </div>
 
                             <EditablePackageTable
                                 items={items}
                                 onProductChange={handleProductChange}
                                 onQuantityChange={handleQuantityChange}
+                                onCustomNameChange={handleCustomNameChange}
+                                onCustomPriceChange={handleCustomPriceChange}
                                 onAddRow={handleAddRow}
                                 onRemoveRow={handleRemoveRow}
                                 pricing={true}
+                                showDiscountedPrice={true}
+                                discountedPrice={discountedPrice}
+                                onDiscountedPriceChange={setDiscountedPrice}
                             />
                         </div>
 
@@ -539,9 +500,9 @@ const PCPartsTable: React.FC = () => {
                             {/* 提示信息 */}
                             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                                 <div className="text-sm text-gray-700 space-y-2">
-                                    <p className="flex items-center">
+                                    <p className="flex items-start">
                                         <svg
-                                            className="w-4 h-4 mr-2 text-blue-600 flex-shrink-0"
+                                            className="w-4 h-4 mr-2 text-blue-600 flex-shrink-0 mt-0.5"
                                             fill="currentColor"
                                             viewBox="0 0 20 20"
                                         >
@@ -551,12 +512,14 @@ const PCPartsTable: React.FC = () => {
                                                 clipRule="evenodd"
                                             />
                                         </svg>
-                                        选择产品并设置数量，价格自动计算
+                                        <span>
+                                            选择产品并设置数量，价格自动计算。支持自定义产品名称和价格。
+                                        </span>
                                     </p>
-                                    {packages.length > 0 && (
-                                        <p className="flex items-center">
+                                    {!loadingPackages && packages.length > 0 && (
+                                        <p className="flex items-start">
                                             <svg
-                                                className="w-4 h-4 mr-2 text-blue-600 flex-shrink-0"
+                                                className="w-4 h-4 mr-2 text-blue-600 flex-shrink-0 mt-0.5"
                                                 fill="currentColor"
                                                 viewBox="0 0 20 20"
                                             >
@@ -566,13 +529,40 @@ const PCPartsTable: React.FC = () => {
                                                     clipRule="evenodd"
                                                 />
                                             </svg>
-                                            点击左侧套餐可快速填充配件信息
+                                            <span>点击左侧推荐套餐可快速填充配件信息。</span>
                                         </p>
                                     )}
                                 </div>
                             </div>
 
-                            {/* 价格提醒 */}
+                            {/* 价格说明 */}
+                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                                <div className="flex items-start">
+                                    <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 text-white shadow-md">
+                                        <svg
+                                            className="w-5 h-5"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                                            />
+                                        </svg>
+                                    </div>
+                                    <div className="ml-4">
+                                        <p className="font-semibold text-gray-800 text-base">
+                                            价格说明
+                                        </p>
+                                        <p className="text-sm text-gray-600 leading-relaxed mt-1">
+                                            硬件价格随市场行情波动，报价仅当日有效。
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
 
                             {/* 重置按钮 */}
                             <div className="flex justify-center sm:justify-end">
