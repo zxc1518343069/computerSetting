@@ -34,7 +34,7 @@ api.interceptors.response.use(
         const res = response.data;
         if (res.code === requestSuccess) {
             // 成功
-            return res.data;
+            return response;
         } else {
             // 业务错误
             message.error(res.message || '请求失败');

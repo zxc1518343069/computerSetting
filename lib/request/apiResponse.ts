@@ -8,7 +8,7 @@ export function success<T>(data?: T, message = '成功') {
     });
 }
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
     code: number;
     message: string;
     data?: T;

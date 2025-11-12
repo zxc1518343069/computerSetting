@@ -126,3 +126,92 @@ setParts(parts.map(part =>
 
 Uses Next.js recommended config with TypeScript support. Some type assertions are disabled in the Excel upload handler (
 lines 179-185) to handle file input reset.
+
+## Code Organization Patterns
+
+### Component Structure Guidelines
+
+Follow these patterns when creating or modifying components:
+
+1. **State Management**
+    - Converge related state into custom hooks (prefix: `use + FunctionName`)
+    - Keep component-only state within the component
+    - Example: `useTableControl`, `usePackageSearch`
+
+2. **Component Extraction**
+    - Extract JSX blocks > 200 lines into separate components
+    - Create dedicated files/folders for extracted components
+    - Naming: FunctionDescription + Type (e.g., `SearchBox`, `PackageCard`, `InfoSection`)
+
+3. **File Organization**
+   ```
+   ComponentName/
+   ├── index.tsx              # Main component
+   ├── components/            # Sub-components (if > 2 sub-components)
+   │   ├── SubComponentA.tsx
+   │   └── SubComponentB.tsx
+   └── hooks/                 # Custom hooks (if > 1 hook)
+       └── useComponentLogic.tsx
+   ```
+
+4. **Code Order in Files**
+    - Main exported component
+    - Sub-components
+    - Custom hooks
+    - Utility functions
+    - API functions
+
+5. **Optimization Philosophy**
+    - Moderate optimization - avoid over-engineering
+    - Do NOT wrap every function with `useCallback` unless performance issues exist
+    - Do NOT use `useMemo` for simple calculations
+    - Keep code readable and maintainable
+
+### UI Library Integration
+
+- **Primary**: Tailwind CSS for custom styling
+- **Component Library**: Ant Design (antd) + ahooks for common components
+    - Use antd for: Input, Button, Spin, Empty, Modal, etc.
+    - Match existing UI gradient/rounded style when using antd
+    - Maintain visual consistency with existing Tailwind components
+
+### Example Component Pattern
+
+```typescript
+'use client';
+import { ComponentFromAntd } from 'antd';
+import { useRequest } from 'ahooks';
+
+// Main Component
+export function MainComponent() {
+    const { data, handleAction } = useMainLogic();
+
+    return (
+        <div>
+            <SubComponentA / >
+        <SubComponentB data = { data }
+    onAction = { handleAction }
+    />
+    < /div>
+)
+    ;
+}
+
+// Sub-components
+function SubComponentA() { /* ... */
+}
+
+function SubComponentB() { /* ... */
+}
+
+// Custom Hooks
+function useMainLogic() {
+    const [state, setState] = useState();
+    // Logic here
+    return { data, handleAction };
+}
+
+// Utility functions
+function helperFunction() { /* ... */
+}
+```
