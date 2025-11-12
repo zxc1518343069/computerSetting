@@ -11,9 +11,13 @@
     "db:test-package": "ts-node -P tsconfig.node.json scripts/create-test-package.ts"
   },
   "dependencies": {
+    "@ant-design/nextjs-registry": "^1.2.0",
     "@supabase/supabase-js": "^2.80.0",
     "@types/bcryptjs": "^3.0.0",
     "@types/pg": "^8.15.6",
+    "ahooks": "^3.9.6",
+    "antd": "^5.28.1",
+    "axios": "^1.13.2",
     "bcryptjs": "^3.0.3",
     "dom-to-image-more": "^3.7.2",
     "file-saver": "^2.0.5",

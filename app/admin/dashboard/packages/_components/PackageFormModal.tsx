@@ -77,11 +77,7 @@ export default function PackageFormModal({
     if (!isOpen) return null;
 
     const handleProductChange = (id: string, productId: number) => {
-        setItems(
-            items.map((item) =>
-                item.id === id ? { ...item, product_id: productId } : item
-            )
-        );
+        setItems(items.map((item) => (item.id === id ? { ...item, product_id: productId } : item)));
     };
 
     const handleQuantityChange = (id: string, quantity: number) => {
@@ -89,19 +85,11 @@ export default function PackageFormModal({
     };
 
     const handleCustomNameChange = (id: string, name: string) => {
-        setItems(
-            items.map((item) =>
-                item.id === id ? { ...item, custom_name: name } : item
-            )
-        );
+        setItems(items.map((item) => (item.id === id ? { ...item, custom_name: name } : item)));
     };
 
     const handleCustomPriceChange = (id: string, price: number) => {
-        setItems(
-            items.map((item) =>
-                item.id === id ? { ...item, custom_price: price } : item
-            )
-        );
+        setItems(items.map((item) => (item.id === id ? { ...item, custom_price: price } : item)));
     };
 
     const handleSubmit = async () => {
