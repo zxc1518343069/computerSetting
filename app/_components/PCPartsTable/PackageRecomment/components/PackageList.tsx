@@ -13,7 +13,7 @@ export function PackageList({ packages, onApplyPackage }: PackageListProps) {
     }
 
     return (
-        <div className="space-y-3 max-h-[500px] lg:max-h-[calc(100vh-300px)] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+        <div className="space-y-3">
             {packages.map((pkg) => (
                 <PackageCard key={pkg.id} pkg={pkg} onApply={() => onApplyPackage(pkg)} />
             ))}

@@ -15,7 +15,7 @@ export const Instructions: React.FC = () => {
                 <ul className="list-disc pl-5 space-y-1 text-gray-600">
                     <li>首次使用请先下载模板，了解所需的数据格式。</li>
                     <li>
-                        模板包含8个工作表，分别对应：CPU、主板、内存、显卡、存储、电源、机箱、散热器。
+                        模板包含9个工作表，分别对应：CPU、主板、内存、显卡、存储、电源、机箱、散热器、显示器。
                     </li>
                     <li>每个工作表需包含&ldquo;产品名称&rdquo;和&ldquo;产品价格&rdquo;两列。</li>
                     <li>请确保价格为数字格式，产品名称不为空。</li>

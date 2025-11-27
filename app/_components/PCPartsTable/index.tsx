@@ -1,4 +1,3 @@
-// _components/PCPartsTable.tsx
 'use client';
 import { Content, CustomRef } from '@/app/_components/PCPartsTable/Content';
 import PackageRecomment from '@/app/_components/PCPartsTable/PackageRecomment';
@@ -6,60 +5,74 @@ import Time from '@/app/_components/Time';
 import ContactInfo from './ContactInfo';
 
 import React, { useRef } from 'react';
+import { Layout } from 'antd';
+import { ThunderboltFilled } from '@ant-design/icons';
+
+const { Header, Sider, Content: AntContent } = Layout;
 
 export function PCPartsTable() {
-    const exportRef = useRef<HTMLDivElement>(null);
     const tableRef = useRef<CustomRef | null>(null);
 
     return (
-        <div
-            className="min-h-screen bg-[#f8fafc] p-4 sm:p-6 relative overflow-hidden"
-            ref={exportRef}
-        >
-            {/* 背景装饰 - 现代抽象图形 */}
-            <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
-                <div className="absolute -top-[10%] -left-[10%] w-[50%] h-[50%] rounded-full bg-gradient-to-br from-blue-100/60 to-indigo-100/60 blur-3xl opacity-70 animate-blob" />
-                <div className="absolute top-[20%] -right-[10%] w-[50%] h-[50%] rounded-full bg-gradient-to-br from-purple-100/60 to-pink-100/60 blur-3xl opacity-70 animate-blob animation-delay-2000" />
-                <div className="absolute -bottom-[10%] left-[20%] w-[50%] h-[50%] rounded-full bg-gradient-to-br from-emerald-100/60 to-teal-100/60 blur-3xl opacity-70 animate-blob animation-delay-4000" />
-            </div>
+        <Layout className="h-screen overflow-hidden bg-[#f8fafc]">
+            {/* Sticky Header */}
+            <Header className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-200/50 px-6 flex items-center justify-between h-14 shadow-sm">
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center text-white shadow-lg shadow-slate-500/20">
+                        <ThunderboltFilled style={{ fontSize: 18 }} />
+                    </div>
+                    <span className="font-black text-lg bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600 tracking-tight drop-shadow-sm">
+                        明远装机工坊
+                    </span>
+                    <span className="text-xs font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded ml-2">
+                        PRO
+                    </span>
+                </div>
+                <div className="flex items-center gap-4">
+                    <div className="hidden md:block">
+                        <Time />
+                    </div>
+                </div>
+            </Header>
 
-            <div className="max-w-[1920px] mx-auto relative z-10">
-                {/* 页面标题 */}
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12 mb-4 animate-fadeIn">
-                    <div className="flex flex-col items-center space-y-6">
-                        {/* 标题 */}
-                        <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 tracking-tight drop-shadow-sm text-center">
-                            巩义明远 DIY装机报价
-                        </h1>
-                        {/* 装饰线 */}
-                        <div className="w-24 h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full" />
-                        {/* 时间显示 */}
-                        <div className="bg-white/50 backdrop-blur-sm px-6 py-2 rounded-full border border-white/50 shadow-sm">
-                            <Time />
+            <Layout className="overflow-hidden">
+                {/* Fixed Sidebar for Recommendations */}
+                <Sider
+                    width={320}
+                    theme="light"
+                    className="border-r border-gray-200 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-20"
+                    breakpoint="lg"
+                    collapsedWidth="0"
+                >
+                    <div className="flex flex-col h-full">
+                        <div className="flex-1 overflow-hidden">
+                            <PackageRecomment
+                                onApplyPackage={(pkg) => {
+                                    tableRef.current?.processPkgToTableData(pkg);
+                                }}
+                            />
+                        </div>
+                        {/* Contact Info at Sidebar Bottom */}
+                        <div className="p-4 border-t border-gray-100 bg-gray-50/50">
+                            <ContactInfo />
                         </div>
                     </div>
-                </div>
+                </Sider>
 
-                {/* 主要内容区域：响应式布局 */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-10 px-2 sm:px-4">
-                    {/* 左侧：推荐套餐区域 */}
-                    <PackageRecomment
-                        onApplyPackage={(pkg) => {
-                            tableRef.current?.processPkgToTableData(pkg);
-                        }}
-                    />
+                {/* Main Workspace Area */}
+                <AntContent className="flex-1 overflow-y-auto p-6 bg-slate-50/50 relative">
+                    {/* Decorative Background */}
+                    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
+                        <div className="absolute -top-[20%] -right-[10%] w-[600px] h-[600px] bg-blue-400/10 rounded-full blur-[100px]"></div>
+                        <div className="absolute top-[40%] -left-[10%] w-[500px] h-[500px] bg-purple-400/10 rounded-full blur-[100px]"></div>
+                    </div>
 
-                    {/* 中间：配件选择表格 */}
-                    <div className={'lg:col-span-7 xl:col-span-7 order-1 lg:order-2'}>
+                    <div className="max-w-5xl mx-auto relative z-10">
                         <Content customRef={tableRef} />
                     </div>
-
-                    {/* 右侧：联系方式 */}
-                    <div className="lg:col-span-2 xl:col-span-2 order-3">
-                        <ContactInfo />
-                    </div>
-                </div>
-            </div>
-        </div>
+                </AntContent>
+            </Layout>
+        </Layout>
     );
 }

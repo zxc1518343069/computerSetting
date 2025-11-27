@@ -4,8 +4,11 @@ import { PACKAGE_CATEGORIES } from '@/const';
 import React, { useImperativeHandle } from 'react';
 import { Package, PackageItem } from '@/app/_components/PCPartsTable/PackageRecomment';
 import { useTableControl } from './hooks/useTableControl';
-import { TableHeader } from './components/TableHeader';
 import { InfoSection } from './components/InfoSection';
+import { Typography } from 'antd';
+import { BuildOutlined } from '@ant-design/icons';
+
+const { Title } = Typography;
 
 export interface CustomRef {
     processPkgToTableData: (pkg: Package) => void;
@@ -60,10 +63,35 @@ export function Content(props: ContentProps) {
     }));
 
     return (
-        <>
-            <div className="bg-white/80 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60 rounded-3xl p-5 sm:p-6 lg:p-8 mb-8 transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
-                <TableHeader />
+        <div className="flex flex-col gap-4 h-full">
+            {/* Header Area */}
+            <div className="flex items-center justify-between px-1">
+                <div>
+                    <Title
+                        level={4}
+                        style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}
+                    >
+                        <BuildOutlined className="text-blue-600" />
+                        配置工坊
+                    </Title>
+                    <p className="text-xs text-gray-400 mt-1">自定义您的专属电脑配置清单</p>
+                </div>
+            </div>
 
+            {/* Main Table Area */}
+            <div className="flex-1 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                {/* 
+                    Wrapping EditablePackageTable to ensure it fits nicely.
+                    Since EditablePackageTable is now a clean card-like component, 
+                    we can just render it or wrap it for padding if needed.
+                    The EditablePackageTable itself has rounded corners and shadow, 
+                    so we might want to strip that if we are already in a card,
+                    OR just let it be.
+                    Let's just render it directly but maybe customize via props if it supported className.
+                    Currently it doesn't support className prop in the interface I updated.
+                    So we rely on its internal style. It has `rounded-2xl bg-white shadow-sm ring-1`.
+                    This matches our theme nicely.
+                */}
                 <EditablePackageTable
                     items={tableData}
                     onProductChange={(id, quantity) => {
@@ -88,6 +116,6 @@ export function Content(props: ContentProps) {
             </div>
 
             <InfoSection onReset={handleReset} />
-        </>
+        </div>
     );
 }
