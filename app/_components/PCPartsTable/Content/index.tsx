@@ -1,5 +1,5 @@
 'use client';
-import EditablePackageTable from '@/app/admin/dashboard/packages/_components/EditablePackageTable';
+import EditablePackageTable from '@/app/admin/dashboard/packages/components/EditablePackageTable';
 import { PACKAGE_CATEGORIES } from '@/const';
 import React, { useImperativeHandle } from 'react';
 import { Package, PackageItem } from '@/app/_components/PCPartsTable/PackageRecomment';
@@ -61,7 +61,7 @@ export function Content(props: ContentProps) {
 
     return (
         <>
-            <div className="bg-white shadow-xl rounded-2xl p-4 sm:p-5 lg:p-6 mb-6">
+            <div className="bg-white/80 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60 rounded-3xl p-5 sm:p-6 lg:p-8 mb-8 transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
                 <TableHeader />
 
                 <EditablePackageTable

@@ -323,6 +323,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
             success: true,
             data: packagesWithItems,
+            code: 200,
         });
     } catch (error) {
         console.error('Get packages error:', error);

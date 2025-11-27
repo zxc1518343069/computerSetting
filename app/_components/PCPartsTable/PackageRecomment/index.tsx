@@ -21,7 +21,7 @@ function PackageRecomment(props: PackageRecommentProps) {
     if (loadingPackages) {
         return (
             <div className="lg:col-span-3 xl:col-span-3 order-2 lg:order-1">
-                <div className="bg-white shadow-xl rounded-2xl p-5 lg:sticky lg:top-6">
+                <div className="bg-white/80 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60 rounded-3xl p-5 sm:p-6 lg:sticky lg:top-8 transition-all duration-300">
                     <LoadingState />
                 </div>
             </div>
@@ -30,7 +30,7 @@ function PackageRecomment(props: PackageRecommentProps) {
 
     return (
         <div className="lg:col-span-3 xl:col-span-3 order-2 lg:order-1">
-            <div className="bg-white shadow-xl rounded-2xl p-4 sm:p-5 lg:sticky lg:top-6">
+            <div className="bg-white/80 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60 rounded-3xl p-5 sm:p-6 lg:sticky lg:top-8 transition-all duration-300">
                 <PackageHeader />
 
                 <SearchBox

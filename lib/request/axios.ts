@@ -30,11 +30,12 @@ api.interceptors.request.use(
 
 // 响应拦截器
 api.interceptors.response.use(
-    (response: AxiosResponse<ApiResponse>) => {
-        const res = response.data;
+    (response: AxiosResponse) => {
+        const res = response.data as ApiResponse;
         if (res.code === requestSuccess) {
             // 成功
-            return response;
+            console.log('API Response:', res);
+            return res as never;
         } else {
             // 业务错误
             message.error(res.message || '请求失败');

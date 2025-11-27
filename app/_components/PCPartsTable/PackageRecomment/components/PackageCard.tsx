@@ -13,30 +13,30 @@ export function PackageCard({ pkg, onApply }: PackageCardProps) {
 
     return (
         <div
-            className="group relative border-2 border-gray-200 rounded-xl p-3 sm:p-4 hover:border-blue-500 transition-all duration-300 hover:shadow-xl cursor-pointer bg-gradient-to-br from-white to-gray-50 overflow-hidden transform hover:-translate-y-1"
+            className="group relative rounded-2xl p-4 transition-all duration-300 cursor-pointer bg-white/50 hover:bg-white/80 border border-white/60 hover:border-blue-200/60 shadow-sm hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] overflow-hidden backdrop-blur-sm"
             onClick={onApply}
         >
             {/* 背景装饰 */}
-            <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-all duration-300" />
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-100/40 to-purple-100/40 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-all duration-500" />
 
             {/* 徽章装饰 */}
-            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
+            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-1 group-hover:translate-y-0">
+                <div className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-lg shadow-blue-500/30">
                     点击使用
                 </div>
             </div>
 
-            <div className="relative">
+            <div className="relative z-10">
                 {/* 标题和价格 */}
-                <div className="mb-3">
-                    <h3 className="font-bold text-gray-900 text-sm sm:text-base mb-2 pr-12">
+                <div className="mb-4">
+                    <h3 className="font-bold text-slate-800 text-base mb-2 pr-12 group-hover:text-blue-600 transition-colors">
                         {pkg.name}
                     </h3>
                     <div className="flex items-baseline justify-between">
-                        <span className="text-blue-600 font-bold text-base sm:text-lg">
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 font-bold text-lg">
                             ¥{pkg.total_price.toFixed(2)}
                         </span>
-                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                        <span className="text-xs font-medium text-slate-500 bg-slate-100/80 px-2.5 py-1 rounded-lg border border-slate-200/50">
                             {pkg.items.length}件
                         </span>
                     </div>

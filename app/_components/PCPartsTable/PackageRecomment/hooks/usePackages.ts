@@ -5,14 +5,18 @@ import { Package } from '../types';
 
 export function usePackages() {
     const [packages, setPackages] = useState<Package[]>([]);
-    const { loading } = useRequest(getPackages, {
+    const { data, loading } = useRequest(getPackages, {
         onSuccess: (result) => {
+            console.log('Fetched Packages:', result.data);
             if (result.data) {
                 setPackages(result.data);
             }
         },
+        onFinally: (props) => {
+            console.log('Fetched fetching packages', props);
+        },
     });
-
+    console.log('data', data);
     return {
         packages,
         loading,

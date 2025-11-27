@@ -1,4 +1,4 @@
-import { EditablePartRow } from '@/app/admin/dashboard/packages/_components/EditablePackageTable';
+import { EditablePartRow } from '@/app/admin/dashboard/packages/types';
 import { PACKAGE_CATEGORIES } from '@/const';
 import { useState } from 'react';
 

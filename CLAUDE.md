@@ -197,7 +197,7 @@ export function MainComponent() {
     ;
 }
 
-// Sub-components
+// Sub-_components
 function SubComponentA() { /* ... */
 }
 
