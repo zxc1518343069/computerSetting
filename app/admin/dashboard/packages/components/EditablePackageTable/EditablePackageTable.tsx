@@ -13,12 +13,10 @@ import { PACKAGE_CATEGORIES } from '@/const';
 
 interface EditablePackageTableProps {
     items: EditablePartRow[];
-    onProductChange: (id: string, productId: number) => void;
-    onQuantityChange: (id: string, quantity: number) => void;
+    /** 统一的行更新回调 */
+    onRowUpdate: (id: string, changes: Partial<EditablePartRow>) => void;
     onAddRow?: (category: string) => void;
     onRemoveRow?: (id: string) => void;
-    onCustomNameChange?: (id: string, name: string) => void;
-    onCustomPriceChange?: (id: string, price: number) => void;
     disabled?: boolean;
     pricing?: boolean;
     showDiscountedPrice?: boolean;
@@ -28,12 +26,9 @@ interface EditablePackageTableProps {
 
 const EditablePackageTable: React.FC<EditablePackageTableProps> = ({
     items,
-    onProductChange,
-    onQuantityChange,
+    onRowUpdate,
     onAddRow,
     onRemoveRow,
-    onCustomNameChange,
-    onCustomPriceChange,
     disabled = false,
     pricing = false,
     showDiscountedPrice,
@@ -80,20 +75,23 @@ const EditablePackageTable: React.FC<EditablePackageTableProps> = ({
                                     key={item.id}
                                     item={item}
                                     products={products.filter((p) => p.category === cat.key)}
-                                    categoryName={cat.name}
-                                    isFirst={index === 0}
-                                    canRemove={isMultiSelect && categoryItems.length > 1}
-                                    isMultiSelect={isMultiSelect}
-                                    disabled={disabled}
-                                    pricing={pricing}
-                                    itemPrice={itemPrice}
-                                    getProductPrice={getProductPrice}
-                                    onProductChange={onProductChange}
-                                    onQuantityChange={onQuantityChange}
-                                    onCustomNameChange={onCustomNameChange}
-                                    onCustomPriceChange={onCustomPriceChange}
-                                    onAddRow={onAddRow}
-                                    onRemoveRow={onRemoveRow}
+                                    config={{
+                                        categoryName: cat.name,
+                                        isFirst: index === 0,
+                                        canRemove: isMultiSelect && categoryItems.length > 1,
+                                        isMultiSelect: isMultiSelect,
+                                        disabled: disabled,
+                                        pricing: pricing,
+                                    }}
+                                    priceData={{
+                                        itemPrice: itemPrice,
+                                        getProductPrice: getProductPrice,
+                                    }}
+                                    actions={{
+                                        onUpdate: onRowUpdate,
+                                        onAddRow: onAddRow,
+                                        onRemoveRow: onRemoveRow,
+                                    }}
                                 />
                             );
                         });

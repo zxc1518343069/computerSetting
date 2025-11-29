@@ -8,40 +8,42 @@ import { CATEGORY_CONFIG } from '@/const';
 interface ProductRowProps {
     item: EditablePartRow;
     products: Product[];
-    categoryName: string;
-    isFirst: boolean;
-    canRemove: boolean;
-    isMultiSelect: boolean;
-    disabled: boolean;
-    pricing: boolean;
-    itemPrice: number;
-    getProductPrice: (p: Product) => number;
-    onProductChange: (id: string, val: number) => void;
-    onQuantityChange: (id: string, val: number) => void;
-    onCustomNameChange?: (id: string, val: string) => void;
-    onCustomPriceChange?: (id: string, val: number) => void;
-    onAddRow?: (category: string) => void;
-    onRemoveRow?: (id: string) => void;
+    
+    /** 行状态配置 */
+    config: {
+        categoryName: string;
+        isFirst: boolean;
+        canRemove: boolean;
+        isMultiSelect: boolean;
+        disabled: boolean;
+        pricing: boolean;
+    };
+
+    /** 价格相关数据 */
+    priceData: {
+        itemPrice: number;
+        getProductPrice: (p: Product) => number;
+    };
+
+    /** 操作回调 */
+    actions: {
+        onUpdate: (id: string, changes: Partial<EditablePartRow>) => void;
+        onAddRow?: (category: string) => void;
+        onRemoveRow?: (id: string) => void;
+    };
 }
 
 export const ProductRow: React.FC<ProductRowProps> = ({
     item,
     products,
-    categoryName,
-    isFirst,
-    canRemove,
-    isMultiSelect,
-    disabled,
-    pricing,
-    itemPrice,
-    getProductPrice,
-    onProductChange,
-    onQuantityChange,
-    onCustomNameChange,
-    onCustomPriceChange,
-    onAddRow,
-    onRemoveRow,
+    config,
+    priceData,
+    actions,
 }) => {
+    const { categoryName, isFirst, canRemove, isMultiSelect, disabled, pricing } = config;
+    const { itemPrice, getProductPrice } = priceData;
+    const { onUpdate, onAddRow, onRemoveRow } = actions;
+
     const selectedProduct = products.find((p) => p.id === item.product_id);
 
     const options = products.map((p) => ({
@@ -79,13 +81,13 @@ export const ProductRow: React.FC<ProductRowProps> = ({
                     <div className="flex-1 relative">
                         <ProductSelect
                             value={item.product_id}
-                            onChange={(val) => onProductChange(item.id, val)}
+                            onChange={(val) => onUpdate(item.id, { product_id: val })}
                             options={options}
                             disabled={disabled}
                             placeholder={isFirst ? `请选择${categoryName}...` : '添加更多...'}
                             allowCustomInput
                             customInputValue={item.custom_name}
-                            onCustomInputChange={(val) => onCustomNameChange?.(item.id, val)}
+                            onCustomInputChange={(val) => onUpdate(item.id, { custom_name: val })}
                         />
                     </div>
 
@@ -126,7 +128,7 @@ export const ProductRow: React.FC<ProductRowProps> = ({
                     min={1}
                     max={99}
                     value={item.quantity}
-                    onChange={(val) => onQuantityChange(item.id, val || 1)}
+                    onChange={(val) => onUpdate(item.id, { quantity: val || 1 })}
                     disabled={disabled || (!item.product_id && !item.custom_name)}
                     className={`w-full text-center font-medium rounded-lg transition-all ${
                         item.quantity > 1
@@ -145,7 +147,7 @@ export const ProductRow: React.FC<ProductRowProps> = ({
                             step={0.01}
                             placeholder="0.00"
                             value={item.custom_price}
-                            onChange={(val) => onCustomPriceChange?.(item.id, val || 0)}
+                            onChange={(val) => onUpdate(item.id, { custom_price: val || 0 })}
                             disabled={disabled}
                             className="w-full text-right rounded-lg border-gray-200 hover:border-blue-300 focus:border-blue-500"
                             size="small"

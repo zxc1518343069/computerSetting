@@ -98,18 +98,7 @@ export function Content(props: ContentProps) {
                 */}
                 <EditablePackageTable
                     items={tableData}
-                    onProductChange={(id, quantity) => {
-                        handleTableDataChange(id, 'product_id', quantity);
-                    }}
-                    onQuantityChange={(id, quantity) => {
-                        handleTableDataChange(id, 'quantity', quantity);
-                    }}
-                    onCustomNameChange={(id, name) =>
-                        handleTableDataChange(id, 'custom_name', name)
-                    }
-                    onCustomPriceChange={(id, price) =>
-                        handleTableDataChange(id, 'custom_price', price)
-                    }
+                    onRowUpdate={handleTableDataChange}
                     onAddRow={handleAddRow}
                     onRemoveRow={handleRemoveRow}
                     pricing={true}

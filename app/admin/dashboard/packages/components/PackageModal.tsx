@@ -65,14 +65,10 @@ export const PackageModal = forwardRef<PackageModalRef, PackageModalProps>(({ on
     };
 
     // 处理表格数据变更
-    const handleProductChange = (id: string, productId: number) => {
+    const handleRowUpdate = (id: string, changes: Partial<EditablePartRow>) => {
         setItems((prev) =>
-            prev.map((item) => (item.id === id ? { ...item, product_id: productId } : item))
+            prev.map((item) => (item.id === id ? { ...item, ...changes } : item))
         );
-    };
-
-    const handleQuantityChange = (id: string, quantity: number) => {
-        setItems((prev) => prev.map((item) => (item.id === id ? { ...item, quantity } : item)));
     };
 
     const { runAsync: handleSubmit, loading } = useRequest(
@@ -172,8 +168,7 @@ export const PackageModal = forwardRef<PackageModalRef, PackageModalProps>(({ on
                 <div className="border border-gray-200 rounded-xl overflow-hidden bg-gray-50/30">
                     <EditablePackageTable
                         items={items}
-                        onProductChange={handleProductChange}
-                        onQuantityChange={handleQuantityChange}
+                        onRowUpdate={handleRowUpdate}
                         disabled={isView}
                         pricing // 开启价格显示
                     />

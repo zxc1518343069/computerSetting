@@ -16,11 +16,10 @@ export function useTableControl() {
 
     const handleTableDataChange = (
         id: string,
-        key: 'quantity' | 'custom_name' | 'custom_price' | 'product_id',
-        value: number | string
+        changes: Partial<EditablePartRow>
     ) => {
         setTableData((prev) =>
-            prev.map((item) => (item.id === id ? { ...item, [key]: value } : item))
+            prev.map((item) => (item.id === id ? { ...item, ...changes } : item))
         );
     };
 
