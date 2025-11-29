@@ -1,12 +1,14 @@
 import { useState } from 'react';
+import { useDebounce } from 'ahooks';
 import { Package } from '../types';
 
 export function usePackageSearch(packages: Package[]) {
     const [searchQuery, setSearchQuery] = useState('');
+    const debouncedSearchQuery = useDebounce(searchQuery, { wait: 300 });
 
     const filteredPackages = packages.filter((pkg) => {
-        if (!searchQuery.trim()) return true;
-        const query = searchQuery.toLowerCase();
+        if (!debouncedSearchQuery?.trim()) return true;
+        const query = debouncedSearchQuery.toLowerCase();
 
         // 搜索套餐名称
         if (pkg.name.toLowerCase().includes(query)) return true;

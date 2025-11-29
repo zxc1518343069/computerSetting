@@ -1,24 +1,6 @@
-export interface Product {
-    id: number;
-    name: string;
-    price: number;
-    category: string;
-    created_at?: string;
-}
+import { Product, PricingConfig } from '@/const';
 
-export interface PricingConfig {
-    unifiedPricing: boolean;
-    unifiedRate: number;
-    cpu: number;
-    motherboard: number;
-    ram: number;
-    gpu: number;
-    storage: number;
-    psu: number;
-    case: number;
-    cooling: number;
-    monitor?: number; // monitor might be optional in some configs
-}
+export type { Product, PricingConfig };
 
 export interface PackageItem {
     id?: number;
@@ -33,7 +15,7 @@ export interface PackageItem {
     category?: string; // Used in EditablePartRow, but PackageItem from API might not have it directly on root or it's product_category
 }
 
-export interface EditablePartRow extends PackageItem {
+export interface EditablePartRow extends Omit<PackageItem, 'id'> {
     id: string;
     category: string;
 }

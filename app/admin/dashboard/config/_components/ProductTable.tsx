@@ -3,7 +3,8 @@ import { Table, Tag, Space, Typography, Tooltip, Button, Popconfirm } from 'antd
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { Product } from '../types';
-import { categoryColorMap, categoryDisplayMap, categoryOptions } from '../constants';
+import { categoryColorMap, categoryDisplayMap, categoryOptions } from '@/const';
+import { formatDate, formatPrice } from '@/utils';
 
 const { Text } = Typography;
 
@@ -59,7 +60,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
             key: 'price',
             align: 'right',
             sorter: (a, b) => a.price - b.price,
-            render: (price) => <Text>¥{price.toFixed(2)}</Text>,
+            render: (price) => <Text>{formatPrice(price)}</Text>,
         },
         {
             title: '售价 (含溢价)',
@@ -70,7 +71,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                 return (
                     <Space direction="vertical" size={0} style={{ alignItems: 'flex-end' }}>
                         <Text type="success" strong>
-                            ¥{price.toFixed(2)}
+                            {formatPrice(price)}
                         </Text>
                         {rate > 0 && (
                             <Text type="secondary" style={{ fontSize: 12 }}>
@@ -86,7 +87,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
             dataIndex: 'created_at',
             key: 'created_at',
             width: 180,
-            render: (date) => (date ? new Date(date).toLocaleString('zh-CN') : '-'),
+            render: (date) => formatDate(date),
             responsive: ['lg'],
         },
         {

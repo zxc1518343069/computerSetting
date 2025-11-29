@@ -16,6 +16,7 @@ const { Text } = Typography;
 interface PackageCardProps {
     pkg: Package;
     loading?: boolean;
+    isDeleting?: boolean;
     onView: (pkg: Package) => void;
     onEdit: (pkg: Package) => void;
     onDelete: (id: number) => void;
@@ -24,6 +25,7 @@ interface PackageCardProps {
 export const PackageCard: React.FC<PackageCardProps> = ({
     pkg,
     loading,
+    isDeleting,
     onView,
     onEdit,
     onDelete,
@@ -64,8 +66,8 @@ export const PackageCard: React.FC<PackageCardProps> = ({
         >
             {/* 视觉封面区 */}
             <div
-                onClick={() => onView(pkg)}
-                className={`h-32 bg-gradient-to-r ${gradientClass} p-6 relative cursor-pointer group-hover:brightness-105 transition-all`}
+                onClick={() => !isDeleting && onView(pkg)}
+                className={`h-32 bg-gradient-to-r ${gradientClass} p-6 relative cursor-pointer group-hover:brightness-105 transition-all ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}
             >
                 <div className="absolute top-4 right-4 bg-white/20 backdrop-blur-md p-2 rounded-xl text-white hover:bg-white/30 transition-colors">
                     <EyeOutlined style={{ fontSize: 18 }} />
@@ -152,6 +154,7 @@ export const PackageCard: React.FC<PackageCardProps> = ({
                         <Button
                             icon={<EditOutlined />}
                             onClick={() => onEdit(pkg)}
+                            disabled={isDeleting}
                             className="rounded-xl h-10 hover:border-blue-500 hover:text-blue-500"
                         >
                             编辑
@@ -162,14 +165,16 @@ export const PackageCard: React.FC<PackageCardProps> = ({
                             onConfirm={() => onDelete(pkg.id)}
                             okText="删除"
                             cancelText="取消"
-                            okButtonProps={{ danger: true }}
+                            okButtonProps={{ danger: true, loading: isDeleting }}
+                            disabled={isDeleting}
                         >
                             <Button
                                 danger
                                 icon={<DeleteOutlined />}
+                                loading={isDeleting}
                                 className="rounded-xl h-10 hover:bg-red-50"
                             >
-                                删除
+                                {isDeleting ? '删除中' : '删除'}
                             </Button>
                         </Popconfirm>
                     </div>

@@ -13,7 +13,7 @@ import { usePricing, useProductList } from './hooks';
 import { ProductTable } from './_components/ProductTable';
 import { ProductModal } from './_components/ProductModal';
 import { ProductModalRef } from './types';
-import { categoryOptions } from './constants';
+import { categoryOptions } from '@/const';
 
 const { Title, Text } = Typography;
 const { Option } = Select;

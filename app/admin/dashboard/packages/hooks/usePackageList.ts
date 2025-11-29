@@ -6,6 +6,7 @@ import { PackageQueryParams } from '../types';
 
 export const usePackageList = () => {
     const [queryParams, setQueryParams] = useState<PackageQueryParams>({});
+    const [deletingId, setDeletingId] = useState<number | null>(null);
 
     const {
         data: packages = [],
@@ -21,12 +22,18 @@ export const usePackageList = () => {
 
     const { runAsync: deletePackage } = useRequest(deletePackageService, {
         manual: true,
+        onBefore: ([id]) => {
+            setDeletingId(id);
+        },
         onSuccess: () => {
             message.success('删除成功');
             refresh();
         },
         onError: (error) => {
             message.error(error.message);
+        },
+        onFinally: () => {
+            setDeletingId(null);
         },
     });
 
@@ -42,6 +49,7 @@ export const usePackageList = () => {
         packages,
         loading,
         queryParams,
+        deletingId,
         handleSearch,
         handleReset,
         deletePackage,

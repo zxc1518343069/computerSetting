@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { sleep } from '@/utils';
 
 export default function AdminLoginPage() {
     const router = useRouter();
@@ -23,7 +24,7 @@ export default function AdminLoginPage() {
         setLoading(true);
 
         // 模拟网络延迟，增加交互质感
-        await new Promise((resolve) => setTimeout(resolve, 600));
+        await sleep(600);
 
         if (username === 'yangshuhao' && password === 'wangman') {
             sessionStorage.setItem('adminLoggedIn', 'true');

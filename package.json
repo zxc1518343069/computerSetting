@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "db:init": "ts-node -P tsconfig.node.json database/init.ts",
-    "db:test-package": "ts-node -P tsconfig.node.json scripts/create-test-package.ts"
+    "db:test-package": "ts-node -P tsconfig.node.json scripts/create-test-package.ts",
+    "gen:api": "ts-node -P tsconfig.node.json scripts/generate-api.ts"
   },
   "dependencies": {
     "@ant-design/nextjs-registry": "^1.2.0",

@@ -16,8 +16,16 @@ import { PackageModalRef } from './types';
 const { Title, Text } = Typography;
 
 export default function PackagesPage() {
-    const { packages, loading, queryParams, handleSearch, handleReset, deletePackage, refresh } =
-        usePackageList();
+    const {
+        packages,
+        loading,
+        queryParams,
+        deletingId,
+        handleSearch,
+        handleReset,
+        deletePackage,
+        refresh,
+    } = usePackageList();
 
     const modalRef = useRef<PackageModalRef>(null);
 
@@ -93,6 +101,7 @@ export default function PackagesPage() {
                             <PackageCard
                                 key={pkg.id}
                                 pkg={pkg}
+                                isDeleting={deletingId === pkg.id}
                                 onView={(p) => modalRef.current?.open('view', p)}
                                 onEdit={(p) => modalRef.current?.open('edit', p)}
                                 onDelete={(id) => deletePackage(id)}

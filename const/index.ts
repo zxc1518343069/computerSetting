@@ -1,23 +1,13 @@
-// 定义配件类别枚举
-export enum PartCategory {
-    CPU = 'CPU',
-    Motherboard = 'Motherboard',
-    RAM = 'RAM',
-    GPU = 'GPU',
-    Storage = 'Storage',
-    PSU = 'PSU',
-    Case = 'Case',
-    Cooling = 'Cooling',
-    Monitor = 'Monitor',
-}
-// 定义产品接口
-export interface Product {
-    id: number;
-    name: string;
-    price: number;
-}
+export * from './categories';
+export * from './types';
 
-export type AllProducts = Record<PartCategory, Product[]>;
+import { PartCategory } from './categories';
+import { Product } from './types';
+
+// Legacy Product type for exampleData (without category)
+type SimpleProduct = Omit<Product, 'category'>;
+
+export type AllProducts = Record<PartCategory, SimpleProduct[]>;
 
 export const exampleData: AllProducts = {
     [PartCategory.CPU]: [
@@ -67,46 +57,14 @@ export const exampleData: AllProducts = {
     ],
 };
 
-// 定义类别显示名称映射
-export const categoryDisplayNames: Record<PartCategory, string> = {
-    [PartCategory.CPU]: '处理器',
-    [PartCategory.Motherboard]: '主板',
-    [PartCategory.RAM]: '内存',
-    [PartCategory.GPU]: '显卡',
-    [PartCategory.Storage]: '存储',
-    [PartCategory.PSU]: '电源',
-    [PartCategory.Case]: '机箱',
-    [PartCategory.Cooling]: '散热',
-    [PartCategory.Monitor]: '显示器',
-};
+// Re-export deprecated constants for compatibility if needed, 
+// or relying on category.ts exports which cover them.
+// PACKAGE_CATEGORIES in categories.ts is named PACKAGE_CATEGORIES_LIST to avoid conflict if I kept the old one.
+// But I should probably alias it back to PACKAGE_CATEGORIES to avoid breaking changes, 
+// or just update the code to use PACKAGE_CATEGORIES_LIST (or rename it to PACKAGE_CATEGORIES).
 
-// Packages相关的常量
-export const PACKAGE_CATEGORIES = [
-    { key: 'cpu', name: '处理器' },
-    { key: 'motherboard', name: '主板' },
-    { key: 'ram', name: '内存' },
-    { key: 'gpu', name: '显卡' },
-    { key: 'storage', name: '存储' },
-    { key: 'psu', name: '电源' },
-    { key: 'case', name: '机箱' },
-    { key: 'cooling', name: '散热' },
-    { key: 'monitor', name: '显示器' },
-] as const;
+// The old PACKAGE_CATEGORIES was: { key: string, name: string }[]
+// The new PACKAGE_CATEGORIES_LIST is: CategoryConfigItem[] (which has key, name, etc.)
+// So it is compatible structure-wise (superset).
 
-// 类别显示名称映射 (小写key版本，用于packages)
-export const packageCategoryDisplayNames: Record<string, string> = {
-    cpu: '处理器',
-    motherboard: '主板',
-    ram: '内存',
-    gpu: '显卡',
-    storage: '存储',
-    psu: '电源',
-    case: '机箱',
-    cooling: '散热',
-    monitor: '显示器',
-};
-
-// 带category字段的Product接口
-export interface ProductWithCategory extends Product {
-    category: string;
-}
+export { PACKAGE_CATEGORIES_LIST as PACKAGE_CATEGORIES } from './categories';

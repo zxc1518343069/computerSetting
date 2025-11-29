@@ -2,7 +2,7 @@ import React, { useState, useImperativeHandle, forwardRef } from 'react';
 import { Modal, Form, Select, Space, Badge, Input, message } from 'antd';
 import { EditOutlined, PlusOutlined } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
-import { categoryOptions } from '../constants';
+import { categoryOptions } from '@/const';
 import { Product, ProductModalRef } from '../types';
 import { saveProductService } from '../services';
 

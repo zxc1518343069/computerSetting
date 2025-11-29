@@ -28,6 +28,23 @@ export const fetchPricingConfigService = async (): Promise<PricingConfig> => {
 };
 
 /**
+ * 保存定价配置
+ */
+export const savePricingConfigService = async (config: PricingConfig): Promise<void> => {
+    const response = await fetch('/api/pricing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config),
+    });
+
+    const result = await response.json();
+
+    if (!result.success) {
+        throw new Error(result.error || '保存溢价配置失败');
+    }
+};
+
+/**
  * 保存产品 (新增或更新)
  */
 export const saveProductService = async (

@@ -1,41 +1,9 @@
 'use client';
-import React, { useState, useEffect } from 'react';
-
-interface PricingConfig {
-    unifiedPricing: boolean;
-    unifiedRate: number;
-    cpu: number;
-    motherboard: number;
-    ram: number;
-    gpu: number;
-    storage: number;
-    psu: number;
-    case: number;
-    cooling: number;
-    monitor: number;
-}
-
-const categoryConfig = [
-    { key: 'cpu', name: '处理器 (CPU)', icon: '🔲', color: 'bg-blue-100 text-blue-600' },
-    {
-        key: 'motherboard',
-        name: '主板 (Motherboard)',
-        icon: '🔌',
-        color: 'bg-purple-100 text-purple-600',
-    },
-    { key: 'ram', name: '内存 (RAM)', icon: '💾', color: 'bg-green-100 text-green-600' },
-    { key: 'gpu', name: '显卡 (GPU)', icon: '🎮', color: 'bg-red-100 text-red-600' },
-    { key: 'storage', name: '存储 (Storage)', icon: '💿', color: 'bg-yellow-100 text-yellow-600' },
-    { key: 'psu', name: '电源 (PSU)', icon: '⚡', color: 'bg-orange-100 text-orange-600' },
-    { key: 'case', name: '机箱 (Case)', icon: '📦', color: 'bg-gray-100 text-gray-600' },
-    { key: 'cooling', name: '散热 (Cooling)', icon: '❄️', color: 'bg-cyan-100 text-cyan-600' },
-    {
-        key: 'monitor',
-        name: '显示器 (Monitor)',
-        icon: '🖥️',
-        color: 'bg-indigo-100 text-indigo-600',
-    },
-];
+import React, { useState } from 'react';
+import { useRequest } from 'ahooks';
+import { message } from 'antd';
+import { PACKAGE_CATEGORIES_LIST, PricingConfig } from '@/const';
+import { fetchPricingConfigService, savePricingConfigService } from '../config/services';
 
 export default function PricingPage() {
     const [config, setConfig] = useState<PricingConfig>({
@@ -51,51 +19,32 @@ export default function PricingPage() {
         cooling: 0,
         monitor: 0,
     });
-    const [loading, setLoading] = useState(false);
-    const [saving, setSaving] = useState(false);
 
-    useEffect(() => {
-        loadConfig();
-    }, []);
-
-    const loadConfig = async () => {
-        setLoading(true);
-        try {
-            const response = await fetch('/api/pricing');
-            const data = await response.json();
+    // 加载配置
+    const { loading } = useRequest(fetchPricingConfigService, {
+        onSuccess: (data) => {
             if (data) {
                 setConfig(data);
             }
-        } catch (error) {
-            console.error('加载溢价配置失败:', error);
-            alert('加载溢价配置失败');
-        } finally {
-            setLoading(false);
-        }
-    };
+        },
+        onError: (error) => {
+            message.error('加载溢价配置失败: ' + error.message);
+        },
+    });
+
+    // 保存配置
+    const { runAsync: saveConfig, loading: saving } = useRequest(savePricingConfigService, {
+        manual: true,
+        onSuccess: () => {
+            message.success('✅ 溢价配置保存成功！');
+        },
+        onError: (error) => {
+            message.error('❌ ' + (error.message || '保存失败'));
+        },
+    });
 
     const handleSave = async () => {
-        setSaving(true);
-        try {
-            const response = await fetch('/api/pricing', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(config),
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                alert('✅ 溢价配置保存成功！');
-            } else {
-                alert('❌ ' + (result.error || '保存失败'));
-            }
-        } catch (error) {
-            console.error('保存溢价配置失败:', error);
-            alert('❌ 保存溢价配置失败，请稍后重试');
-        } finally {
-            setSaving(false);
-        }
+        await saveConfig(config);
     };
 
     const handleUnifiedChange = (checked: boolean) => {
@@ -257,7 +206,7 @@ export default function PricingPage() {
                                             </h3>
                                         </div>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            {categoryConfig.map((cat) => (
+                                            {PACKAGE_CATEGORIES_LIST.map((cat) => (
                                                 <div
                                                     key={cat.key}
                                                     className="group bg-white border border-slate-200 rounded-2xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200"
@@ -265,12 +214,12 @@ export default function PricingPage() {
                                                     <div className="flex items-center justify-between mb-3">
                                                         <div className="flex items-center gap-3">
                                                             <div
-                                                                className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${cat.color}`}
+                                                                className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${cat.twColor}`}
                                                             >
                                                                 {cat.icon}
                                                             </div>
                                                             <span className="font-bold text-slate-700 text-sm">
-                                                                {cat.name.split(' ')[0]}
+                                                                {cat.name}
                                                             </span>
                                                         </div>
                                                     </div>

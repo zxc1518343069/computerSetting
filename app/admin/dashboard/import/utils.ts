@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
-import { categoryDisplayNames, exampleData, PartCategory } from '@/const';
+import { categoryDisplayMap, exampleData, PartCategory } from '@/const';
 import { ImportProductData } from './services';
 
 // PartCategory 到数据库 category 的映射
@@ -35,7 +35,8 @@ export const parseExcelFile = (file: File): Promise<ImportProductData[]> => {
 
                 // 遍历所有分类
                 Object.values(PartCategory).forEach((category) => {
-                    const sheetName = categoryDisplayNames[category];
+                    const mappedKey = categoryMapping[category];
+                    const sheetName = categoryDisplayMap[mappedKey];
                     const worksheet = workbook.Sheets[sheetName];
 
                     if (worksheet) {
@@ -46,7 +47,7 @@ export const parseExcelFile = (file: File): Promise<ImportProductData[]> => {
                                 .map((row) => ({
                                     name: String(row['产品名称']),
                                     price: Number(row['产品价格']) || 0,
-                                    category: categoryMapping[category as PartCategory],
+                                    category: category.toLowerCase(),
                                 }));
 
                             productsToImport.push(...parsedProducts);
@@ -77,7 +78,8 @@ export const generateTemplate = () => {
         ];
 
         const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
-        XLSX.utils.book_append_sheet(workbook, worksheet, categoryDisplayNames[category]);
+        const mappedKey = categoryMapping[category];
+        XLSX.utils.book_append_sheet(workbook, worksheet, categoryDisplayMap[mappedKey]);
     });
 
     const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });

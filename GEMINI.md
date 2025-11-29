@@ -67,7 +67,18 @@ app/
     * `EditablePackageTable`: 实现了高性能、可复用的动态表格，支持分类指示器和动态价格计算。
     * `TableFooter`: 实现了总价与最终成交价的横向并排展示，带动态箭头指示。
 
-## 5. 待办事项 (TODO List)
+## 5. AI 助手工作流规范 (AI Agent Workflow)
+
+为确保代码质量和沟通效率，AI 助手必须严格遵守以下工作流：
+
+* **语言规范 (Language Requirement)**:
+    * 所有回答、解释、Git Commit Message 以及 **代码注释** 必须使用 **中文 (Chinese)**。
+* **质量控制 (Quality Control)**:
+    * 在任何代码生成或修改完成后，**必须** 运行 `npm run lint` (或项目配置的相应 lint 命令)。
+    * 同时，**必须** 运行 `tsc --noEmit` 进行 TypeScript 类型检查。
+    * 必须修复所有 Lint 错误和 TypeScript 类型错误后才能视为任务完成。
+
+## 6. 待办事项 (TODO List)
 
 ### 优先级：高 (High Priority)
 

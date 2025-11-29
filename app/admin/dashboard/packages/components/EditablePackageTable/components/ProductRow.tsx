@@ -1,8 +1,9 @@
+import { EditablePartRow, Product } from '@/app/admin/dashboard/packages/types';
 import React from 'react';
 import { Button, InputNumber, Tooltip } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { ProductSelect } from './ProductSelect';
-import { EditablePartRow, Product } from '../../../../types';
+import { CATEGORY_CONFIG } from '@/const';
 
 interface ProductRowProps {
     item: EditablePartRow;
@@ -22,24 +23,6 @@ interface ProductRowProps {
     onAddRow?: (category: string) => void;
     onRemoveRow?: (id: string) => void;
 }
-
-// Category color mapping for visual indicators
-const getCategoryColor = (name: string) => {
-    const colors: Record<string, string> = {
-        CPU: 'bg-blue-500',
-        主板: 'bg-indigo-500',
-        显卡: 'bg-purple-500',
-        内存: 'bg-cyan-500',
-        存储: 'bg-emerald-500',
-        电源: 'bg-orange-500',
-        机箱: 'bg-slate-500',
-        散热: 'bg-sky-500',
-        显示器: 'bg-rose-500',
-    };
-    // Simple matching or default
-    const key = Object.keys(colors).find((k) => name.includes(k));
-    return key ? colors[key] : 'bg-gray-400';
-};
 
 export const ProductRow: React.FC<ProductRowProps> = ({
     item,
@@ -67,7 +50,7 @@ export const ProductRow: React.FC<ProductRowProps> = ({
         price: p.price,
     }));
 
-    const categoryColor = getCategoryColor(categoryName);
+    const categoryColor = CATEGORY_CONFIG[item.category]?.solidColor || 'bg-gray-400';
 
     return (
         <tr className="group hover:bg-blue-50/20 transition-all duration-300 ease-in-out hover:scale-[1.002] hover:shadow-sm relative">
