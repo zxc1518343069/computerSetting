@@ -9,6 +9,7 @@ export default function PricingPage() {
     const [config, setConfig] = useState<PricingConfig>({
         unifiedPricing: true,
         unifiedRate: 0,
+        roundingType: 'none',
         cpu: 0,
         motherboard: 0,
         ram: 0,
@@ -24,7 +25,7 @@ export default function PricingPage() {
     const { loading } = useRequest(fetchPricingConfigService, {
         onSuccess: (data) => {
             if (data) {
-                setConfig(data);
+                setConfig({ ...data, roundingType: data.roundingType || 'none' });
             }
         },
         onError: (error) => {
@@ -51,6 +52,13 @@ export default function PricingPage() {
         setConfig({
             ...config,
             unifiedPricing: checked,
+        });
+    };
+
+    const handleRoundingChange = (type: 'none' | 'integer' | 'ten') => {
+        setConfig({
+            ...config,
+            roundingType: type,
         });
     };
 
@@ -105,6 +113,63 @@ export default function PricingPage() {
                     {/* 左侧配置主区域 */}
                     <div className="lg:col-span-2 space-y-6">
                         <div className="bg-white/80 backdrop-blur-xl rounded-3xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
+                            {/* 取整策略配置 */}
+                            <div className="p-6 sm:p-8 border-b border-slate-100 bg-blue-50/30">
+                                <div>
+                                    <h3 className="text-lg font-bold text-slate-800 mb-1">
+                                        价格取整策略
+                                    </h3>
+                                    <p className="text-slate-500 text-xs mb-4">
+                                        自动处理溢价后的小数，提升报价专业度
+                                    </p>
+                                </div>
+                                <div className="grid grid-cols-3 gap-3">
+                                    {[
+                                        {
+                                            key: 'none',
+                                            label: '精确计算',
+                                            desc: '保留两位小数 (12.01)',
+                                        },
+                                        {
+                                            key: 'integer',
+                                            label: '个位取整',
+                                            desc: '向上取整到元 (13.00)',
+                                        },
+                                        {
+                                            key: 'ten',
+                                            label: '十位取整',
+                                            desc: '向上取整到十 (20.00)',
+                                        },
+                                    ].map((opt) => (
+                                        <div
+                                            key={opt.key}
+                                            onClick={() =>
+                                                handleRoundingChange(
+                                                    opt.key as 'none' | 'integer' | 'ten'
+                                                )
+                                            }
+                                            className={`
+                                                relative p-3 rounded-xl border-2 cursor-pointer transition-all duration-200
+                                                ${
+                                                    config.roundingType === opt.key
+                                                        ? 'border-indigo-500 bg-white shadow-sm'
+                                                        : 'border-transparent bg-white/50 hover:bg-white hover:border-indigo-200'
+                                                }
+                                            `}
+                                        >
+                                            <div
+                                                className={`font-bold text-sm mb-0.5 ${config.roundingType === opt.key ? 'text-indigo-600' : 'text-slate-600'}`}
+                                            >
+                                                {opt.label}
+                                            </div>
+                                            <div className="text-[10px] text-slate-400 scale-90 origin-left">
+                                                {opt.desc}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
                             {/* 模式切换 */}
                             <div className="p-6 sm:p-8 border-b border-slate-100">
                                 <div className="flex items-center justify-between">

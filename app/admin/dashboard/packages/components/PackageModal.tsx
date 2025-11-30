@@ -169,6 +169,7 @@ export const PackageModal = forwardRef<PackageModalRef, PackageModalProps>(({ on
                         onRowUpdate={handleRowUpdate}
                         disabled={isView}
                         pricing // 开启价格显示
+                        showProfit // 开启利润显示 (仅后台可见)
                     />
                 </div>
             </div>

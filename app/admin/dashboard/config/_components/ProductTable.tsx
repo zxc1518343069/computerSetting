@@ -1,6 +1,6 @@
 import React from 'react';
 import { Table, Tag, Space, Typography, Tooltip, Button, Popconfirm } from 'antd';
-import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { EditOutlined, DeleteOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { Product } from '../types';
 import { categoryColorMap, categoryDisplayMap, categoryOptions } from '@/const';
@@ -63,7 +63,14 @@ export const ProductTable: React.FC<ProductTableProps> = ({
             render: (price) => <Text>{formatPrice(price)}</Text>,
         },
         {
-            title: '售价 (含溢价)',
+            title: (
+                <div className="flex items-center justify-end gap-1 cursor-help">
+                    <span>售价 (含溢价)</span>
+                    <Tooltip title="包含配置的溢价比例及取整策略">
+                        <InfoCircleOutlined className="text-xs text-gray-400" />
+                    </Tooltip>
+                </div>
+            ),
             key: 'sellingPrice',
             align: 'right',
             render: (_, record) => {

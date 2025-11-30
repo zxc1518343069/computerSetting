@@ -17,6 +17,7 @@ interface ProductRowProps {
         isMultiSelect: boolean;
         disabled: boolean;
         pricing: boolean;
+        showProfit?: boolean;
     };
 
     /** 价格相关数据 */
@@ -47,8 +48,9 @@ export const ProductRow: React.FC<ProductRowProps> = ({
     priceData,
     actions,
 }) => {
-    const { categoryName, isFirst, canRemove, isMultiSelect, disabled, pricing } = config;
-    const { getItemMetrics, getProductPrice } = priceData;
+    const { categoryName, isFirst, canRemove, isMultiSelect, disabled, pricing, showProfit } =
+        config;
+    const { getItemMetrics } = priceData;
     const { onUpdate, onAddRow, onRemoveRow } = actions;
 
     const metrics = getItemMetrics(item);
@@ -164,11 +166,13 @@ export const ProductRow: React.FC<ProductRowProps> = ({
                     ) : selectedProduct ? (
                         <div className="flex flex-col items-end">
                             <span className="text-gray-700 text-sm font-medium">
-                                ¥{getProductPrice(selectedProduct).toFixed(0)}
+                                ¥{metrics.unitSellPrice.toFixed(2)}
                             </span>
-                            <span className="text-[10px] text-gray-400 scale-90 origin-right">
-                                进: ¥{metrics.unitCost.toFixed(0)}
-                            </span>
+                            {showProfit && (
+                                <span className="text-[10px] text-gray-400 scale-90 origin-right">
+                                    进: ¥{metrics.unitCost.toFixed(2)}
+                                </span>
+                            )}
                         </div>
                     ) : (
                         <span className="text-gray-200">-</span>
@@ -184,12 +188,18 @@ export const ProductRow: React.FC<ProductRowProps> = ({
                             ¥{metrics.totalSellPrice.toFixed(2)}
                         </div>
                         {/* Profit Indicator */}
-                        <div className={`text-[10px] font-medium flex items-center gap-1 ${metrics.totalProfit >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                            <span>利: ¥{metrics.totalProfit.toFixed(0)}</span>
-                            <span className={`px-1 rounded-sm ${metrics.profitRate > 0.15 ? 'bg-emerald-100 text-emerald-700' : metrics.profitRate > 0.05 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
-                                {(metrics.profitRate * 100).toFixed(0)}%
-                            </span>
-                        </div>
+                        {showProfit && (
+                            <div
+                                className={`text-[10px] font-medium flex items-center gap-1 ${metrics.totalProfit >= 0 ? 'text-emerald-600' : 'text-red-500'}`}
+                            >
+                                <span>利: ¥{metrics.totalProfit.toFixed(0)}</span>
+                                <span
+                                    className={`px-1 rounded-sm ${metrics.profitRate > 0.15 ? 'bg-emerald-100 text-emerald-700' : metrics.profitRate > 0.05 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}
+                                >
+                                    {(metrics.profitRate * 100).toFixed(0)}%
+                                </span>
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <span className="text-gray-200">-</span>

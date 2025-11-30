@@ -46,6 +46,7 @@ export async function GET() {
             case: parseFloat(data.case_rate),
             cooling: parseFloat(data.cooling_rate),
             monitor: parseFloat(data.monitor_rate),
+            roundingType: data.rounding_type,
         });
     } catch (error) {
         console.error('Get pricing config error:', error);
@@ -69,6 +70,7 @@ export async function POST(request: NextRequest) {
             psu,
             case: caseRate,
             cooling,
+            roundingType,
         } = config;
 
         // 检查是否已存在配置
@@ -95,6 +97,7 @@ export async function POST(request: NextRequest) {
                     psu_rate: psu,
                     case_rate: caseRate,
                     cooling_rate: cooling,
+                    rounding_type: roundingType,
                     updated_at: new Date().toISOString(),
                 })
                 .eq('id', existingConfig.id)
@@ -119,6 +122,7 @@ export async function POST(request: NextRequest) {
                         psu_rate: psu,
                         case_rate: caseRate,
                         cooling_rate: cooling,
+                        rounding_type: roundingType,
                     },
                 ])
                 .select()

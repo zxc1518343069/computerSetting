@@ -9,6 +9,7 @@ export interface Product {
 export interface PricingConfig {
     unifiedPricing: boolean;
     unifiedRate: number;
+    roundingType?: 'none' | 'integer' | 'ten';
     cpu: number;
     motherboard: number;
     ram: number;

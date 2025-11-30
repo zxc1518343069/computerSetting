@@ -42,7 +42,21 @@ export class PricingCalculator {
      */
     getProductPrice(product: Product | undefined): number {
         if (!product) return 0;
-        return product.price * this.getPricingRate(product.category);
+        const rawPrice = product.price * this.getPricingRate(product.category);
+
+        if (!this.config?.roundingType || this.config.roundingType === 'none') {
+            return rawPrice;
+        }
+
+        if (this.config.roundingType === 'integer') {
+            return Math.ceil(rawPrice);
+        }
+
+        if (this.config.roundingType === 'ten') {
+            return Math.ceil(rawPrice / 10) * 10;
+        }
+
+        return rawPrice;
     }
 
     /**

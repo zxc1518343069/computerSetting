@@ -19,6 +19,7 @@ interface EditablePackageTableProps {
     onRemoveRow?: (id: string) => void;
     disabled?: boolean;
     pricing?: boolean;
+    showProfit?: boolean;
     showDiscountedPrice?: boolean;
     discountedPrice?: number;
     onDiscountedPriceChange?: (price: number) => void;
@@ -31,19 +32,14 @@ const EditablePackageTable: React.FC<EditablePackageTableProps> = ({
     onRemoveRow,
     disabled = false,
     pricing = false,
+    showProfit = false,
     showDiscountedPrice,
     discountedPrice,
     onDiscountedPriceChange,
 }) => {
     const { products, pricingConfig, loading } = usePackageTableData();
-    const {
-        getProductPrice,
-        getItemMetrics,
-        totalPrice,
-        totalCost,
-        totalProfit,
-        profitRate,
-    } = usePackageCalculator(products, pricingConfig, items);
+    const { getProductPrice, getItemMetrics, totalPrice, totalCost, totalProfit, profitRate } =
+        usePackageCalculator(products, pricingConfig, items);
 
     if (loading) {
         return (
@@ -57,10 +53,13 @@ const EditablePackageTable: React.FC<EditablePackageTableProps> = ({
         return <Empty description="暂无产品数据" />;
     }
 
+    // Only pass metrics if showProfit is explicitly enabled
+    const metrics = showProfit ? { totalCost, totalProfit, profitRate } : undefined;
+
     return (
         <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-100">
             <table className="w-full border-collapse">
-                <TableHeader pricing={pricing} />
+                <TableHeader pricing={pricing} showTips={showProfit} />
                 <tbody className="divide-y divide-gray-50">
                     {PACKAGE_CATEGORIES.map((cat) => {
                         const categoryItems = items.filter((item) => item.category === cat.key);
@@ -82,6 +81,7 @@ const EditablePackageTable: React.FC<EditablePackageTableProps> = ({
                                         isMultiSelect: isMultiSelect,
                                         disabled: disabled,
                                         pricing: pricing,
+                                        showProfit: showProfit,
                                     }}
                                     priceData={{
                                         getItemMetrics: getItemMetrics,
@@ -100,7 +100,7 @@ const EditablePackageTable: React.FC<EditablePackageTableProps> = ({
                 </tbody>
                 <TableFooter
                     totalPrice={totalPrice}
-                    metrics={{ totalCost, totalProfit, profitRate }}
+                    metrics={metrics}
                     pricing={pricing}
                     discount={{
                         show: !!showDiscountedPrice,

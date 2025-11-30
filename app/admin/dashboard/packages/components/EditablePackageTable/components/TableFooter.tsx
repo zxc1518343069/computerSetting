@@ -59,24 +59,55 @@ export const TableFooter: React.FC<TableFooterProps> = ({
                                         {totalCost.toFixed(2)}
                                     </div>
                                 </div>
-                                
+
                                 <div className="w-px bg-gray-200 h-8 self-center mx-2"></div>
 
                                 <div className="flex flex-col">
                                     <div className="flex items-center gap-1 mb-0.5">
-                                        <Text className={`text-[10px] font-bold uppercase tracking-wider ${isProfitable ? 'text-emerald-600' : 'text-rose-500'}`}>
+                                        <Text
+                                            className={`text-[10px] font-bold uppercase tracking-wider ${isProfitable ? 'text-emerald-600' : 'text-rose-500'}`}
+                                        >
                                             预计利润
                                         </Text>
-                                        <Tooltip title={`利润率: ${(profitRate * 100).toFixed(1)}% (利润 / 售价)`}>
-                                            <InfoCircleOutlined className="text-[10px] text-gray-400" />
+                                        <Tooltip
+                                            title={
+                                                <div className="text-xs space-y-2">
+                                                    <p className="font-bold mb-1">
+                                                        📈 利润率 (Margin) 计算说明
+                                                    </p>
+                                                    <p>
+                                                        系统展示的是<b>毛利率</b>，计算公式：
+                                                        <br />
+                                                        <code>(售价 - 进价) / 售价</code>
+                                                    </p>
+                                                    <div className="bg-white/10 p-2 rounded border border-white/20">
+                                                        <p className="mb-1">💡 示例：</p>
+                                                        <p>进价 ¥100，设置溢价 20% (Markup)</p>
+                                                        <p>售价 = ¥120，利润 = ¥20</p>
+                                                        <p>
+                                                            利润率 = 20 / 120 ≈ <b>16.7%</b>
+                                                        </p>
+                                                    </div>
+                                                    <p className="opacity-80">
+                                                        区别于加价率 (20/100 = 20%)
+                                                    </p>
+                                                </div>
+                                            }
+                                            overlayInnerStyle={{ width: 260, padding: 12 }}
+                                        >
+                                            <InfoCircleOutlined className="text-[10px] text-gray-400 cursor-help hover:text-blue-500 transition-colors" />
                                         </Tooltip>
                                     </div>
-                                    <div className={`text-lg font-black ${profitColor} flex items-baseline gap-2`}>
+                                    <div
+                                        className={`text-lg font-black ${profitColor} flex items-baseline gap-2`}
+                                    >
                                         <span>
                                             <span className="text-xs mr-0.5">¥</span>
                                             {totalProfit.toFixed(2)}
                                         </span>
-                                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${profitBg}`}>
+                                        <span
+                                            className={`text-[10px] px-1.5 py-0.5 rounded-full ${profitBg}`}
+                                        >
                                             {(profitRate * 100).toFixed(0)}%
                                         </span>
                                     </div>

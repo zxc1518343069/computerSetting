@@ -23,6 +23,10 @@ CREATE TABLE IF NOT EXISTS pricing_config
     5,
     2
 ) NOT NULL DEFAULT 0, -- 统一加价比例 (%)
+    rounding_type VARCHAR
+(
+    20
+) NOT NULL DEFAULT 'none', -- 取整类型: none, integer, ten
     cpu_rate DECIMAL
 (
     5,
@@ -63,6 +67,11 @@ CREATE TABLE IF NOT EXISTS pricing_config
     5,
     2
 ) NOT NULL DEFAULT 0, -- 散热加价比例 (%)
+    monitor_rate DECIMAL
+(
+    5,
+    2
+) NOT NULL DEFAULT 0, -- 显示器加价比例 (%)
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
                              );
@@ -155,9 +164,10 @@ CREATE INDEX IF NOT EXISTS idx_package_items_product_id ON package_items(product
 -- ====================================
 
 -- 插入默认溢价配置（零加价）
-INSERT INTO pricing_config (unified_pricing, unified_rate, cpu_rate, motherboard_rate, ram_rate, gpu_rate, storage_rate,
-                            psu_rate, case_rate, cooling_rate)
-VALUES (true, 0, 0, 0, 0, 0, 0, 0, 0, 0) ON CONFLICT DO NOTHING;
+INSERT INTO pricing_config (unified_pricing, unified_rate, rounding_type, cpu_rate, motherboard_rate, ram_rate,
+                            gpu_rate, storage_rate,
+                            psu_rate, case_rate, cooling_rate, monitor_rate)
+VALUES (true, 0, 'none', 0, 0, 0, 0, 0, 0, 0, 0, 0) ON CONFLICT DO NOTHING;
 
 -- 插入默认产品数据
 INSERT INTO products (category, name, price)

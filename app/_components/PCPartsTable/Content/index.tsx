@@ -102,6 +102,7 @@ export function Content(props: ContentProps) {
                     onAddRow={handleAddRow}
                     onRemoveRow={handleRemoveRow}
                     pricing={true}
+                    showProfit={false}
                     showDiscountedPrice={true}
                     discountedPrice={discountedPrice}
                     onDiscountedPriceChange={setDiscountedPrice}

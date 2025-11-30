@@ -83,6 +83,8 @@ app/
     * 在任何代码生成或修改完成后，**必须** 运行 `npm run lint` (或项目配置的相应 lint 命令)。
     * 同时，**必须** 运行 `tsc --noEmit` 进行 TypeScript 类型检查。
     * 必须修复所有 Lint 错误和 TypeScript 类型错误后才能视为任务完成。
+* **Git 操作规范 (Git Operations)**:
+    * AI 助手 **严禁** 执行 `git commit` 或 `git push` 操作。所有版本控制提交必须由用户手动确认并执行。
 
 ## 6. 待办事项 (TODO List)
 
