@@ -12,7 +12,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         // 检查登录状态 (同时检查 localStorage 和 sessionStorage)
         const isLocalLoggedIn = localStorage.getItem('adminLoggedIn');
         const isSessionLoggedIn = sessionStorage.getItem('adminLoggedIn');
-        
         if (isLocalLoggedIn !== 'true' && isSessionLoggedIn !== 'true') {
             router.push('/admin');
         }

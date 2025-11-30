@@ -15,7 +15,6 @@ export default function AdminLoginPage() {
         // 检查是否已登录 (优先检查 localStorage，实现 7 天免登录)
         const isLocalLoggedIn = localStorage.getItem('adminLoggedIn');
         const isSessionLoggedIn = sessionStorage.getItem('adminLoggedIn');
-        
         if (isLocalLoggedIn === 'true' || isSessionLoggedIn === 'true') {
             router.push('/admin/dashboard');
         }
