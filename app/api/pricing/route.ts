@@ -1,24 +1,25 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { success, error } from '@/lib/request/apiResponse';
 
 // GET - 获取溢价配置
 export async function GET() {
     try {
-        const { data, error } = await supabase
+        const { data, error: fetchError } = await supabase
             .from('pricing_config')
             .select('*')
             .order('id', { ascending: false })
             .limit(1)
             .single();
 
-        if (error && error.code !== 'PGRST116') {
+        if (fetchError && fetchError.code !== 'PGRST116') {
             // PGRST116 是 "no rows returned" 错误
-            throw error;
+            throw fetchError;
         }
 
         if (!data) {
             // 如果没有配置,返回默认值
-            return NextResponse.json({
+            return success({
                 unifiedPricing: true,
                 unifiedRate: 0,
                 cpu: 0,
@@ -30,11 +31,10 @@ export async function GET() {
                 case: 0,
                 cooling: 0,
                 monitor: 0,
-            });
+            }, '获取默认溢价配置成功');
         }
 
-        console.log('data', data);
-        return NextResponse.json({
+        return success({
             unifiedPricing: data.unified_pricing,
             unifiedRate: parseFloat(data.unified_rate),
             cpu: parseFloat(data.cpu_rate),
@@ -47,10 +47,10 @@ export async function GET() {
             cooling: parseFloat(data.cooling_rate),
             monitor: parseFloat(data.monitor_rate),
             roundingType: data.rounding_type,
-        });
-    } catch (error) {
-        console.error('Get pricing config error:', error);
-        return NextResponse.json({ error: '获取溢价配置失败' }, { status: 500 });
+        }, '获取溢价配置成功');
+    } catch (e) {
+        console.error('Get pricing config error:', e);
+        return error(500, '获取溢价配置失败');
     }
 }
 
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
         let result;
         if (existingConfig) {
             // 更新现有配置
-            const { data, error } = await supabase
+            const { data, error: updateError } = await supabase
                 .from('pricing_config')
                 .update({
                     unified_pricing: unifiedPricing,
@@ -104,11 +104,11 @@ export async function POST(request: NextRequest) {
                 .select()
                 .single();
 
-            if (error) throw error;
+            if (updateError) throw updateError;
             result = data;
         } else {
             // 创建新配置
-            const { data, error } = await supabase
+            const { data, error: insertError } = await supabase
                 .from('pricing_config')
                 .insert([
                     {
@@ -128,17 +128,13 @@ export async function POST(request: NextRequest) {
                 .select()
                 .single();
 
-            if (error) throw error;
+            if (insertError) throw insertError;
             result = data;
         }
 
-        return NextResponse.json({
-            success: true,
-            message: '溢价配置已保存',
-            data: result,
-        });
-    } catch (error) {
-        console.error('Update pricing config error:', error);
-        return NextResponse.json({ error: '保存溢价配置失败' }, { status: 500 });
+        return success(result, '溢价配置已保存');
+    } catch (e) {
+        console.error('Update pricing config error:', e);
+        return error(500, '保存溢价配置失败');
     }
 }

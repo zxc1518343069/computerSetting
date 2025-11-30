@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { success, error } from '@/lib/request/apiResponse';
 
 interface ImportProduct {
     name: string;
@@ -13,7 +14,7 @@ export async function POST(request: NextRequest) {
         const { products } = await request.json();
 
         if (!products || !Array.isArray(products) || products.length === 0) {
-            return NextResponse.json({ error: '产品数据不能为空' }, { status: 400 });
+            return error(400, '产品数据不能为空');
         }
 
         // 验证产品数据格式
@@ -33,9 +34,10 @@ export async function POST(request: NextRequest) {
         });
 
         if (errors.length > 0) {
-            return NextResponse.json(
+            return Response.json(
                 {
-                    error: '部分数据格式不正确',
+                    code: 400,
+                    message: '部分数据格式不正确',
                     details: errors,
                 },
                 { status: 400 }
@@ -43,20 +45,15 @@ export async function POST(request: NextRequest) {
         }
         await supabase.from('products').delete().neq('id', 0); // 清空表数据
         // 批量插入产品
-        const { data, error } = await supabase.from('products').insert(validProducts).select();
+        const { data, error: insertError } = await supabase.from('products').insert(validProducts).select();
 
-        if (error) {
-            throw error;
+        if (insertError) {
+            throw insertError;
         }
 
-        return NextResponse.json({
-            success: true,
-            message: `成功导入 ${data?.length || 0} 条产品数据`,
-            data: data,
-            count: data?.length || 0,
-        });
-    } catch (error) {
-        console.error('Import products error:', error);
-        return NextResponse.json({ error: '批量导入失败' }, { status: 500 });
+        return success(data, `成功导入 ${data?.length || 0} 条产品数据`);
+    } catch (e) {
+        console.error('Import products error:', e);
+        return error(500, '批量导入失败');
     }
 }

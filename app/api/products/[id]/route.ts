@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { success, error } from '@/lib/request/apiResponse';
 
 // GET - 获取单个产品详情
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -7,22 +8,19 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         const { id: idParam } = await params;
         const id = parseInt(idParam);
 
-        const { data, error } = await supabase.from('products').select('*').eq('id', id).single();
+        const { data, error: fetchError } = await supabase.from('products').select('*').eq('id', id).single();
 
-        if (error) {
-            if (error.code === 'PGRST116') {
-                return NextResponse.json({ error: '产品不存在' }, { status: 404 });
+        if (fetchError) {
+            if (fetchError.code === 'PGRST116') {
+                return error(404, '产品不存在');
             }
-            throw error;
+            throw fetchError;
         }
 
-        return NextResponse.json({
-            success: true,
-            data: data,
-        });
-    } catch (error) {
-        console.error('Get product error:', error);
-        return NextResponse.json({ error: '获取产品详情失败' }, { status: 500 });
+        return success(data, '获取产品详情成功');
+    } catch (e) {
+        console.error('Get product error:', e);
+        return error(500, '获取产品详情失败');
     }
 }
 
@@ -34,10 +32,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         const { category, name, price } = await request.json();
 
         if (!category || !name || price === undefined) {
-            return NextResponse.json({ error: '产品类别、名称和价格不能为空' }, { status: 400 });
+            return error(400, '产品类别、名称和价格不能为空');
         }
 
-        const { data, error } = await supabase
+        const { data, error: updateError } = await supabase
             .from('products')
             .update({
                 category,
@@ -49,21 +47,17 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             .select()
             .single();
 
-        if (error) {
-            if (error.code === 'PGRST116') {
-                return NextResponse.json({ error: '产品不存在' }, { status: 404 });
+        if (updateError) {
+            if (updateError.code === 'PGRST116') {
+                return error(404, '产品不存在');
             }
-            throw error;
+            throw updateError;
         }
 
-        return NextResponse.json({
-            success: true,
-            message: '产品更新成功',
-            data: data,
-        });
-    } catch (error) {
-        console.error('Update product error:', error);
-        return NextResponse.json({ error: '更新产品失败' }, { status: 500 });
+        return success(data, '产品更新成功');
+    } catch (e) {
+        console.error('Update product error:', e);
+        return error(500, '更新产品失败');
     }
 }
 
@@ -85,7 +79,7 @@ export async function DELETE(
 
         if (productError) {
             if (productError.code === 'PGRST116') {
-                return NextResponse.json({ error: '产品不存在' }, { status: 404 });
+                return error(404, '产品不存在');
             }
             throw productError;
         }
@@ -128,9 +122,11 @@ export async function DELETE(
                     ? `无法删除产品"${product.name}"，该产品正在被 ${packageItems.length} 个套餐使用（${packageNames} 等${moreCount}个）。请先删除或修改相关套餐后再试。`
                     : `无法删除产品"${product.name}"，该产品正在被以下套餐使用：${packageNames}。请先删除或修改相关套餐后再试。`;
 
-            return NextResponse.json(
+            // Special error response for in-use constraint
+            return Response.json(
                 {
-                    error: message,
+                    code: 400,
+                    message: message,
                     inUse: true,
                     usedByPackages: packageItems.length,
                 },
@@ -145,12 +141,9 @@ export async function DELETE(
             throw deleteError;
         }
 
-        return NextResponse.json({
-            success: true,
-            message: '产品删除成功',
-        });
-    } catch (error) {
-        console.error('Delete product error:', error);
-        return NextResponse.json({ error: '删除产品失败' }, { status: 500 });
+        return success(null, '产品删除成功');
+    } catch (e) {
+        console.error('Delete product error:', e);
+        return error(500, '删除产品失败');
     }
 }

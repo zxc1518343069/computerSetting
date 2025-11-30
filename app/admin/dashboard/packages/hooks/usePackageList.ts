@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useRequest } from 'ahooks';
-import { message } from 'antd';
+import { App } from 'antd'; // Import App to use its context hook
 import { deletePackageService, fetchPackagesService } from '../services';
 import { PackageQueryParams } from '../types';
 
 export const usePackageList = () => {
     const [queryParams, setQueryParams] = useState<PackageQueryParams>({});
     const [deletingId, setDeletingId] = useState<number | null>(null);
+    const { message } = App.useApp(); // Get message instance from App context
 
     const {
         data: packages = [],

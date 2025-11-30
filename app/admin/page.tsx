@@ -1,10 +1,12 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { App } from 'antd'; // Import App to use the hook
 import { sleep } from '@/utils';
 
 export default function AdminLoginPage() {
     const router = useRouter();
+    const { message } = App.useApp(); // Use the Context-aware message hook
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [remember, setRemember] = useState(false);
@@ -15,6 +17,7 @@ export default function AdminLoginPage() {
         // 检查是否已登录 (优先检查 localStorage，实现 7 天免登录)
         const isLocalLoggedIn = localStorage.getItem('adminLoggedIn');
         const isSessionLoggedIn = sessionStorage.getItem('adminLoggedIn');
+
         if (isLocalLoggedIn === 'true' || isSessionLoggedIn === 'true') {
             router.push('/admin/dashboard');
         }
@@ -36,6 +39,7 @@ export default function AdminLoginPage() {
                 sessionStorage.setItem('adminLoggedIn', 'true');
                 localStorage.removeItem('adminLoggedIn'); // 清除持久化标记
             }
+            message.success('登录成功，欢迎回来！'); // Use message.success
             router.push('/admin/dashboard');
         } else {
             setError('账号或密码错误');

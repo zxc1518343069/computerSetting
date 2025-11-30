@@ -1,28 +1,19 @@
 import axios from '@/lib/request/axios';
 import { useRequest } from 'ahooks';
-import { useState } from 'react';
+// import { useState } from 'react'; // Remove useState import
 import { Package } from '../types';
 
 export function usePackages() {
-    const [packages, setPackages] = useState<Package[]>([]);
-    const { data, loading } = useRequest(getPackages, {
-        onSuccess: (result) => {
-            console.log('Fetched Packages:', result.data);
-            if (result.data) {
-                setPackages(result.data);
-            }
-        },
-        onFinally: (props) => {
-            console.log('Fetched fetching packages', props);
-        },
+    // const [packages, setPackages] = useState<Package[]>([]); // Remove this line
+    const { data: packages = [], loading } = useRequest<Package[], []>(getPackages, {
+        // Corrected generics for Result and Params
     });
-    console.log('data', data);
     return {
         packages,
         loading,
     };
 }
 
-function getPackages() {
-    return axios.get<Package[]>('/packages');
+function getPackages(): Promise<Package[]> {
+    return axios.get<Package[], Package[]>('/packages');
 }

@@ -2,7 +2,7 @@
 
 import { ApiResponse, requestSuccess } from './apiResponse';
 import axios, { AxiosResponse } from 'axios';
-import { message } from 'antd';
+import { message } from '@/lib/AntdGlobal';
 
 // 创建 Axios 实例
 const api = axios.create({
@@ -33,9 +33,11 @@ api.interceptors.response.use(
     (response: AxiosResponse) => {
         const res = response.data as ApiResponse;
         if (res.code === requestSuccess) {
-            // 成功
+            // 成功，直接返回 data 载荷
             console.log('API Response:', res);
-            return res as never;
+            // 如果 data 为空（例如 void 响应），返回 null 或 undefined，避免调用端出错
+            // message.success(res.message || '请求失败');
+            return res.data as any; // suppress any for axios interceptor unwrapping
         } else {
             // 业务错误
             message.error(res.message || '请求失败');

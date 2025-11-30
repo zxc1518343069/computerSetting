@@ -393,9 +393,27 @@ export default function PricingPage() {
                                 <div className="space-y-6">
                                     <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
                                         <h4 className="font-bold mb-2 text-blue-100">计算公式</h4>
-                                        <p className="text-2xl font-bold tracking-wider">
-                                            售价 = 原价 × (1 + 溢价%)
-                                        </p>
+                                        <div className="flex flex-col gap-1">
+                                            <p className="text-xl font-bold tracking-wider">
+                                                售价 = 原价 × (1 + 溢价%)
+                                            </p>
+                                            <div className="flex items-center gap-2 text-blue-200/80 text-sm font-medium">
+                                                <svg
+                                                    className="w-4 h-4 rotate-90"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        strokeWidth={2}
+                                                        d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                                                    />
+                                                </svg>
+                                                <span>根据策略向上取整</span>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <div className="space-y-4 text-blue-50">
@@ -415,6 +433,16 @@ export default function PricingPage() {
                                             <p className="text-sm opacity-80 leading-relaxed">
                                                 适用于精细化运营。您可以为显卡、CPU
                                                 等高价值配件设置较低溢价，而为机箱、散热等配件设置较高溢价，以平衡市场竞争力和利润。
+                                            </p>
+                                        </div>
+                                        <div className="w-full h-px bg-white/20"></div>
+                                        <div>
+                                            <h4 className="font-bold text-white mb-1">
+                                                价格取整策略
+                                            </h4>
+                                            <p className="text-sm opacity-80 leading-relaxed">
+                                                开启后系统将自动向上取整最终售价（如个位取整：12.01
+                                                → 13.00），让报价单更加整洁专业，同时增加微薄利润。
                                             </p>
                                         </div>
                                     </div>

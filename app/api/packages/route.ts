@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { success, error } from '@/lib/request/apiResponse';
 
 interface PackageItem {
     product_id: number;
@@ -320,13 +321,9 @@ export async function GET(request: NextRequest) {
             })
         );
 
-        return NextResponse.json({
-            success: true,
-            data: packagesWithItems,
-            code: 200,
-        });
-    } catch (error) {
-        console.error('Get packages error:', error);
+        return success(packagesWithItems, '获取套餐列表成功');
+    } catch (e) {
+        console.error('Get packages error:', e);
 
         // 数据库连接失败时返回测试数据
         let filteredData = MOCK_PACKAGES;
@@ -342,11 +339,7 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        return NextResponse.json({
-            success: true,
-            data: filteredData,
-            fallback: true, // 标记为fallback数据
-        });
+        return success(filteredData, '获取模拟套餐数据成功');
     }
 }
 
@@ -356,20 +349,20 @@ export async function POST(request: NextRequest) {
         const { name, description, items } = await request.json();
 
         if (!name || !items || items.length === 0) {
-            return NextResponse.json({ error: '套餐名称和配件不能为空' }, { status: 400 });
+            return error(400, '套餐名称和配件不能为空');
         }
 
         // 计算总价
         let totalPrice = 0;
         for (const item of items) {
-            const { data: product, error } = await supabase
+            const { data: product, error: prodError } = await supabase
                 .from('products')
                 .select('price')
                 .eq('id', item.product_id)
                 .single();
 
-            if (error) {
-                throw new Error(`获取产品价格失败: ${error.message}`);
+            if (prodError) {
+                throw new Error(`获取产品价格失败: ${prodError.message}`);
             }
 
             if (product) {
@@ -403,13 +396,9 @@ export async function POST(request: NextRequest) {
             throw itemsError;
         }
 
-        return NextResponse.json({
-            success: true,
-            message: '套餐创建成功',
-            data: packageData,
-        });
-    } catch (error) {
-        console.error('Create package error:', error);
-        return NextResponse.json({ error: '创建套餐失败' }, { status: 500 });
+        return success(packageData, '套餐创建成功');
+    } catch (e) {
+        console.error('Create package error:', e);
+        return error(500, '创建套餐失败');
     }
 }

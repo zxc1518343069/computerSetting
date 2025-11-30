@@ -1,71 +1,50 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import api from '@/lib/request/axios';
 import { Package, PackageFormValues, PackageQueryParams, Product, PricingConfig } from './types';
 
 // ... existing package services ...
 
 export const fetchPackagesService = async (params?: PackageQueryParams): Promise<Package[]> => {
-    const response = await fetch('/api/packages');
-    const result = await response.json();
+    const data = await api.get<any, Package[]>('/packages');
 
-    if (!result.success) {
-        throw new Error(result.error || '获取套餐列表失败');
-    }
+    let filteredData = data;
 
-    let data = result.data as Package[];
-
+    // Client-side filtering as before, since the API might not support all filters yet or for simplicity
     if (params) {
         if (params.search) {
-            data = data.filter((p) => p.name.toLowerCase().includes(params.search!.toLowerCase()));
+            filteredData = filteredData.filter((p) =>
+                p.name.toLowerCase().includes(params.search!.toLowerCase())
+            );
         }
         if (params.id) {
-            data = data.filter((p) => p.id.toString() === params.id);
+            filteredData = filteredData.filter((p) => p.id.toString() === params.id);
         }
     }
 
-    return data;
+    return filteredData;
 };
 
-export const deletePackageService = async (id: number): Promise<void> => {
-    const response = await fetch(`/api/packages/${id}`, {
-        method: 'DELETE',
-    });
-    const result = await response.json();
-
-    if (!result.success) {
-        throw new Error(result.error || '删除失败');
-    }
+export const deletePackageService = (id: number) => {
+    return api.delete<any, void>(`/packages/${id}`);
 };
 
-export const savePackageService = async (values: PackageFormValues, id?: number): Promise<void> => {
-    const url = id ? `/api/packages/${id}` : '/api/packages';
-    const method = id ? 'PUT' : 'POST';
+export const savePackageService = (values: PackageFormValues, id?: number) => {
+    const url = id ? `/packages/${id}` : '/packages';
+    const method = id ? 'put' : 'post';
 
-    const response = await fetch(url, {
+    return api.request<any, void>({
+        url,
         method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
+        data: values,
     });
-
-    const result = await response.json();
-
-    if (!result.success) {
-        throw new Error(result.error || '保存失败');
-    }
 };
 
 // --- New Services for EditablePackageTable ---
 
-export const fetchProductsService = async (): Promise<Product[]> => {
-    const response = await fetch('/api/products');
-    const result = await response.json();
-    if (!result.success) {
-        throw new Error(result.error || '获取产品列表失败');
-    }
-    return result.data || [];
+export const fetchProductsService = () => {
+    return api.get<any, Product[]>('/products');
 };
 
-export const fetchPricingConfigService = async (): Promise<PricingConfig> => {
-    const response = await fetch('/api/pricing');
-    const result = await response.json();
-    // Assuming API returns the config object directly or null
-    return result;
+export const fetchPricingConfigService = () => {
+    return api.get<any, PricingConfig>('/pricing');
 };

@@ -165,13 +165,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                 href={item.path}
                                 className={`flex items-center px-3 py-3.5 rounded-xl transition-all duration-200 group relative overflow-hidden ${
                                     isActive
-                                        ? 'bg-blue-50 text-blue-600 shadow-sm'
+                                        ? 'bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-100/50 font-medium'
                                         : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
                                 } ${isSidebarCollapsed ? 'justify-center' : ''}`}
                             >
                                 {/* 激活状态指示条 */}
                                 {isActive && !isSidebarCollapsed && (
-                                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-600 rounded-r-full"></div>
+                                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-blue-600 rounded-r-full shadow-[0_0_8px_rgba(37,99,235,0.4)]"></div>
                                 )}
 
                                 <span

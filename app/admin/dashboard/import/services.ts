@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import api from '@/lib/request/axios';
+
 export interface ImportProductData {
     name: string;
     price: number;
@@ -13,17 +16,6 @@ export interface ImportResult {
 /**
  * 批量导入产品数据
  */
-export const importProductsService = async (
-    products: ImportProductData[]
-): Promise<ImportResult> => {
-    const response = await fetch('/api/products/import', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ products }),
-    });
-
-    const result = await response.json();
-    return result;
+export const importProductsService = (products: ImportProductData[]) => {
+    return api.post<any, ImportResult>('/products/import', { products });
 };
