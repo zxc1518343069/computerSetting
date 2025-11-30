@@ -37,6 +37,7 @@ api.interceptors.response.use(
             console.log('API Response:', res);
             // 如果 data 为空（例如 void 响应），返回 null 或 undefined，避免调用端出错
             // message.success(res.message || '请求失败');
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             return res.data as any; // suppress any for axios interceptor unwrapping
         } else {
             // 业务错误
