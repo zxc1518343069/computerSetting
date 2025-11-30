@@ -9,15 +9,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
     useEffect(() => {
-        // 检查登录状态
-        const isLoggedIn = sessionStorage.getItem('adminLoggedIn');
-        if (isLoggedIn !== 'true') {
+        // 检查登录状态 (同时检查 localStorage 和 sessionStorage)
+        const isLocalLoggedIn = localStorage.getItem('adminLoggedIn');
+        const isSessionLoggedIn = sessionStorage.getItem('adminLoggedIn');
+        
+        if (isLocalLoggedIn !== 'true' && isSessionLoggedIn !== 'true') {
             router.push('/admin');
         }
     }, [router]);
 
     const handleLogout = () => {
         sessionStorage.removeItem('adminLoggedIn');
+        localStorage.removeItem('adminLoggedIn');
         router.push('/admin');
     };
 

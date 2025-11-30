@@ -7,13 +7,16 @@ export default function AdminLoginPage() {
     const router = useRouter();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [remember, setRemember] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        // 检查是否已登录
-        const isLoggedIn = sessionStorage.getItem('adminLoggedIn');
-        if (isLoggedIn === 'true') {
+        // 检查是否已登录 (优先检查 localStorage，实现 7 天免登录)
+        const isLocalLoggedIn = localStorage.getItem('adminLoggedIn');
+        const isSessionLoggedIn = sessionStorage.getItem('adminLoggedIn');
+        
+        if (isLocalLoggedIn === 'true' || isSessionLoggedIn === 'true') {
             router.push('/admin/dashboard');
         }
     }, [router]);
@@ -27,7 +30,13 @@ export default function AdminLoginPage() {
         await sleep(600);
 
         if (username === 'yangshuhao' && password === 'wangman') {
-            sessionStorage.setItem('adminLoggedIn', 'true');
+            if (remember) {
+                localStorage.setItem('adminLoggedIn', 'true');
+                sessionStorage.removeItem('adminLoggedIn'); // 清除会话级标记，避免冲突
+            } else {
+                sessionStorage.setItem('adminLoggedIn', 'true');
+                localStorage.removeItem('adminLoggedIn'); // 清除持久化标记
+            }
             router.push('/admin/dashboard');
         } else {
             setError('账号或密码错误');
@@ -118,6 +127,36 @@ export default function AdminLoginPage() {
                                     />
                                 </div>
                             </div>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                            <label className="flex items-center cursor-pointer group">
+                                <div className="relative">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={remember}
+                                        onChange={(e) => setRemember(e.target.checked)}
+                                    />
+                                    <div className="w-5 h-5 border-2 border-slate-300 rounded-md peer-checked:bg-blue-600 peer-checked:border-blue-600 transition-all group-hover:border-blue-400"></div>
+                                    <svg
+                                        className="w-3.5 h-3.5 text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={3}
+                                            d="M5 13l4 4L19 7"
+                                        />
+                                    </svg>
+                                </div>
+                                <span className="ml-2 text-sm font-medium text-slate-600 group-hover:text-blue-600 transition-colors">
+                                    7天免登录
+                                </span>
+                            </label>
                         </div>
 
                         {error && (
