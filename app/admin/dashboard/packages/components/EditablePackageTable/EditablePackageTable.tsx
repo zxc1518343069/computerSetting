@@ -36,11 +36,14 @@ const EditablePackageTable: React.FC<EditablePackageTableProps> = ({
     onDiscountedPriceChange,
 }) => {
     const { products, pricingConfig, loading } = usePackageTableData();
-    const { getProductPrice, getItemPrice, totalPrice } = usePackageCalculator(
-        products,
-        pricingConfig,
-        items
-    );
+    const {
+        getProductPrice,
+        getItemMetrics,
+        totalPrice,
+        totalCost,
+        totalProfit,
+        profitRate,
+    } = usePackageCalculator(products, pricingConfig, items);
 
     if (loading) {
         return (
@@ -61,11 +64,8 @@ const EditablePackageTable: React.FC<EditablePackageTableProps> = ({
                 <tbody className="divide-y divide-gray-50">
                     {PACKAGE_CATEGORIES.map((cat) => {
                         const categoryItems = items.filter((item) => item.category === cat.key);
-                        // Ensure at least one row exists for structure (handled by parent usually, but good to check)
-                        // But here we rely on `items` passed from parent.
 
                         return categoryItems.map((item, index) => {
-                            const itemPrice = getItemPrice(item);
                             const isMultiSelect = ['ram', 'storage', 'cooling', 'monitor'].includes(
                                 cat.key
                             );
@@ -84,7 +84,7 @@ const EditablePackageTable: React.FC<EditablePackageTableProps> = ({
                                         pricing: pricing,
                                     }}
                                     priceData={{
-                                        itemPrice: itemPrice,
+                                        getItemMetrics: getItemMetrics,
                                         getProductPrice: getProductPrice,
                                     }}
                                     actions={{
@@ -100,6 +100,7 @@ const EditablePackageTable: React.FC<EditablePackageTableProps> = ({
                 </tbody>
                 <TableFooter
                     totalPrice={totalPrice}
+                    metrics={{ totalCost, totalProfit, profitRate }}
                     pricing={pricing}
                     discount={{
                         show: !!showDiscountedPrice,

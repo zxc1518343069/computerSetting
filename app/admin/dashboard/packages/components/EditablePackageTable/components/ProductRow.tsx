@@ -21,7 +21,14 @@ interface ProductRowProps {
 
     /** 价格相关数据 */
     priceData: {
-        itemPrice: number;
+        getItemMetrics: (item: EditablePartRow) => {
+            unitCost: number;
+            unitSellPrice: number;
+            totalCost: number;
+            totalSellPrice: number;
+            totalProfit: number;
+            profitRate: number;
+        };
         getProductPrice: (p: Product) => number;
     };
 
@@ -41,9 +48,10 @@ export const ProductRow: React.FC<ProductRowProps> = ({
     actions,
 }) => {
     const { categoryName, isFirst, canRemove, isMultiSelect, disabled, pricing } = config;
-    const { itemPrice, getProductPrice } = priceData;
+    const { getItemMetrics, getProductPrice } = priceData;
     const { onUpdate, onAddRow, onRemoveRow } = actions;
 
+    const metrics = getItemMetrics(item);
     const selectedProduct = products.find((p) => p.id === item.product_id);
 
     const options = products.map((p) => ({
@@ -138,7 +146,7 @@ export const ProductRow: React.FC<ProductRowProps> = ({
                 />
             </td>
 
-            {/* Pricing Columns */}
+            {/* Pricing Columns (Unit Price) */}
             {pricing && (
                 <td className="px-6 py-4 align-middle text-right w-36 tabular-nums">
                     {item.product_id === 0 ? (
@@ -154,20 +162,34 @@ export const ProductRow: React.FC<ProductRowProps> = ({
                             formatter={(value) => `¥ ${value}`}
                         />
                     ) : selectedProduct ? (
-                        <span className="text-gray-500 text-sm font-medium bg-gray-50 px-2 py-1 rounded-md">
-                            ¥{getProductPrice(selectedProduct).toFixed(2)}
-                        </span>
+                        <div className="flex flex-col items-end">
+                            <span className="text-gray-700 text-sm font-medium">
+                                ¥{getProductPrice(selectedProduct).toFixed(0)}
+                            </span>
+                            <span className="text-[10px] text-gray-400 scale-90 origin-right">
+                                进: ¥{metrics.unitCost.toFixed(0)}
+                            </span>
+                        </div>
                     ) : (
                         <span className="text-gray-200">-</span>
                     )}
                 </td>
             )}
 
-            {/* Subtotal - Bold & Highlighted */}
+            {/* Subtotal & Profit */}
             <td className="px-6 py-4 align-middle text-right w-36 tabular-nums">
-                {itemPrice > 0 ? (
-                    <div className="inline-block px-3 py-1 bg-blue-50 text-blue-600 rounded-lg border border-blue-100 font-bold shadow-sm transform transition-transform group-hover:scale-105">
-                        ¥{itemPrice.toFixed(2)}
+                {metrics.totalSellPrice > 0 ? (
+                    <div className="flex flex-col items-end">
+                        <div className="inline-block px-3 py-1 bg-blue-50 text-blue-600 rounded-lg border border-blue-100 font-bold shadow-sm transform transition-transform group-hover:scale-105 mb-1">
+                            ¥{metrics.totalSellPrice.toFixed(2)}
+                        </div>
+                        {/* Profit Indicator */}
+                        <div className={`text-[10px] font-medium flex items-center gap-1 ${metrics.totalProfit >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                            <span>利: ¥{metrics.totalProfit.toFixed(0)}</span>
+                            <span className={`px-1 rounded-sm ${metrics.profitRate > 0.15 ? 'bg-emerald-100 text-emerald-700' : metrics.profitRate > 0.05 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                                {(metrics.profitRate * 100).toFixed(0)}%
+                            </span>
+                        </div>
                     </div>
                 ) : (
                     <span className="text-gray-200">-</span>

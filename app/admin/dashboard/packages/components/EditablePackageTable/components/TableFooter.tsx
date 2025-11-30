@@ -1,12 +1,17 @@
 import React from 'react';
-import { InputNumber, Typography } from 'antd';
-import { ArrowRightOutlined } from '@ant-design/icons';
+import { InputNumber, Typography, Tooltip } from 'antd';
+import { ArrowRightOutlined, InfoCircleOutlined } from '@ant-design/icons';
 
 const { Text } = Typography;
 
 interface TableFooterProps {
     totalPrice: number;
     pricing: boolean;
+    metrics?: {
+        totalCost: number;
+        totalProfit: number;
+        profitRate: number;
+    };
     discount?: {
         show: boolean;
         price?: number;
@@ -18,6 +23,7 @@ interface TableFooterProps {
 export const TableFooter: React.FC<TableFooterProps> = ({
     totalPrice,
     pricing,
+    metrics,
     discount,
     disabled,
 }) => {
@@ -30,11 +36,54 @@ export const TableFooter: React.FC<TableFooterProps> = ({
     const colCount = pricing ? 5 : 4;
     const hasDiscount = showDiscount && discountedPrice && discountedPrice > 0;
 
+    // Profit Logic
+    const { totalCost = 0, totalProfit = 0, profitRate = 0 } = metrics || {};
+    const isProfitable = totalProfit > 0;
+    const profitColor = isProfitable ? 'text-emerald-600' : 'text-rose-500';
+    const profitBg = isProfitable ? 'bg-emerald-50' : 'bg-rose-50';
+
     return (
         <tfoot className="bg-gray-50/30 border-t border-gray-100">
             <tr>
                 <td colSpan={colCount} className="p-0">
-                    <div className="flex items-center justify-end gap-6 px-8 py-5">
+                    <div className="flex items-center justify-end gap-8 px-8 py-5">
+                        {/* Profit Dashboard (Admin Only - if metrics provided) */}
+                        {metrics && pricing && (
+                            <div className="flex gap-6 mr-auto pl-4 opacity-90">
+                                <div className="flex flex-col">
+                                    <Text className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">
+                                        总成本 (Base)
+                                    </Text>
+                                    <div className="text-lg font-bold text-gray-600">
+                                        <span className="text-xs mr-0.5">¥</span>
+                                        {totalCost.toFixed(2)}
+                                    </div>
+                                </div>
+                                
+                                <div className="w-px bg-gray-200 h-8 self-center mx-2"></div>
+
+                                <div className="flex flex-col">
+                                    <div className="flex items-center gap-1 mb-0.5">
+                                        <Text className={`text-[10px] font-bold uppercase tracking-wider ${isProfitable ? 'text-emerald-600' : 'text-rose-500'}`}>
+                                            预计利润
+                                        </Text>
+                                        <Tooltip title={`利润率: ${(profitRate * 100).toFixed(1)}% (利润 / 售价)`}>
+                                            <InfoCircleOutlined className="text-[10px] text-gray-400" />
+                                        </Tooltip>
+                                    </div>
+                                    <div className={`text-lg font-black ${profitColor} flex items-baseline gap-2`}>
+                                        <span>
+                                            <span className="text-xs mr-0.5">¥</span>
+                                            {totalProfit.toFixed(2)}
+                                        </span>
+                                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${profitBg}`}>
+                                            {(profitRate * 100).toFixed(0)}%
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Configuration Total Price */}
                         <div
                             className={`flex flex-col items-end transition-all duration-300 ${hasDiscount ? 'opacity-60 grayscale' : ''}`}
