@@ -8,7 +8,7 @@ import { CATEGORY_CONFIG } from '@/const';
 interface ProductRowProps {
     item: EditablePartRow;
     products: Product[];
-    
+
     /** 行状态配置 */
     config: {
         categoryName: string;

@@ -20,7 +20,13 @@
 * **UI 组件层 (`components/*.ts`)**:
     * **Smart Modals**: 模态框必须使用 `forwardRef` + `useImperativeHandle` 暴露 `open/close` 方法，实现自我状态管理，父组件只持有
       `ref`。
-    * **Dumb Components**: 纯展示组件，仅通过 Props 接收数据。
+
+### 1.2 代码组织规范 (Code Organization)
+
+* **Hooks vs Utils**:
+    * **Hooks (`hooks/*.ts`)**: 仅在必须使用 React 特性（如 `useState`, `useEffect`, `useContext`）或需要挂钩组件生命周期时使用。
+    * **Utils/Lib**: 纯计算逻辑、数据转换、业务算法应封装为普通 TypeScript 函数或类，放置在 `utils/` 或 `lib/` 中。
+    * **Anti-Pattern**: 严禁将不包含状态的纯逻辑封装为 Hook，也无需对非透传给子组件的函数使用 `useCallback`。
 
 ## 2. UI/UX 设计规范 (Design System)
 
@@ -85,7 +91,7 @@ app/
 - [ ] **溢价体系深度集成 (Pricing Premium Integration)**:
     * **核心目标**: 将后台配置的溢价规则（Unified / Category-based）统一应用到所有端。
     * **现状**: 目前 `EditablePackageTable` 内部有计算逻辑，但前端展示页可能未同步。
-    * **行动**: 封装全局 `usePricingCalculator`，确保套餐总价、详情页单价、前端报价单使用同一套计算公式。
+  * **行动**: 封装全局 `PricingCalculator` 工具类，确保套餐总价、详情页单价、前端报价单使用同一套计算公式。
 
 ### 优先级：中 (Medium Priority)
 

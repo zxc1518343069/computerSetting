@@ -14,10 +14,7 @@ export function useTableControl() {
     const [tableData, setTableData] = useState<EditablePartRow[]>(initTableData);
     const [discountedPrice, setDiscountedPrice] = useState<number>(0);
 
-    const handleTableDataChange = (
-        id: string,
-        changes: Partial<EditablePartRow>
-    ) => {
+    const handleTableDataChange = (id: string, changes: Partial<EditablePartRow>) => {
         setTableData((prev) =>
             prev.map((item) => (item.id === id ? { ...item, ...changes } : item))
         );

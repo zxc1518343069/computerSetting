@@ -66,9 +66,7 @@ export const PackageModal = forwardRef<PackageModalRef, PackageModalProps>(({ on
 
     // 处理表格数据变更
     const handleRowUpdate = (id: string, changes: Partial<EditablePartRow>) => {
-        setItems((prev) =>
-            prev.map((item) => (item.id === id ? { ...item, ...changes } : item))
-        );
+        setItems((prev) => prev.map((item) => (item.id === id ? { ...item, ...changes } : item)));
     };
 
     const { runAsync: handleSubmit, loading } = useRequest(
@@ -120,7 +118,7 @@ export const PackageModal = forwardRef<PackageModalRef, PackageModalProps>(({ on
             }
             open={visible}
             onCancel={handleCancel}
-            width={1000}
+            width={1200}
             footer={
                 isView
                     ? [

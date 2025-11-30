@@ -2,14 +2,33 @@ import { Button, Tag } from 'antd';
 import { CopyOutlined, ThunderboltFilled, DesktopOutlined, RocketFilled } from '@ant-design/icons';
 import { Package } from '../types';
 import { getCoreSpecs } from '../utils';
+import { PricingConfig, Product } from '@/const/types';
+import { PricingCalculator } from '@/utils/pricing';
+import { useMemo } from 'react';
 
 interface PackageCardProps {
     pkg: Package;
     onApply: () => void;
+    pricingConfig?: PricingConfig;
 }
 
-export function PackageCard({ pkg, onApply }: PackageCardProps) {
+export function PackageCard({ pkg, onApply, pricingConfig }: PackageCardProps) {
     const coreSpecs = getCoreSpecs(pkg);
+    const calculator = useMemo(() => new PricingCalculator(pricingConfig), [pricingConfig]);
+
+    const displayedPrice = useMemo(() => {
+        if (!pricingConfig) return pkg.total_price;
+
+        return pkg.items.reduce((sum, item) => {
+            const product: Product = {
+                id: item.product_id,
+                name: item.product_name,
+                price: item.product_price,
+                category: item.product_category,
+            };
+            return sum + calculator.getProductPrice(product) * item.quantity;
+        }, 0);
+    }, [pkg, pricingConfig, calculator]);
 
     // 提取关键配置用于展示
     const findSpec = (category: string) => coreSpecs.find((s) => s.product_category === category);
@@ -64,7 +83,7 @@ export function PackageCard({ pkg, onApply }: PackageCardProps) {
                 <div className="text-right">
                     <div className="text-blue-600 font-black text-base leading-none">
                         <span className="text-xs font-medium mr-0.5">¥</span>
-                        {pkg.total_price.toFixed(0)}
+                        {displayedPrice.toFixed(0)}
                     </div>
                 </div>
             </div>
