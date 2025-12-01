@@ -1,0 +1,28 @@
+import { useState } from 'react';
+import { useDebounce } from 'ahooks';
+import { Package } from '../types';
+
+export function usePackageSearch(packages: Package[]) {
+    const [searchQuery, setSearchQuery] = useState('');
+    const debouncedSearchQuery = useDebounce(searchQuery, { wait: 300 });
+
+    const filteredPackages = packages.filter((pkg) => {
+        if (!debouncedSearchQuery?.trim()) return true;
+        const query = debouncedSearchQuery.toLowerCase();
+
+        // 搜索套餐名称
+        if (pkg.name.toLowerCase().includes(query)) return true;
+
+        // 搜索套餐描述
+        if (pkg.description?.toLowerCase().includes(query)) return true;
+
+        // 搜索产品名称
+        return pkg.items.some((item) => item.product_name.toLowerCase().includes(query));
+    });
+
+    return {
+        searchQuery,
+        setSearchQuery,
+        filteredPackages,
+    };
+}
