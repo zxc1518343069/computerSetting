@@ -29,14 +29,14 @@ export default function ImportPage() {
     return (
         <div className="min-h-screen bg-[#F8FAFC] p-6 relative overflow-hidden">
             {/* Background Grid Pattern */}
-            <div 
+            <div
                 className="absolute inset-0 opacity-[0.03] pointer-events-none"
                 style={{
                     backgroundImage: `linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)`,
-                    backgroundSize: '40px 40px'
+                    backgroundSize: '40px 40px',
                 }}
             />
-            
+
             {/* Ambient Glow */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-blue-200/20 blur-[120px] rounded-full pointer-events-none" />
 
@@ -79,7 +79,7 @@ export default function ImportPage() {
                             </Button>
                         </ImportActionCard>
                     </div>
-                    
+
                     <div className="h-full">
                         <ImportActionCard
                             title="导出数据"
@@ -99,7 +99,7 @@ export default function ImportPage() {
                             </Button>
                         </ImportActionCard>
                     </div>
-                    
+
                     <div className="h-full">
                         <ImportActionCard
                             title="上传数据"
