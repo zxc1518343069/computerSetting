@@ -7,6 +7,7 @@ import {
     DownloadOutlined,
     FileExcelOutlined,
     ImportOutlined,
+    ExportOutlined,
 } from '@ant-design/icons';
 import { useImport } from './hooks/useImport';
 import { ImportActionCard } from './components/ImportActionCard';
@@ -15,7 +16,15 @@ import { Instructions } from './components/Instructions';
 const { Title, Text } = Typography;
 
 export default function ImportPage() {
-    const { uploading, fileList, setFileList, handleUpload, handleDownloadTemplate } = useImport();
+    const {
+        uploading,
+        exporting,
+        fileList,
+        setFileList,
+        handleUpload,
+        handleDownloadTemplate,
+        handleExport,
+    } = useImport();
 
     return (
         <div className="p-6 min-h-screen bg-gray-50/50">
@@ -37,7 +46,7 @@ export default function ImportPage() {
 
                 {/* Actions Area */}
                 <Row gutter={[24, 24]}>
-                    <Col xs={24} md={12}>
+                    <Col xs={24} md={8}>
                         <ImportActionCard
                             title="下载模板"
                             description="获取包含所有硬件分类的标准 Excel 模板文件，按格式填写后上传。"
@@ -55,7 +64,26 @@ export default function ImportPage() {
                             </Button>
                         </ImportActionCard>
                     </Col>
-                    <Col xs={24} md={12}>
+                    <Col xs={24} md={8}>
+                        <ImportActionCard
+                            title="导出数据"
+                            description="将现有产品数据（含溢价配置）导出为 Excel 文件，可用于备份或修改。"
+                            icon={<ExportOutlined />}
+                            color="green"
+                        >
+                            <Button
+                                type="primary"
+                                icon={<DownloadOutlined />}
+                                size="large"
+                                onClick={handleExport}
+                                loading={exporting}
+                                className="w-full max-w-[200px] h-10 bg-green-600 hover:bg-green-500 border-green-600"
+                            >
+                                {exporting ? '导出中...' : '导出数据'}
+                            </Button>
+                        </ImportActionCard>
+                    </Col>
+                    <Col xs={24} md={8}>
                         <ImportActionCard
                             title="上传数据"
                             description="选择填写好的 Excel 文件上传，系统将自动解析并导入数据。"
