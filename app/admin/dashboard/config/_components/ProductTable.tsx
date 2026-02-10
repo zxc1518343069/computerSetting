@@ -66,7 +66,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
             title: (
                 <div className="flex items-center justify-end gap-1 cursor-help">
                     <span>售价 (含溢价)</span>
-                    <Tooltip title="包含配置的溢价比例及取整策略">
+                    <Tooltip title="优先级: 手动定价 > 溢价配置 > 基础价格">
                         <InfoCircleOutlined className="text-xs text-gray-400" />
                     </Tooltip>
                 </div>
@@ -74,6 +74,36 @@ export const ProductTable: React.FC<ProductTableProps> = ({
             key: 'sellingPrice',
             align: 'right',
             render: (_, record) => {
+                // 1. 优先显示手动设置的售价
+                if (record.selling_price !== undefined && record.selling_price !== null) {
+                    return (
+                        <Space direction="vertical" size={0} style={{ alignItems: 'flex-end' }}>
+                            <Text type="warning" strong>
+                                {formatPrice(record.selling_price)}
+                            </Text>
+                            <Tag
+                                color="orange"
+                                style={{ margin: 0, fontSize: 10, lineHeight: '16px' }}
+                            >
+                                手动
+                            </Tag>
+                        </Space>
+                    );
+                }
+
+                // 2. 如果不使用溢价，显示原价
+                if (record.is_use_premium === false) {
+                    return (
+                        <Space direction="vertical" size={0} style={{ alignItems: 'flex-end' }}>
+                            <Text strong>{formatPrice(record.price)}</Text>
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                                无溢价
+                            </Text>
+                        </Space>
+                    );
+                }
+
+                // 3. 使用溢价计算逻辑
                 const { price, rate } = getSellingPriceInfo(record);
                 return (
                     <Space direction="vertical" size={0} style={{ alignItems: 'flex-end' }}>

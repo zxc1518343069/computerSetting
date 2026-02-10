@@ -37,6 +37,8 @@ export const saveProductService = (product: Partial<Product>, isEdit: boolean) =
             category: product.category,
             name: product.name,
             price: product.price,
+            selling_price: product.selling_price,
+            is_use_premium: product.is_use_premium,
         },
     });
 };

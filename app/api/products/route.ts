@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
 // POST - 创建新产品
 export async function POST(request: NextRequest) {
     try {
-        const { category, name, price } = await request.json();
+        const { category, name, price, selling_price, is_use_premium } = await request.json();
 
         if (!category || !name || price === undefined) {
             return error(400, '产品类别、名称和价格不能为空');
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
 
         const { data, error: insertError } = await supabase
             .from('products')
-            .insert([{ category, name, price }])
+            .insert([{ category, name, price, selling_price, is_use_premium }])
             .select()
             .single();
 

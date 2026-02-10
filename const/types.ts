@@ -2,6 +2,8 @@ export interface Product {
     id: number;
     name: string;
     price: number;
+    selling_price?: number | null;
+    is_use_premium?: boolean;
     category: string;
     created_at?: string;
 }

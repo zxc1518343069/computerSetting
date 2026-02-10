@@ -93,7 +93,6 @@ export default function ConfigPage() {
                                 showSearch
                                 optionFilterProp="children"
                                 filterOption={(input, option) => {
-                                    console.log('options', option);
                                     const optLabel = (option?.value as string) || '';
                                     return optLabel?.toLowerCase().includes(input.toLowerCase());
                                 }}

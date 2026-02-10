@@ -1,14 +1,13 @@
 'use client';
 import { Content, CustomRef } from '@/app/_components/PCPartsTable/Content';
 import PackageRecomment from '@/app/_components/PCPartsTable/PackageRecomment';
-import Time from '@/app/_components/Time';
 import ContactInfo from './ContactInfo';
+import SiteHeader from '@/app/_components/SiteHeader';
 
 import React, { useRef } from 'react';
 import { Layout } from 'antd';
-import { ThunderboltFilled } from '@ant-design/icons';
 
-const { Header, Sider, Content: AntContent } = Layout;
+const { Sider, Content: AntContent } = Layout;
 
 export function PCPartsTable() {
     const tableRef = useRef<CustomRef | null>(null);
@@ -16,24 +15,7 @@ export function PCPartsTable() {
     return (
         <Layout className="h-screen overflow-hidden bg-[#f8fafc]">
             {/* Sticky Header */}
-            <Header className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-200/50 px-6 flex items-center justify-between h-14 shadow-sm">
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center text-white shadow-lg shadow-slate-500/20">
-                        <ThunderboltFilled style={{ fontSize: 18 }} />
-                    </div>
-                    <span className="font-black text-lg bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600 tracking-tight drop-shadow-sm">
-                        明远装机工坊
-                    </span>
-                    <span className="text-xs font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded ml-2">
-                        PRO
-                    </span>
-                </div>
-                <div className="flex items-center gap-4">
-                    <div className="hidden md:block">
-                        <Time />
-                    </div>
-                </div>
-            </Header>
+            <SiteHeader />
 
             <Layout className="overflow-hidden">
                 {/* Fixed Sidebar for Recommendations */}
