@@ -82,10 +82,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                 <span className="text-lg">M</span>
                             </div>
                         </div>
-                        
+
                         <div
                             className={`flex flex-col transition-all duration-300 origin-left ${
-                                isSidebarCollapsed ? 'opacity-0 w-0 scale-90 hidden' : 'opacity-100 w-auto scale-100'
+                                isSidebarCollapsed
+                                    ? 'opacity-0 w-0 scale-90 hidden'
+                                    : 'opacity-100 w-auto scale-100'
                             }`}
                         >
                             <h2 className="text-lg font-bold text-gray-900 tracking-tight leading-none mb-1">
@@ -103,7 +105,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                     className="absolute -right-3 top-28 bg-white border border-gray-200 text-gray-400 hover:text-indigo-600 hover:border-indigo-200 hover:shadow-md rounded-full p-1.5 transition-all duration-300 z-40 shadow-sm"
                 >
-                    {isSidebarCollapsed ? <MenuUnfoldOutlined className="text-xs" /> : <MenuFoldOutlined className="text-xs" />}
+                    {isSidebarCollapsed ? (
+                        <MenuUnfoldOutlined className="text-xs" />
+                    ) : (
+                        <MenuFoldOutlined className="text-xs" />
+                    )}
                 </button>
 
                 {/* 导航菜单 */}
@@ -137,12 +143,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
                                 <span
                                     className={`ml-3.5 font-medium whitespace-nowrap transition-all duration-300 ${
-                                        isSidebarCollapsed ? 'opacity-0 w-0 hidden translate-x-4' : 'opacity-100 translate-x-0'
+                                        isSidebarCollapsed
+                                            ? 'opacity-0 w-0 hidden translate-x-4'
+                                            : 'opacity-100 translate-x-0'
                                     }`}
                                 >
                                     {item.title}
                                 </span>
-                                
+
                                 {/* Hover Glow Effect */}
                                 {!isActive && (
                                     <div className="absolute inset-0 rounded-xl bg-gray-100/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10" />
