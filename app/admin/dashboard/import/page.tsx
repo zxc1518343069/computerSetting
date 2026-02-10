@@ -1,7 +1,9 @@
 'use client';
 
+'use client';
+
 import React from 'react';
-import { Upload, Button, Typography, Space, Row, Col } from 'antd';
+import { Upload, Button } from 'antd';
 import {
     CloudUploadOutlined,
     DownloadOutlined,
@@ -12,8 +14,6 @@ import {
 import { useImport } from './hooks/useImport';
 import { ImportActionCard } from './components/ImportActionCard';
 import { Instructions } from './components/Instructions';
-
-const { Title, Text } = Typography;
 
 export default function ImportPage() {
     const {
@@ -27,29 +27,44 @@ export default function ImportPage() {
     } = useImport();
 
     return (
-        <div className="p-6 min-h-screen bg-gray-50/50">
-            <div className="max-w-[1200px] mx-auto space-y-8">
+        <div className="min-h-screen bg-[#F8FAFC] p-6 relative overflow-hidden">
+            {/* Background Grid Pattern */}
+            <div 
+                className="absolute inset-0 opacity-[0.03] pointer-events-none"
+                style={{
+                    backgroundImage: `linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)`,
+                    backgroundSize: '40px 40px'
+                }}
+            />
+            
+            {/* Ambient Glow */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-blue-200/20 blur-[120px] rounded-full pointer-events-none" />
+
+            <div className="max-w-[1200px] mx-auto space-y-10 relative z-10">
                 {/* Page Header */}
-                <div>
-                    <Title level={2} style={{ marginBottom: 0, fontSize: '24px', fontWeight: 600 }}>
-                        <Space>
-                            <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-purple-600/20">
-                                <ImportOutlined style={{ fontSize: 20 }} />
-                            </div>
-                            <span>数据导入导出</span>
-                        </Space>
-                    </Title>
-                    <Text type="secondary" className="mt-1 block pl-[52px]">
-                        批量导入产品数据，支持 Excel 模板下载与解析
-                    </Text>
+                <div className="flex flex-col items-center text-center space-y-4 py-8">
+                    <div className="inline-flex items-center justify-center p-3 bg-white rounded-2xl shadow-sm border border-gray-100 mb-2">
+                        <div className="w-12 h-12 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+                            <ImportOutlined style={{ fontSize: 24 }} />
+                        </div>
+                    </div>
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900 tracking-tight mb-2">
+                            数据交换中心
+                        </h1>
+                        <p className="text-gray-500 max-w-lg mx-auto text-base">
+                            高效管理您的产品数据库。支持批量导入、导出及模板生成，
+                            确保数据流转的准确性与时效性。
+                        </p>
+                    </div>
                 </div>
 
                 {/* Actions Area */}
-                <Row gutter={[24, 24]}>
-                    <Col xs={24} md={8}>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="h-full">
                         <ImportActionCard
                             title="下载模板"
-                            description="获取包含所有硬件分类的标准 Excel 模板文件，按格式填写后上传。"
+                            description="获取标准 Excel 结构文件，包含预设的硬件分类工作表。"
                             icon={<FileExcelOutlined />}
                             color="blue"
                         >
@@ -58,16 +73,17 @@ export default function ImportPage() {
                                 icon={<DownloadOutlined />}
                                 size="large"
                                 onClick={handleDownloadTemplate}
-                                className="w-full max-w-[200px] h-10 bg-blue-600"
+                                className="w-full h-11 bg-blue-600 hover:bg-blue-500 border-none shadow-lg shadow-blue-600/20 rounded-lg font-medium"
                             >
                                 下载模板
                             </Button>
                         </ImportActionCard>
-                    </Col>
-                    <Col xs={24} md={8}>
+                    </div>
+                    
+                    <div className="h-full">
                         <ImportActionCard
                             title="导出数据"
-                            description="将现有产品数据（含溢价配置）导出为 Excel 文件，可用于备份或修改。"
+                            description="生成包含完整产品信息与溢价配置的备份文件。"
                             icon={<ExportOutlined />}
                             color="green"
                         >
@@ -77,16 +93,17 @@ export default function ImportPage() {
                                 size="large"
                                 onClick={handleExport}
                                 loading={exporting}
-                                className="w-full max-w-[200px] h-10 bg-green-600 hover:bg-green-500 border-green-600"
+                                className="w-full h-11 bg-emerald-600 hover:bg-emerald-500 border-none shadow-lg shadow-emerald-600/20 rounded-lg font-medium"
                             >
                                 {exporting ? '导出中...' : '导出数据'}
                             </Button>
                         </ImportActionCard>
-                    </Col>
-                    <Col xs={24} md={8}>
+                    </div>
+                    
+                    <div className="h-full">
                         <ImportActionCard
                             title="上传数据"
-                            description="选择填写好的 Excel 文件上传，系统将自动解析并导入数据。"
+                            description="解析 Excel 文件并批量更新数据库，支持自动去重。"
                             icon={<CloudUploadOutlined />}
                             color="purple"
                         >
@@ -103,14 +120,14 @@ export default function ImportPage() {
                                     icon={<CloudUploadOutlined />}
                                     size="large"
                                     loading={uploading}
-                                    className="w-full max-w-[200px] h-10 bg-purple-600 border-purple-600 hover:bg-purple-500"
+                                    className="w-full h-11 bg-violet-600 hover:bg-violet-500 border-none shadow-lg shadow-violet-600/20 rounded-lg font-medium"
                                 >
-                                    {uploading ? '导入中...' : '选择文件上传'}
+                                    {uploading ? '处理中...' : '选择文件'}
                                 </Button>
                             </Upload>
                         </ImportActionCard>
-                    </Col>
-                </Row>
+                    </div>
+                </div>
 
                 {/* Instructions */}
                 <Instructions />
