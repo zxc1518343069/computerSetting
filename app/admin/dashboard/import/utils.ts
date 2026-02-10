@@ -52,10 +52,13 @@ export const parseExcelFile = (file: File): Promise<ImportProductData[]> => {
                                     price: Number(row['产品价格']) || 0,
                                     category: category.toLowerCase(),
                                     // 尝试读取新字段，如果不存在则使用默认值
-                                    selling_price: row['最终售价'] ? Number(row['最终售价']) : undefined,
+                                    selling_price: row['最终售价']
+                                        ? Number(row['最终售价'])
+                                        : undefined,
                                     is_use_premium:
                                         row['是否使用溢价'] !== undefined
-                                            ? row['是否使用溢价'] === '是' || row['是否使用溢价'] === true
+                                            ? row['是否使用溢价'] === '是' ||
+                                              row['是否使用溢价'] === true
                                             : undefined,
                                 }));
 
@@ -132,10 +135,10 @@ export const exportData = (products: Product[]) => {
         ];
 
         const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
-        
+
         // 设置列宽
         worksheet['!cols'] = [
-            { wch: 8 },  // ID
+            { wch: 8 }, // ID
             { wch: 40 }, // Name
             { wch: 12 }, // Price
             { wch: 15 }, // Selling Price
