@@ -1,33 +1,33 @@
 import React from 'react';
-import { 
-    CloudDownloadOutlined, 
-    FileExcelOutlined, 
-    CloudUploadOutlined, 
-    CheckCircleOutlined 
+import {
+    CloudDownloadOutlined,
+    FileExcelOutlined,
+    CloudUploadOutlined,
+    CheckCircleOutlined,
 } from '@ant-design/icons';
 
 export const Instructions: React.FC = () => {
     const steps = [
         {
             icon: <CloudDownloadOutlined />,
-            title: "下载模板",
-            desc: "获取标准 Excel 模板，包含所有硬件分类工作表。"
+            title: '下载模板',
+            desc: '获取标准 Excel 模板，包含所有硬件分类工作表。',
         },
         {
             icon: <FileExcelOutlined />,
-            title: "填充数据",
-            desc: "在对应工作表中填写产品名称、价格及可选的溢价配置。"
+            title: '填充数据',
+            desc: '在对应工作表中填写产品名称、价格及可选的溢价配置。',
         },
         {
             icon: <CloudUploadOutlined />,
-            title: "上传文件",
-            desc: "将填写好的文件上传，系统自动解析并验证数据格式。"
+            title: '上传文件',
+            desc: '将填写好的文件上传，系统自动解析并验证数据格式。',
         },
         {
             icon: <CheckCircleOutlined />,
-            title: "完成导入",
-            desc: "确认导入结果，数据将即时同步至产品数据库。"
-        }
+            title: '完成导入',
+            desc: '确认导入结果，数据将即时同步至产品数据库。',
+        },
     ];
 
     return (
@@ -46,19 +46,21 @@ export const Instructions: React.FC = () => {
                         {index < steps.length - 1 && (
                             <div className="absolute left-6 top-6 hidden h-0.5 w-full bg-gray-100 md:block group-hover:bg-blue-100 transition-colors" />
                         )}
-                        
+
                         <div className="relative z-10 flex h-12 w-12 items-center justify-center rounded-xl bg-white border border-gray-100 text-gray-400 shadow-sm transition-all duration-300 group-hover:border-blue-200 group-hover:bg-blue-50 group-hover:text-blue-600 group-hover:scale-110">
                             <span className="text-xl">{step.icon}</span>
                         </div>
-                        
+
                         <div>
-                            <h4 className="mb-1 font-bold text-gray-800 group-hover:text-blue-700 transition-colors">{step.title}</h4>
+                            <h4 className="mb-1 font-bold text-gray-800 group-hover:text-blue-700 transition-colors">
+                                {step.title}
+                            </h4>
                             <p className="text-xs leading-relaxed text-gray-500">{step.desc}</p>
                         </div>
                     </div>
                 ))}
             </div>
-            
+
             {/* Background Decoration */}
             <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-gray-50 opacity-50 blur-3xl pointer-events-none" />
         </div>
