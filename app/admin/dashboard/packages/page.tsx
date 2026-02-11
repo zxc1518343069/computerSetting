@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import { Input, Button, Typography, Tooltip, Segmented } from 'antd';
+import { Input, Button, Tooltip, Segmented } from 'antd';
 import {
     PlusOutlined,
     SearchOutlined,
@@ -16,8 +16,6 @@ import { usePackageList } from './hooks/usePackageList';
 import { PackageCard } from './components/PackageCard';
 import { PackageModal } from './components/PackageModal';
 import { PackageModalRef } from './types';
-
-const { Title, Text } = Typography;
 
 export default function PackagesPage() {
     const {

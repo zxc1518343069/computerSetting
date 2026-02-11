@@ -5,11 +5,9 @@ import React, { useImperativeHandle, useState } from 'react';
 import { Package, PackageItem } from '@/app/_components/PCPartsTable/PackageRecomment';
 import { useTableControl } from './hooks/useTableControl';
 import { InfoSection } from './components/InfoSection';
-import { Typography, Button } from 'antd';
+import { Button } from 'antd';
 import { BuildOutlined, ExperimentOutlined } from '@ant-design/icons';
 import { TestConfigModal } from './components/TestConfigModal';
-
-const { Title } = Typography;
 
 export interface CustomRef {
     processPkgToTableData: (pkg: Package) => void;
@@ -70,27 +68,44 @@ export function Content(props: ContentProps) {
     );
 
     return (
-        <div className="flex flex-col gap-4 h-full">
-            {/* Header Area */}
-            <div className="flex items-center justify-between px-1">
-                <div>
-                    <Title
-                        level={4}
-                        style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}
-                    >
-                        <BuildOutlined className="text-blue-600" />
-                        配置工坊
-                    </Title>
-                    <p className="text-xs text-gray-400 mt-1">自定义您的专属电脑配置清单</p>
+        <div className="flex flex-col gap-6 h-full">
+            {/* Header Area: 科技感标题与操作 */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 px-1">
+                <div className="relative">
+                    <div className="flex items-center gap-3 mb-1">
+                        <div className="px-2 py-0.5 rounded-md bg-blue-50 text-[10px] font-bold text-blue-600 uppercase tracking-widest border border-blue-100">
+                            Configuration
+                        </div>
+                        <div className="w-1 h-1 rounded-full bg-gray-300" />
+                        <div className="text-[10px] font-medium text-gray-400 uppercase tracking-widest">
+                            v2.0.4
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+                            <BuildOutlined className="text-xl" />
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-black text-gray-800 m-0 tracking-tight">
+                                配置工坊
+                            </h2>
+                            <p className="text-xs text-gray-400 m-0 font-medium">
+                                自定义您的专属电脑配置清单 · 实时价格计算
+                            </p>
+                        </div>
+                    </div>
                 </div>
-                <Button
-                    type="primary"
-                    icon={<ExperimentOutlined />}
-                    onClick={() => setTestModalVisible(true)}
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 border-0 shadow-md shadow-blue-500/20"
-                >
-                    测试配置
-                </Button>
+                <div className="flex items-center gap-3">
+                    <Button
+                        type="primary"
+                        size="large"
+                        icon={<ExperimentOutlined />}
+                        onClick={() => setTestModalVisible(true)}
+                        className="h-12 px-6 bg-gray-900 hover:bg-blue-600 border-none shadow-xl shadow-gray-200 hover:shadow-blue-200 rounded-2xl transition-all duration-300 font-bold text-sm"
+                    >
+                        测试配置
+                    </Button>
+                </div>
             </div>
 
             {/* Main Table Area */}

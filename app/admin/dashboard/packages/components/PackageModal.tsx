@@ -1,18 +1,15 @@
 import EditablePackageTable from '@/app/admin/dashboard/packages/components/EditablePackageTable';
 import React, { forwardRef, useImperativeHandle, useState } from 'react';
-import { Modal, Form, Input, Button, Typography, message, Divider } from 'antd';
+import { Modal, Form, Input, Button, message } from 'antd';
 import { useRequest } from 'ahooks';
 import { EditablePartRow, Package, PackageModalRef } from '../types';
 import { savePackageService } from '../services';
 import { PACKAGE_CATEGORIES } from '@/const';
 import {
-    CodeSandboxOutlined,
     SaveOutlined,
     CloseOutlined,
     LayoutOutlined,
 } from '@ant-design/icons';
-
-const { Title, Text } = Typography;
 
 interface PackageModalProps {
     onSuccess: () => void;

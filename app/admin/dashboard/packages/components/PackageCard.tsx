@@ -1,7 +1,6 @@
 import React from 'react';
-import { Card, Typography, Tag, Button, Popconfirm, Skeleton, Tooltip } from 'antd';
+import { Card, Tag, Button, Popconfirm, Skeleton, Tooltip } from 'antd';
 import {
-    EditOutlined,
     DeleteOutlined,
     EyeOutlined,
     ThunderboltOutlined,
@@ -12,8 +11,6 @@ import {
 } from '@ant-design/icons';
 import { Package } from '../types';
 import dayjs from 'dayjs';
-
-const { Text } = Typography;
 
 interface PackageCardProps {
     pkg: Package;
@@ -211,7 +208,7 @@ const SpecItem = ({
 }: {
     icon: React.ReactNode;
     value?: string;
-    theme: any;
+    theme: { iconBg: string };
 }) => (
     <div className="flex items-center gap-2 group/item">
         <div

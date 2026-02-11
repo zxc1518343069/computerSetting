@@ -1,13 +1,9 @@
 import React from 'react';
-import { Tooltip } from 'antd';
-import { InfoCircleOutlined } from '@ant-design/icons';
-
 interface TableHeaderProps {
     pricing: boolean;
-    showTips?: boolean;
 }
 
-export const TableHeader: React.FC<TableHeaderProps> = ({ pricing, showTips }) => {
+export const TableHeader: React.FC<TableHeaderProps> = ({ pricing }) => {
     return (
         <thead className="bg-slate-50/50">
             <tr>

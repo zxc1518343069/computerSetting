@@ -73,7 +73,7 @@ const EditablePackageTable: React.FC<EditablePackageTableProps> = ({
         <div className={containerClasses}>
             {/* 设置 min-w 确保在窄容器中内容不被挤压 */}
             <table className="w-full border-collapse table-auto min-w-[800px]">
-                <TableHeader pricing={pricing} showTips={showProfit} />
+                <TableHeader pricing={pricing} />
                 <tbody className="divide-y divide-gray-100/50">
                     {PACKAGE_CATEGORIES.map((cat) => {
                         const categoryItems = items.filter((item) => item.category === cat.key);
