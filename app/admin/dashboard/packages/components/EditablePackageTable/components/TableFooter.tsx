@@ -1,6 +1,10 @@
 import React from 'react';
 import { InputNumber, Typography, Tooltip } from 'antd';
-import { ArrowRightOutlined, InfoCircleOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import {
+    ArrowRightOutlined,
+    InfoCircleOutlined,
+    SafetyCertificateOutlined,
+} from '@ant-design/icons';
 
 const { Text } = Typography;
 
@@ -55,7 +59,9 @@ export const TableFooter: React.FC<TableFooterProps> = ({
                                     </Text>
                                     <div className="text-xl font-bold text-slate-500 tabular-nums">
                                         <span className="text-xs mr-1 font-medium">¥</span>
-                                        {totalCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        {totalCost.toLocaleString(undefined, {
+                                            minimumFractionDigits: 2,
+                                        })}
                                     </div>
                                 </div>
 
@@ -63,19 +69,27 @@ export const TableFooter: React.FC<TableFooterProps> = ({
 
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-2">
-                                        <Text className={`text-[10px] font-black uppercase tracking-[0.2em] ${isProfitable ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                        <Text
+                                            className={`text-[10px] font-black uppercase tracking-[0.2em] ${isProfitable ? 'text-emerald-600' : 'text-rose-600'}`}
+                                        >
                                             预计毛利
                                         </Text>
                                         <Tooltip title="毛利率 = (售价 - 成本) / 售价">
                                             <InfoCircleOutlined className="text-[10px] text-slate-300 cursor-help" />
                                         </Tooltip>
                                     </div>
-                                    <div className={`text-xl font-black flex items-baseline gap-3 tabular-nums ${isProfitable ? 'text-emerald-700' : 'text-rose-700'}`}>
+                                    <div
+                                        className={`text-xl font-black flex items-baseline gap-3 tabular-nums ${isProfitable ? 'text-emerald-700' : 'text-rose-700'}`}
+                                    >
                                         <span>
                                             <span className="text-xs mr-1 font-bold">¥</span>
-                                            {totalProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            {totalProfit.toLocaleString(undefined, {
+                                                minimumFractionDigits: 2,
+                                            })}
                                         </span>
-                                        <span className={`text-[10px] px-2 py-0.5 rounded font-black ${profitBg} ${isProfitable ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                        <span
+                                            className={`text-[10px] px-2 py-0.5 rounded font-black ${profitBg} ${isProfitable ? 'text-emerald-600' : 'text-rose-600'}`}
+                                        >
                                             {(profitRate * 100).toFixed(1)}%
                                         </span>
                                     </div>
@@ -84,20 +98,28 @@ export const TableFooter: React.FC<TableFooterProps> = ({
                         )}
 
                         {/* 右侧：最终结算卡片 */}
-                        <div className={`flex-1 bg-white rounded-2xl border ${hasDiscount ? 'border-blue-100 shadow-blue-100/20' : 'border-slate-100'} p-6 flex items-center justify-between shadow-sm relative overflow-hidden`}>
+                        <div
+                            className={`flex-1 bg-white rounded-2xl border ${hasDiscount ? 'border-blue-100 shadow-blue-100/20' : 'border-slate-100'} p-6 flex items-center justify-between shadow-sm relative overflow-hidden`}
+                        >
                             {hasDiscount && (
                                 <div className="absolute -right-6 -top-6 w-20 h-20 bg-blue-50 rounded-full blur-2xl opacity-50" />
                             )}
-                            
+
                             <div className="flex items-center gap-8">
                                 {/* 配置总价 */}
-                                <div className={`flex flex-col transition-all duration-500 ${hasDiscount ? 'opacity-30 scale-90' : 'opacity-60'}`}>
+                                <div
+                                    className={`flex flex-col transition-all duration-500 ${hasDiscount ? 'opacity-30 scale-90' : 'opacity-60'}`}
+                                >
                                     <Text className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">
                                         配置总价
                                     </Text>
-                                    <div className={`font-bold tracking-tight tabular-nums ${hasDiscount ? 'text-lg text-slate-400 line-through' : 'text-2xl text-slate-700'}`}>
+                                    <div
+                                        className={`font-bold tracking-tight tabular-nums ${hasDiscount ? 'text-lg text-slate-400 line-through' : 'text-2xl text-slate-700'}`}
+                                    >
                                         <span className="text-xs mr-1">¥</span>
-                                        {totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        {totalPrice.toLocaleString(undefined, {
+                                            minimumFractionDigits: 2,
+                                        })}
                                     </div>
                                 </div>
 
@@ -116,12 +138,17 @@ export const TableFooter: React.FC<TableFooterProps> = ({
                                             </Text>
                                             {hasDiscount && discountedPrice < totalPrice && (
                                                 <span className="text-[9px] font-black text-white bg-emerald-500 px-1.5 py-0.5 rounded shadow-sm">
-                                                    已省 ¥{(totalPrice - discountedPrice).toFixed(0)}
+                                                    已省 ¥
+                                                    {(totalPrice - discountedPrice).toFixed(0)}
                                                 </span>
                                             )}
                                         </div>
                                         <div className="flex items-center">
-                                            <span className={`text-xl font-black mr-1 ${hasDiscount ? 'text-blue-600' : 'text-slate-300'}`}>¥</span>
+                                            <span
+                                                className={`text-xl font-black mr-1 ${hasDiscount ? 'text-blue-600' : 'text-slate-300'}`}
+                                            >
+                                                ¥
+                                            </span>
                                             <InputNumber
                                                 value={discountedPrice || undefined}
                                                 onChange={(val) => onDiscountChange?.(val || 0)}

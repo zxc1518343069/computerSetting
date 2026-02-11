@@ -26,10 +26,7 @@ function PackageRecomment(props: PackageRecommentProps) {
     return (
         <div className="flex flex-col h-full w-full relative">
             {/* Toggle Button - Adjusted position to prevent clipping */}
-            <div
-                className="absolute -right-3 top-8 z-50 cursor-pointer group"
-                onClick={onToggle}
-            >
+            <div className="absolute -right-3 top-8 z-50 cursor-pointer group" onClick={onToggle}>
                 <div className="w-6 h-6 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-md text-gray-400 group-hover:text-blue-600 group-hover:border-blue-200 transition-all transform hover:scale-110">
                     {collapsed ? (
                         <RightOutlined className="text-[10px]" />

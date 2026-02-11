@@ -96,7 +96,9 @@ export default function PackagesPage() {
                         <div className="flex-1 w-full group">
                             <Input
                                 placeholder="搜索套餐名称、核心硬件型号..."
-                                prefix={<SearchOutlined className="text-gray-400 text-lg mr-2 transition-colors group-focus-within:text-indigo-500" />}
+                                prefix={
+                                    <SearchOutlined className="text-gray-400 text-lg mr-2 transition-colors group-focus-within:text-indigo-500" />
+                                }
                                 variant="borderless"
                                 allowClear
                                 value={queryParams.search}
@@ -104,7 +106,7 @@ export default function PackagesPage() {
                                 className="w-full h-14 px-6 bg-white/50 hover:bg-white focus:bg-white rounded-2xl text-base font-medium transition-all border border-gray-100 focus:border-indigo-200 shadow-inner"
                             />
                         </div>
-                        
+
                         <div className="flex items-center gap-4 w-full md:w-auto">
                             <Input
                                 placeholder="ID 搜索"
@@ -137,20 +139,38 @@ export default function PackagesPage() {
                     {showAdvanced && (
                         <div className="pt-6 border-t border-gray-100 grid grid-cols-1 md:grid-cols-4 gap-6 animate-in fade-in slide-in-from-top-4 duration-300">
                             <div className="space-y-2">
-                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">价格区间</span>
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                                    价格区间
+                                </span>
                                 <div className="flex items-center gap-2">
-                                    <Input placeholder="最低" className="rounded-xl h-11 bg-white/50" />
+                                    <Input
+                                        placeholder="最低"
+                                        className="rounded-xl h-11 bg-white/50"
+                                    />
                                     <div className="w-4 h-px bg-gray-200" />
-                                    <Input placeholder="最高" className="rounded-xl h-11 bg-white/50" />
+                                    <Input
+                                        placeholder="最高"
+                                        className="rounded-xl h-11 bg-white/50"
+                                    />
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">创建时间</span>
-                                <Input placeholder="选择日期范围" className="rounded-xl h-11 bg-white/50 w-full" />
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                                    创建时间
+                                </span>
+                                <Input
+                                    placeholder="选择日期范围"
+                                    className="rounded-xl h-11 bg-white/50 w-full"
+                                />
                             </div>
                             <div className="space-y-2">
-                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">排序方式</span>
-                                <Input placeholder="默认排序" className="rounded-xl h-11 bg-white/50 w-full" />
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                                    排序方式
+                                </span>
+                                <Input
+                                    placeholder="默认排序"
+                                    className="rounded-xl h-11 bg-white/50 w-full"
+                                />
                             </div>
                             <div className="flex items-end">
                                 <Button className="w-full h-11 bg-indigo-50 text-indigo-600 border-none rounded-xl font-bold hover:bg-indigo-100 transition-all">
@@ -194,24 +214,50 @@ export default function PackagesPage() {
                                 <table className="w-full text-left border-collapse min-w-[1000px]">
                                     <thead className="bg-slate-50/50 border-b border-gray-100">
                                         <tr>
-                                            <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">ID</th>
-                                            <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">方案名称</th>
-                                            <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">核心配置摘要</th>
-                                            <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">市场总价</th>
-                                            <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">操作</th>
+                                            <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                                ID
+                                            </th>
+                                            <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                                方案名称
+                                            </th>
+                                            <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                                核心配置摘要
+                                            </th>
+                                            <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">
+                                                市场总价
+                                            </th>
+                                            <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">
+                                                操作
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-50">
                                         {packages.map((pkg) => (
-                                            <tr key={pkg.id} className="hover:bg-blue-50/30 transition-colors group">
-                                                <td className="px-8 py-5 text-sm font-mono text-gray-400">#{pkg.id}</td>
-                                                <td className="px-8 py-5 text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{pkg.name}</td>
+                                            <tr
+                                                key={pkg.id}
+                                                className="hover:bg-blue-50/30 transition-colors group"
+                                            >
+                                                <td className="px-8 py-5 text-sm font-mono text-gray-400">
+                                                    #{pkg.id}
+                                                </td>
+                                                <td className="px-8 py-5 text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                                                    {pkg.name}
+                                                </td>
                                                 <td className="px-8 py-5 text-xs text-gray-500">
                                                     <div className="flex gap-2">
                                                         {pkg.items.slice(0, 3).map((i, idx) => (
-                                                            <span key={idx} className="bg-gray-100 px-2 py-0.5 rounded text-gray-600">{i.product_name}</span>
+                                                            <span
+                                                                key={idx}
+                                                                className="bg-gray-100 px-2 py-0.5 rounded text-gray-600"
+                                                            >
+                                                                {i.product_name}
+                                                            </span>
                                                         ))}
-                                                        {pkg.items.length > 3 && <span className="text-gray-300">...</span>}
+                                                        {pkg.items.length > 3 && (
+                                                            <span className="text-gray-300">
+                                                                ...
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </td>
                                                 <td className="px-8 py-5 text-base font-black text-gray-900 text-right tabular-nums">
@@ -220,8 +266,25 @@ export default function PackagesPage() {
                                                 </td>
                                                 <td className="px-8 py-5 text-right">
                                                     <div className="flex justify-end gap-2">
-                                                        <Button type="text" size="small" onClick={() => modalRef.current?.open('edit', pkg)} className="text-blue-600 font-bold hover:bg-blue-50">编辑</Button>
-                                                        <Button type="text" size="small" danger onClick={() => deletePackage(pkg.id)} className="font-bold hover:bg-red-50">删除</Button>
+                                                        <Button
+                                                            type="text"
+                                                            size="small"
+                                                            onClick={() =>
+                                                                modalRef.current?.open('edit', pkg)
+                                                            }
+                                                            className="text-blue-600 font-bold hover:bg-blue-50"
+                                                        >
+                                                            编辑
+                                                        </Button>
+                                                        <Button
+                                                            type="text"
+                                                            size="small"
+                                                            danger
+                                                            onClick={() => deletePackage(pkg.id)}
+                                                            className="font-bold hover:bg-red-50"
+                                                        >
+                                                            删除
+                                                        </Button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -235,12 +298,14 @@ export default function PackagesPage() {
                             <div className="w-24 h-24 bg-gray-100 rounded-[2rem] flex items-center justify-center text-gray-300 mb-8 transition-transform hover:scale-110 hover:rotate-3">
                                 <CodeSandboxOutlined style={{ fontSize: 48 }} />
                             </div>
-                            <h3 className="text-2xl font-bold text-gray-900 mb-3">未检测到配置方案</h3>
+                            <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                                未检测到配置方案
+                            </h3>
                             <p className="text-gray-500 max-w-md mb-10 text-base">
                                 您的方案库目前为空。点击下方按钮初始化您的第一个硬件配置方案。
                             </p>
-                            <Button 
-                                type="primary" 
+                            <Button
+                                type="primary"
                                 size="large"
                                 onClick={() => modalRef.current?.open('create')}
                                 className="h-14 px-12 bg-indigo-600 border-none rounded-2xl font-bold shadow-xl shadow-indigo-600/20 transition-all hover:scale-105 active:scale-95"
@@ -256,7 +321,3 @@ export default function PackagesPage() {
         </div>
     );
 }
-
-
-
-

@@ -65,7 +65,9 @@ export const ProductRow: React.FC<ProductRowProps> = ({
     const categoryColor = CATEGORY_CONFIG[item.category]?.solidColor || 'bg-slate-400';
 
     return (
-        <tr className={`group transition-all duration-300 ${disabled ? 'hover:bg-slate-50/50' : 'hover:bg-indigo-50/30'} relative`}>
+        <tr
+            className={`group transition-all duration-300 ${disabled ? 'hover:bg-slate-50/50' : 'hover:bg-indigo-50/30'} relative`}
+        >
             {/* 类别标签 */}
             <td className="px-6 py-4 align-middle whitespace-nowrap">
                 {isFirst && (
@@ -81,9 +83,7 @@ export const ProductRow: React.FC<ProductRowProps> = ({
             {/* 产品选择 */}
             <td className="px-6 py-4 align-middle min-w-[280px]">
                 <div className="flex items-center gap-4">
-                    {!isFirst && (
-                        <div className="w-1 h-1 rounded-full bg-slate-200 ml-1"></div>
-                    )}
+                    {!isFirst && <div className="w-1 h-1 rounded-full bg-slate-200 ml-1"></div>}
 
                     <div className="flex-1">
                         <div className="relative group/select">
@@ -92,10 +92,14 @@ export const ProductRow: React.FC<ProductRowProps> = ({
                                 onChange={(val) => onUpdate(item.id, { product_id: val })}
                                 options={options}
                                 disabled={disabled}
-                                placeholder={isFirst ? `选择 ${categoryName} 配件...` : '添加额外配件...'}
+                                placeholder={
+                                    isFirst ? `选择 ${categoryName} 配件...` : '添加额外配件...'
+                                }
                                 allowCustomInput
                                 customInputValue={item.custom_name}
-                                onCustomInputChange={(val) => onUpdate(item.id, { custom_name: val })}
+                                onCustomInputChange={(val) =>
+                                    onUpdate(item.id, { custom_name: val })
+                                }
                             />
                         </div>
                     </div>
@@ -166,7 +170,10 @@ export const ProductRow: React.FC<ProductRowProps> = ({
                     ) : selectedProduct ? (
                         <div className="flex flex-col items-end gap-0.5">
                             <span className="text-blue-600 text-sm font-bold tracking-tight">
-                                ¥{metrics.unitSellPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                ¥
+                                {metrics.unitSellPrice.toLocaleString(undefined, {
+                                    minimumFractionDigits: 2,
+                                })}
                             </span>
                             {showProfit && (
                                 <div className="flex items-center gap-1.5 opacity-60">
@@ -189,19 +196,28 @@ export const ProductRow: React.FC<ProductRowProps> = ({
                     <div className="flex flex-col items-end gap-1">
                         <div className="inline-flex items-center px-3 py-1 bg-emerald-50 rounded-lg border border-emerald-100/50">
                             <span className="text-emerald-600 text-base font-black tracking-tight">
-                                ¥{metrics.totalSellPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                ¥
+                                {metrics.totalSellPrice.toLocaleString(undefined, {
+                                    minimumFractionDigits: 2,
+                                })}
                             </span>
                         </div>
                         {showProfit && (
                             <div className="flex items-center gap-1.5 pr-1">
-                                <span className={`text-[10px] font-bold ${metrics.totalProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                <span
+                                    className={`text-[10px] font-bold ${metrics.totalProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}
+                                >
                                     利 ¥{metrics.totalProfit.toFixed(0)}
                                 </span>
-                                <span className={`text-[9px] px-1.5 py-0.5 rounded font-black ${
-                                    metrics.profitRate > 0.15 ? 'bg-emerald-100 text-emerald-700' : 
-                                    metrics.profitRate > 0.05 ? 'bg-amber-50 text-amber-600' : 
-                                    'bg-rose-50 text-rose-600'
-                                }`}>
+                                <span
+                                    className={`text-[9px] px-1.5 py-0.5 rounded font-black ${
+                                        metrics.profitRate > 0.15
+                                            ? 'bg-emerald-100 text-emerald-700'
+                                            : metrics.profitRate > 0.05
+                                              ? 'bg-amber-50 text-amber-600'
+                                              : 'bg-rose-50 text-rose-600'
+                                    }`}
+                                >
                                     {(metrics.profitRate * 100).toFixed(0)}%
                                 </span>
                             </div>

@@ -107,11 +107,15 @@ export const PackageCard: React.FC<PackageCardProps> = ({
             <div className="relative z-10 flex flex-col h-full">
                 {/* 头部：图标与 ID */}
                 <div className="flex justify-between items-start mb-6">
-                    <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${theme.iconBg} shadow-inner transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3`}>
+                    <div
+                        className={`flex h-12 w-12 items-center justify-center rounded-xl ${theme.iconBg} shadow-inner transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3`}
+                    >
                         <DesktopOutlined style={{ fontSize: 24 }} />
                     </div>
                     <div className="text-right">
-                        <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${theme.iconBg}`}>
+                        <span
+                            className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${theme.iconBg}`}
+                        >
                             ID: {pkg.id}
                         </span>
                         <div className="text-[10px] text-gray-400 mt-1 font-medium">
@@ -132,17 +136,27 @@ export const PackageCard: React.FC<PackageCardProps> = ({
 
                 {/* 核心规格：网格布局 */}
                 <div className="grid grid-cols-2 gap-3 mb-6">
-                    <SpecItem icon={<ThunderboltOutlined />} value={cpu?.product_name} theme={theme} />
+                    <SpecItem
+                        icon={<ThunderboltOutlined />}
+                        value={cpu?.product_name}
+                        theme={theme}
+                    />
                     <SpecItem icon={<DesktopOutlined />} value={gpu?.product_name} theme={theme} />
                     <SpecItem icon={<HddOutlined />} value={ram?.product_name} theme={theme} />
-                    <SpecItem icon={<GatewayOutlined />} value={motherboard?.product_name} theme={theme} />
+                    <SpecItem
+                        icon={<GatewayOutlined />}
+                        value={motherboard?.product_name}
+                        theme={theme}
+                    />
                 </div>
 
                 {/* 底部：价格与操作 */}
                 <div className="mt-auto pt-6 border-t border-gray-100/50">
                     <div className="flex justify-between items-end mb-6">
                         <div>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">套餐总价</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">
+                                套餐总价
+                            </span>
                             <div className="text-2xl font-black text-gray-900 tabular-nums flex items-baseline">
                                 <span className="text-sm font-bold mr-1">¥</span>
                                 {Number(pkg.total_price).toLocaleString()}
@@ -163,7 +177,7 @@ export const PackageCard: React.FC<PackageCardProps> = ({
                             配置详情
                         </Button>
                         <Tooltip title="快速预览">
-                            <Button 
+                            <Button
                                 icon={<EyeOutlined />}
                                 onClick={() => onView(pkg)}
                                 className="h-11 w-11 flex items-center justify-center rounded-xl border-gray-200 text-gray-400 hover:text-blue-500 hover:border-blue-200 transition-all"
@@ -190,14 +204,26 @@ export const PackageCard: React.FC<PackageCardProps> = ({
     );
 };
 
-const SpecItem = ({ icon, value, theme }: { icon: React.ReactNode; value?: string; theme: any }) => (
+const SpecItem = ({
+    icon,
+    value,
+    theme,
+}: {
+    icon: React.ReactNode;
+    value?: string;
+    theme: any;
+}) => (
     <div className="flex items-center gap-2 group/item">
-        <div className={`flex h-6 w-6 items-center justify-center rounded-lg ${theme.iconBg} text-xs shadow-sm`}>
+        <div
+            className={`flex h-6 w-6 items-center justify-center rounded-lg ${theme.iconBg} text-xs shadow-sm`}
+        >
             {icon}
         </div>
-        <div className="text-[11px] font-bold text-gray-600 truncate flex-1" title={value || '未配置'}>
+        <div
+            className="text-[11px] font-bold text-gray-600 truncate flex-1"
+            title={value || '未配置'}
+        >
             {value || <span className="text-gray-300 italic font-normal">未配置</span>}
         </div>
     </div>
 );
-
