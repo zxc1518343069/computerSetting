@@ -1,35 +1,29 @@
 'use client';
 
-import React, { useRef } from 'react';
-import { Card, Input, Select, Button, Space, Typography, Tooltip, Badge } from 'antd';
+import React, { useRef, useMemo } from 'react';
+import { Input, Select, Button, Tooltip } from 'antd';
 import {
     PlusOutlined,
     ReloadOutlined,
-    SettingOutlined,
     SearchOutlined,
     FilterOutlined,
+    DatabaseOutlined,
+    DollarOutlined,
+    AppstoreOutlined,
 } from '@ant-design/icons';
 import { usePricing, useProductList } from './hooks';
 import { ProductTable } from './_components/ProductTable';
 import { ProductModal } from './_components/ProductModal';
 import { ProductModalRef } from './types';
-import { categoryOptions } from '@/const';
+import { CATEGORY_CONFIG, categoryOptions } from '@/const/categories';
+import { formatPrice } from '@/utils';
 
-const { Title, Text } = Typography;
 const { Option } = Select;
 
 export default function ConfigPage() {
     // 列表数据逻辑
-    const {
-        products,
-        loading,
-        queryParams,
-        handleSearch,
-        handleReset,
-        deleteProduct,
-        deleteLoading,
-        refresh,
-    } = useProductList();
+    const { products, loading, queryParams, handleSearch, deleteProduct, deleteLoading, refresh } =
+        useProductList();
 
     // 价格计算逻辑
     const { getSellingPriceInfo } = usePricing();
@@ -37,121 +31,155 @@ export default function ConfigPage() {
     // 模态框 Ref
     const modalRef = useRef<ProductModalRef>(null);
 
+    // 计算统计数据
+    const stats = useMemo(() => {
+        const totalProducts = products.length;
+        const totalPrice = products.reduce((sum, p) => sum + p.price, 0);
+        const avgPrice = totalProducts > 0 ? totalPrice / totalProducts : 0;
+        const activeCategories = new Set(products.map((p) => p.category)).size;
+
+        return {
+            totalProducts,
+            avgPrice,
+            activeCategories,
+        };
+    }, [products]);
+
     return (
-        <div className="p-6 min-h-screen bg-gray-50/50">
-            <div className="max-w-[1600px] mx-auto space-y-6">
-                {/* 页面标题区域 */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="min-h-screen bg-gray-50/30 pb-20">
+            {/* 顶部装饰背景 */}
+            <div className="absolute top-0 left-0 right-0 h-[300px] bg-gradient-to-b from-blue-50/50 to-transparent -z-10 pointer-events-none" />
+
+            <div className="max-w-[1600px] mx-auto px-6 pt-8 space-y-8">
+                {/* 页面头部 */}
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                     <div>
-                        <Title
-                            level={2}
-                            style={{ marginBottom: 0, fontSize: '24px', fontWeight: 600 }}
-                        >
-                            <Space>
-                                <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-blue-600/20">
-                                    <SettingOutlined style={{ fontSize: 20 }} />
-                                </div>
-                                <span>产品配置管理</span>
-                            </Space>
-                        </Title>
-                        <Text type="secondary" className="mt-1 block pl-[52px]">
-                            统一管理电脑硬件的基础信息、分类及定价策略
-                        </Text>
+                        <h1 className="text-3xl font-bold text-gray-900 tracking-tight mb-2">
+                            硬件配置中心
+                        </h1>
+                        <p className="text-gray-500 text-lg max-w-2xl">
+                            管理所有电脑硬件的基础信息、分类归属及全局定价策略。
+                        </p>
                     </div>
-
                     <div className="flex items-center gap-3">
-                        <div className="bg-white p-1 rounded-lg border border-gray-200 shadow-sm hidden md:flex">
-                            <Space size={0}>
-                                <span className="px-3 text-gray-400 text-sm">总产品数</span>
-                                <span className="px-3 font-semibold text-gray-700 border-l border-gray-100">
-                                    {products.length}
-                                </span>
-                            </Space>
-                        </div>
-                    </div>
-                </div>
-
-                {/* 主内容卡片 */}
-                <Card
-                    bordered={false}
-                    className="shadow-sm rounded-xl overflow-hidden"
-                    bodyStyle={{ padding: '24px' }}
-                >
-                    {/* 工具栏 */}
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                        {/* 左侧搜索筛选区 */}
-                        <div className="flex flex-1 flex-wrap items-center gap-3 w-full md:w-auto">
-                            <Select
-                                placeholder="所有硬件类型"
-                                allowClear
-                                style={{ width: 180 }}
-                                size="large"
-                                value={queryParams.category}
-                                onChange={(val) => handleSearch('category', val)}
-                                suffixIcon={<FilterOutlined className="text-gray-400" />}
-                                className="shadow-sm"
-                                showSearch
-                                optionFilterProp="children"
-                                filterOption={(input, option) => {
-                                    const optLabel = (option?.value as string) || '';
-                                    return optLabel?.toLowerCase().includes(input.toLowerCase());
-                                }}
-                            >
-                                {categoryOptions.map((opt) => (
-                                    <Option key={opt.value} value={opt.value}>
-                                        <Space>
-                                            <Badge color={opt.color} />
-                                            {opt.label}
-                                        </Space>
-                                    </Option>
-                                ))}
-                            </Select>
-
-                            <Input
-                                placeholder="搜索产品名称..."
-                                prefix={<SearchOutlined className="text-gray-400" />}
-                                allowClear
-                                size="large"
-                                style={{ width: 240 }}
-                                value={queryParams.search}
-                                onChange={(e) => handleSearch('search', e.target.value)}
-                                className="shadow-sm"
-                            />
-
-                            <Tooltip title="重置筛选">
-                                <Button
-                                    icon={<ReloadOutlined />}
-                                    size="large"
-                                    onClick={handleReset}
-                                    className="text-gray-500 hover:text-blue-600 border-dashed"
-                                />
-                            </Tooltip>
-                        </div>
-
-                        {/* 右侧操作区 */}
                         <Button
                             type="primary"
                             size="large"
                             icon={<PlusOutlined />}
                             onClick={() => modalRef.current?.open()}
-                            className="bg-blue-600 shadow-lg shadow-blue-600/30 hover:shadow-blue-600/40 border-none w-full md:w-auto"
+                            className="h-12 px-6 text-base bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-600/20 border-none rounded-xl"
                         >
                             新增产品
                         </Button>
                     </div>
+                </div>
+
+                {/* 统计卡片区域 */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-5 hover:shadow-md transition-shadow">
+                        <div className="w-14 h-14 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-2xl">
+                            <DatabaseOutlined />
+                        </div>
+                        <div>
+                            <div className="text-gray-500 text-sm font-medium mb-1">总产品数</div>
+                            <div className="text-3xl font-bold text-gray-900">
+                                {stats.totalProducts}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-5 hover:shadow-md transition-shadow">
+                        <div className="w-14 h-14 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl">
+                            <DollarOutlined />
+                        </div>
+                        <div>
+                            <div className="text-gray-500 text-sm font-medium mb-1">平均成本</div>
+                            <div className="text-3xl font-bold text-gray-900">
+                                {formatPrice(stats.avgPrice)}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-5 hover:shadow-md transition-shadow">
+                        <div className="w-14 h-14 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-2xl">
+                            <AppstoreOutlined />
+                        </div>
+                        <div>
+                            <div className="text-gray-500 text-sm font-medium mb-1">覆盖分类</div>
+                            <div className="text-3xl font-bold text-gray-900">
+                                {stats.activeCategories}
+                                <span className="text-gray-400 text-lg font-normal ml-2">
+                                    / {categoryOptions.length}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 控制栏与表格 */}
+                <div className="space-y-4">
+                    {/* 悬浮控制栏 */}
+                    <div className="sticky top-4 z-20 bg-white/80 backdrop-blur-xl p-2 rounded-2xl shadow-sm border border-gray-200/50 flex flex-wrap items-center justify-between gap-4 transition-all duration-300">
+                        <div className="flex items-center gap-2 flex-1 min-w-[300px]">
+                            <div className="relative flex-1 max-w-md group">
+                                <SearchOutlined className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                                <Input
+                                    placeholder="搜索产品名称..."
+                                    allowClear
+                                    value={queryParams.search}
+                                    onChange={(e) => handleSearch('search', e.target.value)}
+                                    className="pl-10 border-none bg-gray-100/50 hover:bg-gray-100 focus:bg-white transition-all rounded-xl h-10"
+                                />
+                            </div>
+                            <div className="h-6 w-px bg-gray-200 mx-2" />
+                            <Select
+                                placeholder="所有硬件类型"
+                                allowClear
+                                style={{ width: 200 }}
+                                value={queryParams.category}
+                                onChange={(val) => handleSearch('category', val)}
+                                suffixIcon={<FilterOutlined className="text-gray-400" />}
+                                className="bg-gray-100/50 hover:bg-gray-100 rounded-xl h-10 flex items-center"
+                                showSearch
+                                optionFilterProp="children"
+                                filterOption={(input, option) => {
+                                    const optLabel = (option?.label as string) || '';
+                                    return optLabel?.toLowerCase().includes(input.toLowerCase());
+                                }}
+                            >
+                                {categoryOptions.map((opt) => (
+                                    <Option key={opt.value} value={opt.value} label={opt.label}>
+                                        <div className="flex items-center gap-2 py-1">
+                                            <span>{CATEGORY_CONFIG[opt.value]?.icon}</span>
+                                            <span>{opt.label}</span>
+                                        </div>
+                                    </Option>
+                                ))}
+                            </Select>
+                        </div>
+
+                        <div className="flex items-center gap-2 pr-2">
+                            <Tooltip title="刷新列表">
+                                <Button
+                                    type="text"
+                                    icon={<ReloadOutlined />}
+                                    onClick={refresh}
+                                    className="text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg h-10 w-10 flex items-center justify-center"
+                                />
+                            </Tooltip>
+                        </div>
+                    </div>
 
                     {/* 表格区域 */}
-                    <div className="bg-white rounded-lg border border-gray-100">
-                        <ProductTable
-                            loading={loading}
-                            products={products}
-                            getSellingPriceInfo={getSellingPriceInfo}
-                            onEdit={(product) => modalRef.current?.open(product)}
-                            onDelete={deleteProduct}
-                            deleteLoading={deleteLoading}
-                        />
-                    </div>
-                </Card>
+                    <ProductTable
+                        loading={loading}
+                        products={products}
+                        getSellingPriceInfo={getSellingPriceInfo}
+                        onEdit={(product) => modalRef.current?.open(product)}
+                        onDelete={deleteProduct}
+                        deleteLoading={deleteLoading}
+                    />
+                </div>
             </div>
 
             <ProductModal ref={modalRef} onSuccess={refresh} />

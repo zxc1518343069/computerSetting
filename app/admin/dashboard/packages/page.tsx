@@ -92,8 +92,9 @@ export default function PackagesPage() {
 
                 {/* Content Grid */}
                 {loading ? (
-                    <div className="flex justify-center py-20">
-                        <Spin size="large" tip="加载套餐数据中..." />
+                    <div className="flex flex-col items-center justify-center py-20 gap-3">
+                        <Spin size="large" />
+                        <span className="text-gray-400 text-sm">加载套餐数据中...</span>
                     </div>
                 ) : packages.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">

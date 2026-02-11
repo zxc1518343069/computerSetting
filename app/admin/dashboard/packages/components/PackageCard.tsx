@@ -62,7 +62,9 @@ export const PackageCard: React.FC<PackageCardProps> = ({
         <Card
             bordered={false}
             className="h-full shadow-sm hover:shadow-xl transition-all duration-300 rounded-2xl overflow-hidden group border border-gray-100 flex flex-col bg-white"
-            bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', height: '100%' }}
+            styles={{
+                body: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%' },
+            }}
         >
             {/* 视觉封面区 */}
             <div

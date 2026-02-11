@@ -15,14 +15,19 @@ export function PackageList({ packages, onApplyPackage, pricingConfig }: Package
     }
 
     return (
-        <div className="space-y-3">
-            {packages.map((pkg) => (
-                <PackageCard
+        <div className="space-y-4 animate-fade-in px-1">
+            {packages.map((pkg, index) => (
+                <div
                     key={pkg.id}
-                    pkg={pkg}
-                    onApply={() => onApplyPackage(pkg)}
-                    pricingConfig={pricingConfig}
-                />
+                    className="transform transition-all duration-500"
+                    style={{ animationDelay: `${index * 50}ms` }}
+                >
+                    <PackageCard
+                        pkg={pkg}
+                        onApply={() => onApplyPackage(pkg)}
+                        pricingConfig={pricingConfig}
+                    />
+                </div>
             ))}
         </div>
     );

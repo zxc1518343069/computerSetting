@@ -43,8 +43,9 @@ const EditablePackageTable: React.FC<EditablePackageTableProps> = ({
 
     if (loading) {
         return (
-            <div className="flex justify-center py-12 bg-gray-50/30 rounded-xl">
-                <Spin tip="加载产品数据..." />
+            <div className="flex flex-col items-center justify-center py-12 bg-gray-50/30 rounded-xl gap-3">
+                <Spin size="large" />
+                <span className="text-gray-400 text-sm">加载产品数据...</span>
             </div>
         );
     }

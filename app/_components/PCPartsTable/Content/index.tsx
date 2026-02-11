@@ -1,12 +1,13 @@
 'use client';
 import EditablePackageTable from '@/app/admin/dashboard/packages/components/EditablePackageTable';
 import { PACKAGE_CATEGORIES } from '@/const';
-import React, { useImperativeHandle } from 'react';
+import React, { useImperativeHandle, useState } from 'react';
 import { Package, PackageItem } from '@/app/_components/PCPartsTable/PackageRecomment';
 import { useTableControl } from './hooks/useTableControl';
 import { InfoSection } from './components/InfoSection';
-import { Typography } from 'antd';
-import { BuildOutlined } from '@ant-design/icons';
+import { Typography, Button } from 'antd';
+import { BuildOutlined, ExperimentOutlined } from '@ant-design/icons';
+import { TestConfigModal } from './components/TestConfigModal';
 
 const { Title } = Typography;
 
@@ -29,6 +30,8 @@ export function Content(props: ContentProps) {
         discountedPrice,
         setDiscountedPrice,
     } = useTableControl();
+
+    const [testModalVisible, setTestModalVisible] = useState(false);
 
     useImperativeHandle(
         props.customRef,
@@ -80,6 +83,14 @@ export function Content(props: ContentProps) {
                     </Title>
                     <p className="text-xs text-gray-400 mt-1">自定义您的专属电脑配置清单</p>
                 </div>
+                <Button
+                    type="primary"
+                    icon={<ExperimentOutlined />}
+                    onClick={() => setTestModalVisible(true)}
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 border-0 shadow-md shadow-blue-500/20"
+                >
+                    测试配置
+                </Button>
             </div>
 
             {/* Main Table Area */}
@@ -110,6 +121,12 @@ export function Content(props: ContentProps) {
             </div>
 
             <InfoSection onReset={handleReset} />
+
+            <TestConfigModal
+                visible={testModalVisible}
+                onClose={() => setTestModalVisible(false)}
+                items={tableData}
+            />
         </div>
     );
 }
