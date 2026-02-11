@@ -63,7 +63,7 @@ export const ProductSelect: React.FC<ProductSelectProps> = ({
                 (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
             }
             className="w-full"
-            dropdownRender={(menu) => (
+            popupRender={(menu) => (
                 <>
                     {menu}
                     {allowCustomInput && (

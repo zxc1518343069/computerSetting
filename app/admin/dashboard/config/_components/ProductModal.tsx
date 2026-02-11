@@ -1,10 +1,17 @@
-import React, { useState, useImperativeHandle, forwardRef } from 'react';
-import { Modal, Form, Select, Space, Badge, Input, message } from 'antd';
-import { EditOutlined, PlusOutlined } from '@ant-design/icons';
+import React, { useState, useImperativeHandle, forwardRef, useMemo } from 'react';
+import { Modal, Form, Select, Input, message, InputNumber, Switch, Button, Divider } from 'antd';
+import {
+    EditOutlined,
+    PlusOutlined,
+    CalculatorOutlined,
+    CheckCircleFilled,
+} from '@ant-design/icons';
 import { useRequest } from 'ahooks';
-import { categoryOptions } from '@/const';
+import { CATEGORY_CONFIG, categoryOptions } from '@/const/categories';
 import { Product, ProductModalRef } from '../types';
 import { saveProductService } from '../services';
+import { usePricing } from '../hooks/usePricing';
+import { formatPrice } from '@/utils';
 
 const { Option } = Select;
 
@@ -18,6 +25,31 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
     const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
     const [form] = Form.useForm();
 
+    // 引入定价计算逻辑
+    const { getSellingPriceInfo } = usePricing();
+
+    // 监听表单值以实时计算
+    const watchedCategory = Form.useWatch('category', form);
+    const watchedPrice = Form.useWatch('price', form);
+    const watchedIsUsePremium = Form.useWatch('is_use_premium', form);
+    const watchedSellingPrice = Form.useWatch('selling_price', form);
+
+    // 计算预览价格
+    const previewPriceInfo = useMemo(() => {
+        const price = parseFloat(watchedPrice || '0');
+        if (isNaN(price)) return { price: 0, rate: 0 };
+
+        // 构造临时对象用于计算
+        const tempProduct = {
+            id: 0,
+            name: '',
+            price: price,
+            category: watchedCategory || 'cpu',
+        } as Product;
+
+        return getSellingPriceInfo(tempProduct);
+    }, [watchedCategory, watchedPrice, getSellingPriceInfo]);
+
     // 暴露给父组件的方法
     useImperativeHandle(ref, () => ({
         open: (product?: Product) => {
@@ -28,12 +60,14 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
                     category: product.category,
                     name: product.name,
                     price: product.price,
+                    selling_price: product.selling_price,
+                    is_use_premium: product.is_use_premium ?? true,
                 });
             } else {
                 setIsEditMode(false);
                 setCurrentProduct(null);
                 form.resetFields();
-                form.setFieldsValue({ category: 'cpu' }); // 默认值
+                form.setFieldsValue({ category: 'cpu', is_use_premium: true }); // 默认值
             }
             setVisible(true);
         },
@@ -58,6 +92,9 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
                 category: values.category,
                 name: values.name,
                 price: parseFloat(values.price),
+                // 如果使用溢价配置，强制将 selling_price 设为 null
+                selling_price: values.is_use_premium ? null : values.selling_price,
+                is_use_premium: values.is_use_premium,
             };
 
             await saveProductService(productData, isEditMode);
@@ -75,65 +112,199 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
         }
     );
 
+    // 获取当前分类的配置
+    const currentCategoryConfig = CATEGORY_CONFIG[watchedCategory || 'cpu'];
+
     return (
         <Modal
-            title={
-                <Space>
-                    {isEditMode ? <EditOutlined /> : <PlusOutlined />}
-                    {isEditMode ? '编辑产品' : '新增产品'}
-                </Space>
-            }
+            title={null}
             open={visible}
             onOk={handleSubmit}
             onCancel={handleCancel}
             confirmLoading={loading}
             destroyOnClose
+            width={800}
+            footer={null}
+            className="custom-modal"
+            styles={{ content: { padding: 0, borderRadius: '16px', overflow: 'hidden' } }}
         >
-            <Form
-                form={form}
-                layout="vertical"
-                name="productForm"
-                initialValues={{ category: 'cpu' }}
-            >
-                <Form.Item
-                    name="category"
-                    label="硬件类型"
-                    rules={[{ required: true, message: '请选择硬件类型' }]}
-                >
-                    <Select placeholder="请选择">
-                        {categoryOptions.map((opt) => (
-                            <Option key={opt.value} value={opt.value}>
-                                <Space>
-                                    <Badge color={opt.color} />
-                                    {opt.label}
-                                </Space>
-                            </Option>
-                        ))}
-                    </Select>
-                </Form.Item>
+            <div className="flex flex-col md:flex-row h-full">
+                {/* 左侧表单区域 */}
+                <div className="flex-1 p-8 bg-white">
+                    <div className="mb-8">
+                        <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                                {isEditMode ? <EditOutlined /> : <PlusOutlined />}
+                            </div>
+                            {isEditMode ? '编辑产品' : '新增产品'}
+                        </h2>
+                        <p className="text-gray-500 mt-1 ml-[52px]">填写产品基础信息与定价策略</p>
+                    </div>
 
-                <Form.Item
-                    name="name"
-                    label="产品名称"
-                    rules={[{ required: true, message: '请输入产品名称' }]}
-                >
-                    <Input placeholder="例如: Intel Core i9-13900K" />
-                </Form.Item>
+                    <Form
+                        form={form}
+                        layout="vertical"
+                        name="productForm"
+                        initialValues={{ category: 'cpu', is_use_premium: true }}
+                        size="large"
+                    >
+                        <Form.Item
+                            name="category"
+                            label="硬件类型"
+                            rules={[{ required: true, message: '请选择硬件类型' }]}
+                        >
+                            <Select placeholder="请选择" className="w-full">
+                                {categoryOptions.map((opt) => (
+                                    <Option key={opt.value} value={opt.value}>
+                                        <div className="flex items-center gap-2">
+                                            <span>{CATEGORY_CONFIG[opt.value]?.icon}</span>
+                                            <span>{opt.label}</span>
+                                        </div>
+                                    </Option>
+                                ))}
+                            </Select>
+                        </Form.Item>
 
-                <Form.Item
-                    name="price"
-                    label="基础价格 (¥)"
-                    rules={[
-                        { required: true, message: '请输入价格' },
-                        {
-                            pattern: /^\d+(\.\d{1,2})?$/,
-                            message: '请输入有效的数字，最多两位小数',
-                        },
-                    ]}
-                >
-                    <Input prefix="¥" type="number" step="0.01" min="0" placeholder="0.00" />
-                </Form.Item>
-            </Form>
+                        <Form.Item
+                            name="name"
+                            label="产品名称"
+                            rules={[{ required: true, message: '请输入产品名称' }]}
+                        >
+                            <Input placeholder="例如: Intel Core i9-13900K" />
+                        </Form.Item>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <Form.Item
+                                name="price"
+                                label="基础成本 (¥)"
+                                rules={[{ required: true, message: '请输入价格' }]}
+                            >
+                                <InputNumber
+                                    prefix="¥"
+                                    style={{ width: '100%' }}
+                                    min={0}
+                                    precision={2}
+                                    placeholder="0.00"
+                                />
+                            </Form.Item>
+
+                            <Form.Item
+                                name="selling_price"
+                                label="手动定价 (¥)"
+                                tooltip="若填写，将覆盖自动计算的价格"
+                            >
+                                <InputNumber
+                                    prefix="¥"
+                                    style={{ width: '100%' }}
+                                    min={0}
+                                    precision={2}
+                                    placeholder="可选"
+                                    disabled={watchedIsUsePremium}
+                                />
+                            </Form.Item>
+                        </div>
+
+                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 mb-0 flex items-center justify-between">
+                            <div>
+                                <div className="font-medium text-gray-800">自动溢价计算</div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                    根据全局配置自动计算最终售价
+                                </div>
+                            </div>
+                            <Form.Item name="is_use_premium" valuePropName="checked" noStyle>
+                                <Switch />
+                            </Form.Item>
+                        </div>
+                    </Form>
+
+                    <div className="flex justify-end gap-3 mt-8">
+                        <Button size="large" onClick={handleCancel}>
+                            取消
+                        </Button>
+                        <Button
+                            type="primary"
+                            size="large"
+                            onClick={handleSubmit}
+                            loading={loading}
+                            className="bg-blue-600 hover:bg-blue-500"
+                        >
+                            保存提交
+                        </Button>
+                    </div>
+                </div>
+
+                {/* 右侧预览区域 */}
+                <div className="w-full md:w-[320px] bg-gray-50/80 border-l border-gray-100 p-8 flex flex-col justify-center relative overflow-hidden">
+                    {/* 背景装饰 */}
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-30 -translate-y-1/2 translate-x-1/2"></div>
+                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-100 rounded-full mix-blend-multiply filter blur-3xl opacity-30 translate-y-1/2 -translate-x-1/2"></div>
+
+                    <div className="relative z-10">
+                        <div className="text-center mb-6">
+                            <div className="w-16 h-16 mx-auto bg-white rounded-2xl shadow-sm flex items-center justify-center text-3xl mb-3">
+                                {currentCategoryConfig?.icon || '📦'}
+                            </div>
+                            <h3 className="font-bold text-gray-800 text-lg">价格预览</h3>
+                            <p className="text-gray-500 text-sm">实时计算最终售价</p>
+                        </div>
+
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-4">
+                            <div className="flex justify-between items-center text-sm">
+                                <span className="text-gray-500">基础成本</span>
+                                <span className="font-mono font-medium">
+                                    {formatPrice(Number(watchedPrice) || 0)}
+                                </span>
+                            </div>
+
+                            {watchedIsUsePremium ? (
+                                <>
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-gray-500">溢价率</span>
+                                        <span className="text-emerald-600 font-medium bg-emerald-50 px-2 py-0.5 rounded-full text-xs">
+                                            +{previewPriceInfo.rate.toFixed(1)}%
+                                        </span>
+                                    </div>
+                                    <Divider style={{ margin: '8px 0' }} />
+                                    <div className="flex justify-between items-end">
+                                        <span className="text-gray-600 font-medium">最终售价</span>
+                                        <span className="text-2xl font-bold text-emerald-600 font-mono">
+                                            {formatPrice(previewPriceInfo.price)}
+                                        </span>
+                                    </div>
+                                    <div className="text-xs text-center text-gray-400 mt-2 bg-gray-50 py-2 rounded-lg">
+                                        <CheckCircleFilled className="text-emerald-500 mr-1" />
+                                        已应用自动溢价策略
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-gray-500">定价模式</span>
+                                        <span className="text-orange-600 font-medium bg-orange-50 px-2 py-0.5 rounded-full text-xs">
+                                            手动定价
+                                        </span>
+                                    </div>
+                                    <Divider style={{ margin: '8px 0' }} />
+                                    <div className="flex justify-between items-end">
+                                        <span className="text-gray-600 font-medium">最终售价</span>
+                                        <span className="text-2xl font-bold text-orange-600 font-mono">
+                                            {formatPrice(
+                                                Number(watchedSellingPrice) ||
+                                                    Number(watchedPrice) ||
+                                                    0
+                                            )}
+                                        </span>
+                                    </div>
+                                    <div className="text-xs text-center text-gray-400 mt-2 bg-gray-50 py-2 rounded-lg">
+                                        <CalculatorOutlined className="text-orange-500 mr-1" />
+                                        使用手动指定价格
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
         </Modal>
     );
 });

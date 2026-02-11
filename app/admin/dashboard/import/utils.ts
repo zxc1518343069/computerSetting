@@ -2,6 +2,7 @@ import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { categoryDisplayMap, exampleData, PartCategory } from '@/const';
 import { ImportProductData } from './services';
+import { Product } from '../config/types';
 
 // PartCategory 到数据库 category 的映射
 const categoryMapping: Record<PartCategory, string> = {
@@ -19,6 +20,8 @@ const categoryMapping: Record<PartCategory, string> = {
 interface ExcelRow {
     产品名称?: string | number;
     产品价格?: string | number;
+    最终售价?: string | number;
+    是否使用溢价?: string | boolean;
 }
 
 /**
@@ -48,6 +51,15 @@ export const parseExcelFile = (file: File): Promise<ImportProductData[]> => {
                                     name: String(row['产品名称']),
                                     price: Number(row['产品价格']) || 0,
                                     category: category.toLowerCase(),
+                                    // 尝试读取新字段，如果不存在则使用默认值
+                                    selling_price: row['最终售价']
+                                        ? Number(row['最终售价'])
+                                        : undefined,
+                                    is_use_premium:
+                                        row['是否使用溢价'] !== undefined
+                                            ? row['是否使用溢价'] === '是' ||
+                                              row['是否使用溢价'] === true
+                                            : undefined,
                                 }));
 
                             productsToImport.push(...parsedProducts);
@@ -73,8 +85,8 @@ export const generateTemplate = () => {
     Object.values(PartCategory).forEach((category) => {
         const products = exampleData[category];
         const worksheetData = [
-            ['产品名称', '产品价格'],
-            ...products.map((product) => [product.name, product.price]),
+            ['产品名称', '产品价格', '最终售价', '是否使用溢价'],
+            ...products.map((product) => [product.name, product.price, '', '是']),
         ];
 
         const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
@@ -87,4 +99,59 @@ export const generateTemplate = () => {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });
     saveAs(data, '电脑配件导入模板.xlsx');
+};
+
+/**
+ * 导出所有产品数据到 Excel
+ */
+export const exportData = (products: Product[]) => {
+    const workbook = XLSX.utils.book_new();
+
+    // 按分类分组
+    const groupedProducts: Record<string, Product[]> = {};
+    products.forEach((product) => {
+        if (!groupedProducts[product.category]) {
+            groupedProducts[product.category] = [];
+        }
+        groupedProducts[product.category].push(product);
+    });
+
+    // 遍历所有定义的分类，确保即使没有数据的分类也有 Sheet
+    Object.values(PartCategory).forEach((categoryEnum) => {
+        const categoryKey = categoryMapping[categoryEnum];
+        const categoryProducts = groupedProducts[categoryKey] || [];
+        const sheetName = categoryDisplayMap[categoryKey];
+
+        const worksheetData = [
+            ['ID', '产品名称', '基础价格', '最终售价(手动)', '是否使用溢价', '创建时间'],
+            ...categoryProducts.map((product) => [
+                product.id,
+                product.name,
+                product.price,
+                product.selling_price ?? '', // 如果是 null/undefined 显示为空
+                product.is_use_premium ? '是' : '否',
+                product.created_at ? new Date(product.created_at).toLocaleDateString() : '',
+            ]),
+        ];
+
+        const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+
+        // 设置列宽
+        worksheet['!cols'] = [
+            { wch: 8 }, // ID
+            { wch: 40 }, // Name
+            { wch: 12 }, // Price
+            { wch: 15 }, // Selling Price
+            { wch: 12 }, // Is Premium
+            { wch: 15 }, // Created At
+        ];
+
+        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+    });
+
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const data = new Blob([excelBuffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    saveAs(data, `电脑配件数据导出_${new Date().toISOString().split('T')[0]}.xlsx`);
 };

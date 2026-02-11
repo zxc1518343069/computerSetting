@@ -1,4 +1,4 @@
-import { Button, Space } from 'antd';
+import { Button } from 'antd';
 import { ReloadOutlined, InfoCircleOutlined } from '@ant-design/icons';
 
 interface InfoSectionProps {
@@ -7,26 +7,32 @@ interface InfoSectionProps {
 
 export function InfoSection({ onReset }: InfoSectionProps) {
     return (
-        <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+        <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-6 p-6 bg-gray-50/50 rounded-[2rem] border border-gray-100/50 backdrop-blur-sm">
             {/* Left: Hints */}
-            <div className="flex items-center gap-3 text-xs text-gray-500">
-                <InfoCircleOutlined className="text-blue-500" />
-                <span>
-                    提示：价格随市场波动，仅供参考。点击左侧{' '}
-                    <span className="font-bold text-gray-700">推荐套餐</span> 可快速填单。
-                </span>
+            <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 flex-shrink-0">
+                    <InfoCircleOutlined className="text-lg" />
+                </div>
+                <div className="flex-1">
+                    <div className="text-sm font-bold text-gray-800 mb-0.5">配置说明</div>
+                    <p className="text-xs text-gray-400 leading-relaxed m-0">
+                        价格随市场波动，仅供参考。点击左侧{' '}
+                        <span className="text-blue-600 font-bold">推荐套餐</span> 可快速填单。
+                        所有配件均支持自定义调整。
+                    </p>
+                </div>
             </div>
 
             {/* Right: Actions */}
-            <Space>
+            <div className="flex items-center gap-3">
                 <Button
                     icon={<ReloadOutlined />}
                     onClick={onReset}
-                    className="border-gray-200 text-gray-500 hover:text-red-500 hover:border-red-200"
+                    className="h-10 px-5 border-gray-200 text-gray-500 hover:text-red-500 hover:border-red-200 rounded-xl transition-all font-medium"
                 >
-                    重置
+                    清空配置
                 </Button>
-            </Space>
+            </div>
         </div>
     );
 }

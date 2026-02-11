@@ -1,17 +1,16 @@
 import React from 'react';
-import { Card, Typography, Tag, Button, Popconfirm, Skeleton, Divider } from 'antd';
+import { Card, Tag, Button, Popconfirm, Skeleton, Tooltip } from 'antd';
 import {
-    EditOutlined,
     DeleteOutlined,
     EyeOutlined,
     ThunderboltOutlined,
     GatewayOutlined,
     HddOutlined,
     DesktopOutlined,
+    ArrowRightOutlined,
 } from '@ant-design/icons';
 import { Package } from '../types';
-
-const { Text } = Typography;
+import dayjs from 'dayjs';
 
 interface PackageCardProps {
     pkg: Package;
@@ -32,13 +31,12 @@ export const PackageCard: React.FC<PackageCardProps> = ({
 }) => {
     if (loading) {
         return (
-            <Card className="h-full shadow-sm rounded-2xl border-gray-100">
-                <Skeleton active avatar paragraph={{ rows: 4 }} />
+            <Card className="h-full shadow-sm rounded-2xl border-gray-100 overflow-hidden">
+                <Skeleton active avatar paragraph={{ rows: 5 }} />
             </Card>
         );
     }
 
-    // 提取核心配置
     const getSpecItem = (category: string) => {
         return pkg.items.find((item) => item.product_category === category);
     };
@@ -48,166 +46,181 @@ export const PackageCard: React.FC<PackageCardProps> = ({
     const ram = getSpecItem('ram');
     const motherboard = getSpecItem('motherboard');
 
-    // 生成随机渐变色背景，基于 ID
-    const gradients = [
-        'from-blue-500 to-cyan-400',
-        'from-purple-500 to-indigo-400',
-        'from-emerald-500 to-teal-400',
-        'from-rose-500 to-orange-400',
-        'from-amber-500 to-yellow-400',
+    // 定义多色系配置，参考 import 模块
+    const themes = [
+        {
+            name: 'blue',
+            bg: 'bg-blue-50/50',
+            border: 'border-blue-100',
+            iconBg: 'bg-blue-100 text-blue-600',
+            hoverBorder: 'hover:border-blue-300',
+            glow: 'hover:shadow-blue-200/50',
+            gradient: 'from-blue-500 to-cyan-400',
+            btn: 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/20',
+        },
+        {
+            name: 'purple',
+            bg: 'bg-purple-50/50',
+            border: 'border-purple-100',
+            iconBg: 'bg-purple-100 text-purple-600',
+            hoverBorder: 'hover:border-purple-300',
+            glow: 'hover:shadow-purple-200/50',
+            gradient: 'from-purple-500 to-pink-400',
+            btn: 'bg-purple-600 hover:bg-purple-500 shadow-purple-600/20',
+        },
+        {
+            name: 'green',
+            bg: 'bg-emerald-50/50',
+            border: 'border-emerald-100',
+            iconBg: 'bg-emerald-100 text-emerald-600',
+            hoverBorder: 'hover:border-emerald-300',
+            glow: 'hover:shadow-emerald-200/50',
+            gradient: 'from-emerald-500 to-teal-400',
+            btn: 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/20',
+        },
+        {
+            name: 'amber',
+            bg: 'bg-amber-50/50',
+            border: 'border-amber-100',
+            iconBg: 'bg-amber-100 text-amber-600',
+            hoverBorder: 'hover:border-amber-300',
+            glow: 'hover:shadow-amber-200/50',
+            gradient: 'from-amber-500 to-orange-400',
+            btn: 'bg-amber-600 hover:bg-amber-500 shadow-amber-600/20',
+        },
     ];
-    const gradientClass = gradients[pkg.id % gradients.length];
+
+    const theme = themes[pkg.id % themes.length];
 
     return (
-        <Card
-            bordered={false}
-            className="h-full shadow-sm hover:shadow-xl transition-all duration-300 rounded-2xl overflow-hidden group border border-gray-100 flex flex-col bg-white"
-            bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', height: '100%' }}
+        <div
+            className={`group relative h-full overflow-hidden rounded-2xl border ${theme.border} ${theme.bg} p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${theme.hoverBorder} ${theme.glow} backdrop-blur-sm flex flex-col ${isDeleting ? 'opacity-50 grayscale pointer-events-none' : ''}`}
         >
-            {/* 视觉封面区 */}
+            {/* 装饰性渐变光晕 */}
             <div
-                onClick={() => !isDeleting && onView(pkg)}
-                className={`h-32 bg-gradient-to-r ${gradientClass} p-6 relative cursor-pointer group-hover:brightness-105 transition-all ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}
-            >
-                <div className="absolute top-4 right-4 bg-white/20 backdrop-blur-md p-2 rounded-xl text-white hover:bg-white/30 transition-colors">
-                    <EyeOutlined style={{ fontSize: 18 }} />
-                </div>
-                <div className="absolute -bottom-6 left-6">
-                    <div className="w-12 h-12 bg-white rounded-2xl shadow-lg flex items-center justify-center text-2xl">
-                        {/* 根据套餐首字显示图标或字符 */}
-                        <DesktopOutlined
-                            className={`text-transparent bg-clip-text bg-gradient-to-br ${gradientClass}`}
-                        />
+                className={`absolute -right-12 -top-12 h-32 w-32 rounded-full bg-gradient-to-br ${theme.gradient} opacity-10 blur-2xl transition-all duration-500 group-hover:scale-150 group-hover:opacity-20`}
+            />
+
+            <div className="relative z-10 flex flex-col h-full">
+                {/* 头部：图标与 ID */}
+                <div className="flex justify-between items-start mb-6">
+                    <div
+                        className={`flex h-12 w-12 items-center justify-center rounded-xl ${theme.iconBg} shadow-inner transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3`}
+                    >
+                        <DesktopOutlined style={{ fontSize: 24 }} />
+                    </div>
+                    <div className="text-right">
+                        <span
+                            className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${theme.iconBg}`}
+                        >
+                            ID: {pkg.id}
+                        </span>
+                        <div className="text-[10px] text-gray-400 mt-1 font-medium">
+                            {dayjs(pkg.updated_at).format('YYYY.MM.DD')}
+                        </div>
                     </div>
                 </div>
-                <div className="text-white/90 font-medium text-sm tracking-wider opacity-80">
-                    PACKAGE #{pkg.id}
+
+                {/* 标题与描述 */}
+                <div className="mb-6">
+                    <h3 className="text-xl font-bold text-gray-800 group-hover:text-black transition-colors truncate mb-2">
+                        {pkg.name}
+                    </h3>
+                    <p className="text-xs leading-relaxed text-gray-500 line-clamp-2 h-8">
+                        {pkg.description || '该配置方案经过专业调优，旨在提供卓越的性能表现。'}
+                    </p>
                 </div>
-                <h3 className="text-white text-xl font-bold mt-1 truncate pr-12 shadow-sm">
-                    {pkg.name}
-                </h3>
-            </div>
 
-            {/* 内容区 */}
-            <div className="pt-10 px-6 pb-4 flex-1 flex flex-col">
-                <Text className="text-gray-500 text-sm mb-6 line-clamp-2 h-10 leading-relaxed">
-                    {pkg.description || '暂无详细描述，请点击查看更多配置信息。'}
-                </Text>
-
-                {/* 核心配置列表 */}
-                <div className="space-y-3 mb-6">
-                    <SpecRow
+                {/* 核心规格：网格布局 */}
+                <div className="grid grid-cols-2 gap-3 mb-6">
+                    <SpecItem
                         icon={<ThunderboltOutlined />}
-                        label="CPU"
                         value={cpu?.product_name}
-                        color="text-blue-500"
-                        bg="bg-blue-50"
+                        theme={theme}
                     />
-                    <SpecRow
-                        icon={<DesktopOutlined />}
-                        label="显卡"
-                        value={gpu?.product_name}
-                        color="text-purple-500"
-                        bg="bg-purple-50"
-                    />
-                    <SpecRow
-                        icon={<HddOutlined />}
-                        label="内存"
-                        value={ram?.product_name}
-                        color="text-emerald-500"
-                        bg="bg-emerald-50"
-                    />
-                    <SpecRow
+                    <SpecItem icon={<DesktopOutlined />} value={gpu?.product_name} theme={theme} />
+                    <SpecItem icon={<HddOutlined />} value={ram?.product_name} theme={theme} />
+                    <SpecItem
                         icon={<GatewayOutlined />}
-                        label="主板"
                         value={motherboard?.product_name}
-                        color="text-orange-500"
-                        bg="bg-orange-50"
+                        theme={theme}
                     />
                 </div>
 
-                <Divider className="my-4" />
-
-                {/* 价格与操作 */}
-                <div className="mt-auto">
-                    <div className="flex justify-between items-end mb-4">
+                {/* 底部：价格与操作 */}
+                <div className="mt-auto pt-6 border-t border-gray-100/50">
+                    <div className="flex justify-between items-end mb-6">
                         <div>
-                            <Text type="secondary" className="text-xs block">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">
                                 套餐总价
-                            </Text>
-                            <div className="text-2xl font-black text-gray-800">
-                                <span className="text-base font-bold mr-1">¥</span>
-                                {Number(pkg.total_price).toFixed(2)}
+                            </span>
+                            <div className="text-2xl font-black text-gray-900 tabular-nums flex items-baseline">
+                                <span className="text-sm font-bold mr-1">¥</span>
+                                {Number(pkg.total_price).toLocaleString()}
                             </div>
                         </div>
-                        <div className="text-right">
-                            <Tag
-                                color="default"
-                                className="mr-0 px-3 py-1 rounded-lg border-gray-200 text-gray-500"
-                            >
-                                共 {pkg.items.length} 件配件
-                            </Tag>
-                        </div>
+                        <Tag className="m-0 px-2 py-0.5 rounded-md bg-white/50 border-gray-100 text-gray-500 text-[10px] font-bold backdrop-blur-sm">
+                            {pkg.items.length} 件配件
+                        </Tag>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="flex gap-2">
                         <Button
-                            icon={<EditOutlined />}
+                            type="primary"
+                            icon={<ArrowRightOutlined />}
                             onClick={() => onEdit(pkg)}
-                            disabled={isDeleting}
-                            className="rounded-xl h-10 hover:border-blue-500 hover:text-blue-500"
+                            className={`flex-1 h-11 border-none shadow-lg rounded-xl font-bold transition-all duration-300 group-hover:scale-[1.02] ${theme.btn}`}
                         >
-                            编辑
+                            配置详情
                         </Button>
+                        <Tooltip title="快速预览">
+                            <Button
+                                icon={<EyeOutlined />}
+                                onClick={() => onView(pkg)}
+                                className="h-11 w-11 flex items-center justify-center rounded-xl border-gray-200 text-gray-400 hover:text-blue-500 hover:border-blue-200 transition-all"
+                            />
+                        </Tooltip>
                         <Popconfirm
-                            title="确定删除?"
-                            description="删除后无法恢复"
+                            title="确定删除？"
                             onConfirm={() => onDelete(pkg.id)}
                             okText="删除"
                             cancelText="取消"
                             okButtonProps={{ danger: true, loading: isDeleting }}
-                            disabled={isDeleting}
                         >
                             <Button
                                 danger
+                                type="text"
                                 icon={<DeleteOutlined />}
-                                loading={isDeleting}
-                                className="rounded-xl h-10 hover:bg-red-50"
-                            >
-                                {isDeleting ? '删除中' : '删除'}
-                            </Button>
+                                className="h-11 w-11 flex items-center justify-center rounded-xl bg-red-50/50 hover:bg-red-100 border-none transition-all"
+                            />
                         </Popconfirm>
                     </div>
                 </div>
             </div>
-        </Card>
+        </div>
     );
 };
 
-const SpecRow = ({
+const SpecItem = ({
     icon,
-    label,
     value,
-    color,
-    bg,
+    theme,
 }: {
     icon: React.ReactNode;
-    label: string;
     value?: string;
-    color: string;
-    bg: string;
+    theme: { iconBg: string };
 }) => (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2 group/item">
         <div
-            className={`w-8 h-8 rounded-lg ${bg} ${color} flex items-center justify-center flex-shrink-0`}
+            className={`flex h-6 w-6 items-center justify-center rounded-lg ${theme.iconBg} text-xs shadow-sm`}
         >
             {icon}
         </div>
-        <div className="flex-1 min-w-0">
-            <div className="text-xs text-gray-400">{label}</div>
-            <div className="text-sm font-medium text-gray-700 truncate" title={value || '未配置'}>
-                {value || <span className="text-gray-300 italic">未配置</span>}
-            </div>
+        <div
+            className="text-[11px] font-bold text-gray-600 truncate flex-1"
+            title={value || '未配置'}
+        >
+            {value || <span className="text-gray-300 italic font-normal">未配置</span>}
         </div>
     </div>
 );

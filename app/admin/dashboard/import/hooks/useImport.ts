@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { message, UploadFile } from 'antd';
 import { useRequest } from 'ahooks';
-import { importProductsService } from '../services';
-import { parseExcelFile, generateTemplate } from '../utils';
+import { importProductsService, fetchAllProductsService } from '../services';
+import { parseExcelFile, generateTemplate, exportData } from '../utils';
 
 export const useImport = () => {
     const [fileList, setFileList] = useState<UploadFile[]>([]);
@@ -32,6 +32,26 @@ export const useImport = () => {
         }
     );
 
+    // 导出逻辑
+    const { runAsync: handleExport, loading: exporting } = useRequest(
+        async () => {
+            const products = await fetchAllProductsService();
+            if (!products || products.length === 0) {
+                throw new Error('暂无数据可导出');
+            }
+            exportData(products);
+        },
+        {
+            manual: true,
+            onSuccess: () => {
+                message.success('数据导出成功');
+            },
+            onError: (error) => {
+                message.error(error.message || '导出失败，请重试');
+            },
+        }
+    );
+
     // 处理文件上传
     const handleUpload = async (file: File) => {
         await importData(file);
@@ -51,9 +71,11 @@ export const useImport = () => {
 
     return {
         uploading,
+        exporting,
         fileList,
         setFileList,
         handleUpload,
         handleDownloadTemplate,
+        handleExport,
     };
 };

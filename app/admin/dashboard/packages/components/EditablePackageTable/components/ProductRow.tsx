@@ -62,68 +62,71 @@ export const ProductRow: React.FC<ProductRowProps> = ({
         price: p.price,
     }));
 
-    const categoryColor = CATEGORY_CONFIG[item.category]?.solidColor || 'bg-gray-400';
+    const categoryColor = CATEGORY_CONFIG[item.category]?.solidColor || 'bg-slate-400';
 
     return (
-        <tr className="group hover:bg-blue-50/20 transition-all duration-300 ease-in-out hover:scale-[1.002] hover:shadow-sm relative">
-            {/* Category Label - Minimalist Indicator */}
-            <td className="px-6 py-4 align-middle w-32 relative">
+        <tr
+            className={`group transition-all duration-300 ${disabled ? 'hover:bg-slate-50/50' : 'hover:bg-indigo-50/30'} relative`}
+        >
+            {/* 类别标签 */}
+            <td className="px-6 py-4 align-middle whitespace-nowrap">
                 {isFirst && (
                     <div className="flex items-center gap-3">
-                        <div
-                            className={`w-1.5 h-8 rounded-full ${categoryColor} shadow-sm ring-2 ring-white`}
-                        ></div>
-                        <span className="text-sm font-bold text-gray-700 tracking-wide whitespace-nowrap">
+                        <div className={`w-1 h-5 rounded-full ${categoryColor} opacity-60`}></div>
+                        <span className="text-sm font-bold text-slate-500 tracking-tight">
                             {categoryName}
                         </span>
                     </div>
                 )}
             </td>
 
-            {/* Product Select */}
-            <td className="px-6 py-4 align-middle">
-                <div className="flex items-center gap-3">
-                    {/* Visual dot for sub-items */}
-                    {!isFirst && (
-                        <div className="w-1.5 h-1.5 rounded-full bg-gray-300 ml-0.5"></div>
-                    )}
+            {/* 产品选择 */}
+            <td className="px-6 py-4 align-middle min-w-[280px]">
+                <div className="flex items-center gap-4">
+                    {!isFirst && <div className="w-1 h-1 rounded-full bg-slate-200 ml-1"></div>}
 
-                    <div className="flex-1 relative">
-                        <ProductSelect
-                            value={item.product_id}
-                            onChange={(val) => onUpdate(item.id, { product_id: val })}
-                            options={options}
-                            disabled={disabled}
-                            placeholder={isFirst ? `请选择${categoryName}...` : '添加更多...'}
-                            allowCustomInput
-                            customInputValue={item.custom_name}
-                            onCustomInputChange={(val) => onUpdate(item.id, { custom_name: val })}
-                        />
+                    <div className="flex-1">
+                        <div className="relative group/select">
+                            <ProductSelect
+                                value={item.product_id}
+                                onChange={(val) => onUpdate(item.id, { product_id: val })}
+                                options={options}
+                                disabled={disabled}
+                                placeholder={
+                                    isFirst ? `选择 ${categoryName} 配件...` : '添加额外配件...'
+                                }
+                                allowCustomInput
+                                customInputValue={item.custom_name}
+                                onCustomInputChange={(val) =>
+                                    onUpdate(item.id, { custom_name: val })
+                                }
+                            />
+                        </div>
                     </div>
 
-                    {/* Actions (Add/Remove) - Always Visible */}
+                    {/* 操作按钮 */}
                     {!disabled && (
-                        <div className="flex items-center w-16 justify-end gap-1">
+                        <div className="flex items-center gap-2">
                             {isMultiSelect && isFirst && onAddRow && (
-                                <Tooltip title="添加">
+                                <Tooltip title="添加模块">
                                     <Button
-                                        type="dashed"
+                                        type="text"
                                         size="small"
-                                        icon={<PlusOutlined className="text-blue-500" />}
+                                        icon={<PlusOutlined />}
                                         onClick={() => onAddRow(item.category)}
-                                        className="flex items-center justify-center w-7 h-7 rounded-full border-blue-200 bg-blue-50 hover:bg-blue-100 hover:border-blue-300 transition-all"
+                                        className="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 flex items-center justify-center border-none transition-all"
                                     />
                                 </Tooltip>
                             )}
                             {canRemove && onRemoveRow && (
-                                <Tooltip title="移除">
+                                <Tooltip title="移除模块">
                                     <Button
                                         type="text"
                                         size="small"
                                         danger
                                         icon={<DeleteOutlined />}
                                         onClick={() => onRemoveRow(item.id)}
-                                        className="flex items-center justify-center w-7 h-7 rounded-full hover:bg-red-50 transition-all opacity-60 hover:opacity-100"
+                                        className="w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 flex items-center justify-center border-none transition-all opacity-0 group-hover:opacity-100"
                                     />
                                 </Tooltip>
                             )}
@@ -132,25 +135,26 @@ export const ProductRow: React.FC<ProductRowProps> = ({
                 </div>
             </td>
 
-            {/* Quantity */}
-            <td className="px-6 py-4 align-middle text-center w-28">
+            {/* 数量控制 */}
+            <td className="px-6 py-4 align-middle text-center w-24">
                 <InputNumber
                     min={1}
                     max={99}
                     value={item.quantity}
                     onChange={(val) => onUpdate(item.id, { quantity: val || 1 })}
                     disabled={disabled || (!item.product_id && !item.custom_name)}
-                    className={`w-full text-center font-medium rounded-lg transition-all ${
+                    className={`w-full !rounded-xl !border-none !shadow-sm transition-all font-mono font-bold ${
                         item.quantity > 1
-                            ? 'border-blue-200 bg-blue-50 text-blue-600 shadow-inner'
-                            : 'border-gray-200 hover:border-blue-300'
+                            ? 'bg-blue-50 text-blue-600'
+                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
                     }`}
+                    controls={false}
                 />
             </td>
 
-            {/* Pricing Columns (Unit Price) */}
+            {/* 价格信息 (单价列) */}
             {pricing && (
-                <td className="px-6 py-4 align-middle text-right w-36 tabular-nums">
+                <td className="px-6 py-4 align-middle text-right whitespace-nowrap tabular-nums">
                     {item.product_id === 0 ? (
                         <InputNumber
                             min={0}
@@ -159,42 +163,60 @@ export const ProductRow: React.FC<ProductRowProps> = ({
                             value={item.custom_price}
                             onChange={(val) => onUpdate(item.id, { custom_price: val || 0 })}
                             disabled={disabled}
-                            className="w-full text-right rounded-lg border-gray-200 hover:border-blue-300 focus:border-blue-500"
-                            size="small"
-                            formatter={(value) => `¥ ${value}`}
+                            className="w-32 !rounded-xl !bg-slate-50/50 !border-none !shadow-sm font-mono font-bold text-right"
+                            prefix={<span className="text-slate-300 text-xs">¥</span>}
+                            controls={false}
                         />
                     ) : selectedProduct ? (
-                        <div className="flex flex-col items-end">
-                            <span className="text-gray-700 text-sm font-medium">
-                                ¥{metrics.unitSellPrice.toFixed(2)}
+                        <div className="flex flex-col items-end gap-0.5">
+                            <span className="text-blue-600 text-sm font-bold tracking-tight">
+                                ¥
+                                {metrics.unitSellPrice.toLocaleString(undefined, {
+                                    minimumFractionDigits: 2,
+                                })}
                             </span>
                             {showProfit && (
-                                <span className="text-[10px] text-gray-400 scale-90 origin-right">
-                                    进: ¥{metrics.unitCost.toFixed(2)}
-                                </span>
+                                <div className="flex items-center gap-1.5 opacity-60">
+                                    <span className="text-[9px] font-bold text-slate-400">进</span>
+                                    <span className="text-[10px] text-slate-500 font-mono">
+                                        ¥{metrics.unitCost.toFixed(0)}
+                                    </span>
+                                </div>
                             )}
                         </div>
                     ) : (
-                        <span className="text-gray-200">-</span>
+                        <span className="text-slate-200 font-mono">---</span>
                     )}
                 </td>
             )}
 
-            {/* Subtotal & Profit */}
-            <td className="px-6 py-4 align-middle text-right w-36 tabular-nums">
+            {/* 小计列 - 翡翠绿标签化设计 */}
+            <td className="px-6 py-4 align-middle text-right whitespace-nowrap tabular-nums">
                 {metrics.totalSellPrice > 0 ? (
-                    <div className="flex flex-col items-end">
-                        <div className="inline-block px-3 py-1 bg-blue-50 text-blue-600 rounded-lg border border-blue-100 font-bold shadow-sm transform transition-transform group-hover:scale-105 mb-1">
-                            ¥{metrics.totalSellPrice.toFixed(2)}
+                    <div className="flex flex-col items-end gap-1">
+                        <div className="inline-flex items-center px-3 py-1 bg-emerald-50 rounded-lg border border-emerald-100/50">
+                            <span className="text-emerald-600 text-base font-black tracking-tight">
+                                ¥
+                                {metrics.totalSellPrice.toLocaleString(undefined, {
+                                    minimumFractionDigits: 2,
+                                })}
+                            </span>
                         </div>
-                        {/* Profit Indicator */}
                         {showProfit && (
-                            <div
-                                className={`text-[10px] font-medium flex items-center gap-1 ${metrics.totalProfit >= 0 ? 'text-emerald-600' : 'text-red-500'}`}
-                            >
-                                <span>利: ¥{metrics.totalProfit.toFixed(0)}</span>
+                            <div className="flex items-center gap-1.5 pr-1">
                                 <span
-                                    className={`px-1 rounded-sm ${metrics.profitRate > 0.15 ? 'bg-emerald-100 text-emerald-700' : metrics.profitRate > 0.05 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}
+                                    className={`text-[10px] font-bold ${metrics.totalProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}
+                                >
+                                    利 ¥{metrics.totalProfit.toFixed(0)}
+                                </span>
+                                <span
+                                    className={`text-[9px] px-1.5 py-0.5 rounded font-black ${
+                                        metrics.profitRate > 0.15
+                                            ? 'bg-emerald-100 text-emerald-700'
+                                            : metrics.profitRate > 0.05
+                                              ? 'bg-amber-50 text-amber-600'
+                                              : 'bg-rose-50 text-rose-600'
+                                    }`}
                                 >
                                     {(metrics.profitRate * 100).toFixed(0)}%
                                 </span>
@@ -202,7 +224,7 @@ export const ProductRow: React.FC<ProductRowProps> = ({
                         )}
                     </div>
                 ) : (
-                    <span className="text-gray-200">-</span>
+                    <span className="text-slate-200 font-mono">---</span>
                 )}
             </td>
         </tr>

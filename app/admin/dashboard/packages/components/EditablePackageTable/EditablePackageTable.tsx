@@ -2,7 +2,7 @@
 
 import { EditablePartRow } from '@/app/admin/dashboard/packages/types';
 import React from 'react';
-import { Spin, Empty } from 'antd';
+import { Empty } from 'antd';
 import { usePackageTableData } from './hooks/usePackageTableData';
 import { usePackageCalculator } from './hooks/usePackageCalculator';
 import { TableHeader } from './components/TableHeader';
@@ -43,24 +43,38 @@ const EditablePackageTable: React.FC<EditablePackageTableProps> = ({
 
     if (loading) {
         return (
-            <div className="flex justify-center py-12 bg-gray-50/30 rounded-xl">
-                <Spin tip="加载产品数据..." />
+            <div className="flex flex-col items-center justify-center py-24 bg-slate-50/50 rounded-3xl gap-6 border border-slate-100">
+                <div className="w-10 h-10 border-2 border-slate-200 border-t-indigo-600 rounded-full animate-spin"></div>
+                <span className="text-slate-400 text-xs font-bold uppercase tracking-widest">
+                    正在同步配置数据...
+                </span>
             </div>
         );
     }
 
     if (!products.length) {
-        return <Empty description="暂无产品数据" />;
+        return (
+            <div className="py-20 bg-white rounded-3xl border-2 border-dashed border-slate-100 flex flex-col items-center">
+                <Empty
+                    description={<span className="text-slate-400 font-medium">暂无硬件数据</span>}
+                />
+            </div>
+        );
     }
 
-    // Only pass metrics if showProfit is explicitly enabled
     const metrics = showProfit ? { totalCost, totalProfit, profitRate } : undefined;
 
+    // 容器样式：增加 overflow-x-auto 解决展示不全问题
+    const containerClasses = disabled
+        ? 'w-full bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto scrollbar-hide'
+        : 'w-full bg-white/60 backdrop-blur-xl rounded-[2rem] border border-white shadow-md overflow-x-auto scrollbar-hide';
+
     return (
-        <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-100">
-            <table className="w-full border-collapse">
-                <TableHeader pricing={pricing} showTips={showProfit} />
-                <tbody className="divide-y divide-gray-50">
+        <div className={containerClasses}>
+            {/* 设置 min-w 确保在窄容器中内容不被挤压 */}
+            <table className="w-full border-collapse table-auto min-w-[800px]">
+                <TableHeader pricing={pricing} />
+                <tbody className="divide-y divide-gray-100/50">
                     {PACKAGE_CATEGORIES.map((cat) => {
                         const categoryItems = items.filter((item) => item.category === cat.key);
 

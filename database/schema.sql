@@ -98,6 +98,12 @@ CREATE TABLE IF NOT EXISTS products
     10,
     2
 ) NOT NULL, -- 配件价格
+    selling_price DECIMAL
+(
+    10,
+    2
+), -- 最终售价 (手动指定)
+    is_use_premium BOOLEAN DEFAULT true, -- 是否使用溢价配置
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
                              );

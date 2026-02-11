@@ -1,30 +1,68 @@
 import React from 'react';
-import { Alert, Space } from 'antd';
-import { InfoCircleOutlined } from '@ant-design/icons';
+import {
+    CloudDownloadOutlined,
+    FileExcelOutlined,
+    CloudUploadOutlined,
+    CheckCircleOutlined,
+} from '@ant-design/icons';
 
 export const Instructions: React.FC = () => {
+    const steps = [
+        {
+            icon: <CloudDownloadOutlined />,
+            title: '下载模板',
+            desc: '获取标准 Excel 模板，包含所有硬件分类工作表。',
+        },
+        {
+            icon: <FileExcelOutlined />,
+            title: '填充数据',
+            desc: '在对应工作表中填写产品名称、价格及可选的溢价配置。',
+        },
+        {
+            icon: <CloudUploadOutlined />,
+            title: '上传文件',
+            desc: '将填写好的文件上传，系统自动解析并验证数据格式。',
+        },
+        {
+            icon: <CheckCircleOutlined />,
+            title: '完成导入',
+            desc: '确认导入结果，数据将即时同步至产品数据库。',
+        },
+    ];
+
     return (
-        <Alert
-            message={
-                <Space align="center" className="mb-2">
-                    <InfoCircleOutlined />
-                    <span className="font-semibold">使用说明</span>
-                </Space>
-            }
-            description={
-                <ul className="list-disc pl-5 space-y-1 text-gray-600">
-                    <li>首次使用请先下载模板，了解所需的数据格式。</li>
-                    <li>
-                        模板包含9个工作表，分别对应：CPU、主板、内存、显卡、存储、电源、机箱、散热器、显示器。
-                    </li>
-                    <li>每个工作表需包含&ldquo;产品名称&rdquo;和&ldquo;产品价格&rdquo;两列。</li>
-                    <li>请确保价格为数字格式，产品名称不为空。</li>
-                    <li>上传成功后，系统将自动解析并批量添加产品数据。</li>
-                </ul>
-            }
-            type="info"
-            showIcon={false}
-            className="rounded-xl border-blue-100 bg-blue-50/50 p-6"
-        />
+        <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white/60 p-8 backdrop-blur-xl shadow-sm">
+            <div className="mb-8 flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-900 text-white">
+                    <span className="font-bold text-sm">i</span>
+                </div>
+                <h3 className="text-lg font-bold text-gray-800">操作指南</h3>
+            </div>
+
+            <div className="grid gap-8 md:grid-cols-4">
+                {steps.map((step, index) => (
+                    <div key={index} className="relative flex flex-col gap-4 group">
+                        {/* Connector Line */}
+                        {index < steps.length - 1 && (
+                            <div className="absolute left-6 top-6 hidden h-0.5 w-full bg-gray-100 md:block group-hover:bg-blue-100 transition-colors" />
+                        )}
+
+                        <div className="relative z-10 flex h-12 w-12 items-center justify-center rounded-xl bg-white border border-gray-100 text-gray-400 shadow-sm transition-all duration-300 group-hover:border-blue-200 group-hover:bg-blue-50 group-hover:text-blue-600 group-hover:scale-110">
+                            <span className="text-xl">{step.icon}</span>
+                        </div>
+
+                        <div>
+                            <h4 className="mb-1 font-bold text-gray-800 group-hover:text-blue-700 transition-colors">
+                                {step.title}
+                            </h4>
+                            <p className="text-xs leading-relaxed text-gray-500">{step.desc}</p>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Background Decoration */}
+            <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-gray-50 opacity-50 blur-3xl pointer-events-none" />
+        </div>
     );
 };

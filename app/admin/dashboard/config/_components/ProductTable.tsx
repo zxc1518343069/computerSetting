@@ -1,10 +1,10 @@
 import React from 'react';
-import { Table, Tag, Space, Typography, Tooltip, Button, Popconfirm } from 'antd';
-import { EditOutlined, DeleteOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { Table, Tag, Tooltip, Button, Popconfirm, Typography } from 'antd';
+import { EditOutlined, DeleteOutlined, InfoCircleOutlined, RiseOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { Product } from '../types';
-import { categoryColorMap, categoryDisplayMap, categoryOptions } from '@/const';
-import { formatDate, formatPrice } from '@/utils';
+import { CATEGORY_CONFIG, categoryOptions } from '@/const/categories';
+import { formatPrice } from '@/utils';
 
 const { Text } = Typography;
 
@@ -32,117 +32,194 @@ export const ProductTable: React.FC<ProductTableProps> = ({
             key: 'id',
             width: 80,
             sorter: (a, b) => a.id - b.id,
-            render: (text) => <Text type="secondary">#{text}</Text>,
+            render: (text) => <span className="text-gray-400 font-mono text-xs">#{text}</span>,
         },
         {
             title: '硬件类型',
             dataIndex: 'category',
             key: 'category',
-            width: 150,
+            width: 160,
             filters: categoryOptions.map((c) => ({ text: c.label, value: c.value })),
             onFilter: (value, record) => record.category === value,
-            render: (category) => (
-                <Tag color={categoryColorMap[category] || 'default'}>
-                    {categoryDisplayMap[category] || category}
-                </Tag>
-            ),
+            render: (category) => {
+                const config = CATEGORY_CONFIG[category];
+                return (
+                    <div className="flex items-center gap-2">
+                        <div
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center text-lg shadow-sm ${
+                                config?.twColor?.split(' ')[0] || 'bg-gray-100'
+                            }`}
+                        >
+                            {config?.icon || '📦'}
+                        </div>
+                        <span className="font-medium text-gray-700">
+                            {config?.name || category}
+                        </span>
+                    </div>
+                );
+            },
         },
         {
             title: '产品名称',
             dataIndex: 'name',
             key: 'name',
             sorter: (a, b) => a.name.localeCompare(b.name),
-            render: (text) => <Text strong>{text}</Text>,
+            render: (text) => (
+                <Text strong className="text-gray-800 text-[15px]">
+                    {text}
+                </Text>
+            ),
         },
         {
-            title: '原价 (¥)',
+            title: '基础成本',
             dataIndex: 'price',
             key: 'price',
             align: 'right',
+            width: 140,
             sorter: (a, b) => a.price - b.price,
-            render: (price) => <Text>{formatPrice(price)}</Text>,
+            render: (price) => (
+                <div className="font-mono text-gray-500 font-medium">{formatPrice(price)}</div>
+            ),
         },
         {
             title: (
-                <div className="flex items-center justify-end gap-1 cursor-help">
-                    <span>售价 (含溢价)</span>
-                    <Tooltip title="包含配置的溢价比例及取整策略">
-                        <InfoCircleOutlined className="text-xs text-gray-400" />
+                <div className="flex items-center justify-end gap-1 cursor-help group">
+                    <span className="group-hover:text-blue-600 transition-colors">最终售价</span>
+                    <Tooltip title="优先级: 手动定价 > 溢价配置 > 基础价格">
+                        <InfoCircleOutlined className="text-xs text-gray-400 group-hover:text-blue-600 transition-colors" />
                     </Tooltip>
                 </div>
             ),
             key: 'sellingPrice',
             align: 'right',
+            width: 180,
             render: (_, record) => {
+                // 1. 优先显示手动设置的售价
+                if (record.selling_price !== undefined && record.selling_price !== null) {
+                    return (
+                        <div className="flex flex-col items-end">
+                            <span className="text-orange-600 font-bold font-mono text-lg">
+                                {formatPrice(record.selling_price)}
+                            </span>
+                            <Tag
+                                color="orange"
+                                bordered={false}
+                                className="mr-0 text-[10px] px-1 leading-tight bg-orange-50 text-orange-600"
+                            >
+                                手动定价
+                            </Tag>
+                        </div>
+                    );
+                }
+
+                // 2. 如果不使用溢价，显示原价
+                if (record.is_use_premium === false) {
+                    return (
+                        <div className="flex flex-col items-end opacity-60">
+                            <span className="text-gray-700 font-bold font-mono text-lg">
+                                {formatPrice(record.price)}
+                            </span>
+                            <span className="text-[10px] text-gray-400">无溢价</span>
+                        </div>
+                    );
+                }
+
+                // 3. 使用溢价计算逻辑
                 const { price, rate } = getSellingPriceInfo(record);
                 return (
-                    <Space direction="vertical" size={0} style={{ alignItems: 'flex-end' }}>
-                        <Text type="success" strong>
+                    <div className="flex flex-col items-end">
+                        <span className="text-emerald-600 font-bold font-mono text-lg">
                             {formatPrice(price)}
-                        </Text>
+                        </span>
                         {rate > 0 && (
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                                +{rate.toFixed(1)}%
-                            </Text>
+                            <div className="flex items-center gap-1 text-[10px] text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">
+                                <RiseOutlined />
+                                <span>+{rate.toFixed(1)}%</span>
+                            </div>
                         )}
-                    </Space>
+                    </div>
                 );
             },
         },
         {
-            title: '创建时间',
-            dataIndex: 'created_at',
-            key: 'created_at',
-            width: 180,
-            render: (date) => formatDate(date),
-            responsive: ['lg'],
-        },
-        {
             title: '操作',
             key: 'action',
-            width: 150,
+            width: 120,
             align: 'center',
             render: (_, record) => (
-                <Space size="small">
+                <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <Tooltip title="编辑">
                         <Button
-                            type="primary"
-                            ghost
+                            type="text"
                             size="small"
                             icon={<EditOutlined />}
                             onClick={() => onEdit(record)}
+                            className="text-blue-600 hover:bg-blue-50 hover:text-blue-700"
                         />
                     </Tooltip>
                     <Popconfirm
                         title="确定删除此产品?"
-                        description={`将删除: ${record.name}`}
+                        description="此操作不可恢复"
                         onConfirm={() => onDelete(record.id)}
-                        okText="确定"
+                        okText="删除"
                         cancelText="取消"
                         okButtonProps={{ danger: true, loading: deleteLoading }}
                     >
                         <Tooltip title="删除">
-                            <Button danger size="small" icon={<DeleteOutlined />} />
+                            <Button
+                                type="text"
+                                danger
+                                size="small"
+                                icon={<DeleteOutlined />}
+                                className="hover:bg-red-50"
+                            />
                         </Tooltip>
                     </Popconfirm>
-                </Space>
+                </div>
             ),
         },
     ];
 
     return (
-        <Table
-            columns={columns}
-            dataSource={products}
-            rowKey="id"
-            loading={loading}
-            pagination={{
-                pageSize: 10,
-                showTotal: (total) => `共 ${total} 条记录`,
-                showSizeChanger: true,
-            }}
-            scroll={{ x: 1000 }}
-            size="middle"
-        />
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <Table
+                columns={columns}
+                dataSource={products}
+                rowKey="id"
+                loading={loading}
+                pagination={{
+                    pageSize: 10,
+                    showTotal: (total) => <span className="text-gray-400">共 {total} 条记录</span>,
+                    showSizeChanger: true,
+                    position: ['bottomRight'],
+                    className: '!mb-0 !mt-4',
+                }}
+                scroll={{ x: 1000 }}
+                size="middle"
+                rowClassName="group hover:bg-gray-50/50 transition-colors cursor-default"
+                className="custom-table"
+            />
+            <style jsx global>{`
+                .custom-table .ant-table-thead > tr > th {
+                    background: #f9fafb;
+                    color: #6b7280;
+                    font-weight: 600;
+                    font-size: 13px;
+                    border-bottom: 1px solid #f3f4f6;
+                    padding: 16px 16px;
+                }
+                .custom-table .ant-table-tbody > tr > td {
+                    padding: 16px 16px;
+                    border-bottom: 1px solid #f9fafb;
+                }
+                .custom-table .ant-table-tbody > tr:last-child > td {
+                    border-bottom: none;
+                }
+                /* 修复分页样式 */
+                .custom-table .ant-pagination {
+                    margin-right: 0 !important;
+                }
+            `}</style>
+        </div>
     );
 };

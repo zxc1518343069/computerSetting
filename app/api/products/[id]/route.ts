@@ -29,7 +29,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     try {
         const { id: idParam } = await params;
         const id = parseInt(idParam);
-        const { category, name, price } = await request.json();
+        const { category, name, price, selling_price, is_use_premium } = await request.json();
 
         if (!category || !name || price === undefined) {
             return error(400, '产品类别、名称和价格不能为空');
@@ -41,6 +41,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
                 category,
                 name,
                 price,
+                selling_price,
+                is_use_premium,
                 updated_at: new Date().toISOString(),
             })
             .eq('id', id)

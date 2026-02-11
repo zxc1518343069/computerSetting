@@ -1,78 +1,113 @@
 'use client';
 import { Content, CustomRef } from '@/app/_components/PCPartsTable/Content';
 import PackageRecomment from '@/app/_components/PCPartsTable/PackageRecomment';
-import Time from '@/app/_components/Time';
 import ContactInfo from './ContactInfo';
+import SiteHeader from '@/app/_components/SiteHeader';
 
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Layout } from 'antd';
-import { ThunderboltFilled } from '@ant-design/icons';
-
-const { Header, Sider, Content: AntContent } = Layout;
 
 export function PCPartsTable() {
     const tableRef = useRef<CustomRef | null>(null);
+    const [collapsed, setCollapsed] = useState(false);
 
     return (
-        <Layout className="h-screen overflow-hidden bg-[#f8fafc]">
-            {/* Sticky Header */}
-            <Header className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-200/50 px-6 flex items-center justify-between h-14 shadow-sm">
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center text-white shadow-lg shadow-slate-500/20">
-                        <ThunderboltFilled style={{ fontSize: 18 }} />
-                    </div>
-                    <span className="font-black text-lg bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600 tracking-tight drop-shadow-sm">
-                        明远装机工坊
-                    </span>
-                    <span className="text-xs font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded ml-2">
-                        PRO
-                    </span>
-                </div>
-                <div className="flex items-center gap-4">
-                    <div className="hidden md:block">
-                        <Time />
-                    </div>
-                </div>
-            </Header>
+        <Layout className="h-screen overflow-hidden bg-[#F8FAFC] relative">
+            {/* 极简背景装饰：营造数字化舞台感 */}
+            <div
+                className="absolute inset-0 opacity-[0.03] pointer-events-none"
+                style={{
+                    backgroundImage: `radial-gradient(#000 1px, transparent 1px)`,
+                    backgroundSize: '40px 40px',
+                }}
+            />
 
-            <Layout className="overflow-hidden">
-                {/* Fixed Sidebar for Recommendations */}
-                <Sider
-                    width={320}
-                    theme="light"
-                    className="border-r border-gray-200 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-20"
-                    breakpoint="lg"
-                    collapsedWidth="0"
+            {/* 扫描线与环境光：增加科技质感 */}
+            <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_0%,rgba(59,130,246,0.02)_50%,transparent_100%)] bg-[length:100%_8px] pointer-events-none" />
+
+            {/* 多层环境光晕：增加视觉深度 */}
+            <div
+                className="absolute -top-[10%] -right-[5%] w-[1000px] h-[1000px] bg-blue-200/20 blur-[160px] rounded-full pointer-events-none animate-pulse"
+                style={{ animationDuration: '8s' }}
+            />
+            <div
+                className="absolute top-[10%] -left-[10%] w-[800px] h-[800px] bg-indigo-200/15 blur-[140px] rounded-full pointer-events-none animate-pulse"
+                style={{ animationDuration: '12s' }}
+            />
+            <div className="absolute bottom-0 right-[10%] w-[600px] h-[600px] bg-purple-100/10 blur-[120px] rounded-full pointer-events-none" />
+
+            {/* 顶部导航：悬浮感设计 */}
+            <div className="relative z-30">
+                <SiteHeader />
+            </div>
+
+            <div className="flex flex-1 overflow-hidden relative z-10">
+                {/* 侧边栏：极致玻璃拟态 */}
+                <div
+                    className={`relative flex flex-col border-r border-white/40 bg-white/60 backdrop-blur-3xl shadow-[20px_0_50px_-20px_rgba(0,0,0,0.03)] z-20 transition-all duration-500 ease-in-out ${
+                        collapsed ? 'w-[88px]' : 'w-[400px]'
+                    }`}
                 >
-                    <div className="flex flex-col h-full">
-                        <div className="flex-1 overflow-hidden">
-                            <PackageRecomment
-                                onApplyPackage={(pkg) => {
-                                    tableRef.current?.processPkgToTableData(pkg);
-                                }}
-                            />
-                        </div>
-                        {/* Contact Info at Sidebar Bottom */}
-                        <div className="p-4 border-t border-gray-100 bg-gray-50/50">
+                    <div className="flex-1 overflow-visible">
+                        <PackageRecomment
+                            collapsed={collapsed}
+                            onToggle={() => setCollapsed(!collapsed)}
+                            onApplyPackage={(pkg) => {
+                                tableRef.current?.processPkgToTableData(pkg);
+                            }}
+                        />
+                    </div>
+
+                    {/* 联系信息：轻量化处理 */}
+                    <div
+                        className={`border-t border-gray-100/30 bg-white/20 backdrop-blur-md transition-all duration-300 ${collapsed ? 'p-4' : 'p-8'}`}
+                    >
+                        <div
+                            className={
+                                collapsed
+                                    ? 'opacity-0 pointer-events-none'
+                                    : 'opacity-100 transition-opacity duration-700'
+                            }
+                        >
                             <ContactInfo />
                         </div>
                     </div>
-                </Sider>
+                </div>
 
-                {/* Main Workspace Area */}
-                <AntContent className="flex-1 overflow-y-auto p-6 bg-slate-50/50 relative">
-                    {/* Decorative Background */}
-                    <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
-                        <div className="absolute -top-[20%] -right-[10%] w-[600px] h-[600px] bg-blue-400/10 rounded-full blur-[100px]"></div>
-                        <div className="absolute top-[40%] -left-[10%] w-[500px] h-[500px] bg-purple-400/10 rounded-full blur-[100px]"></div>
-                    </div>
+                {/* 主工作区：舞台化陈列 */}
+                <div className="flex-1 pt-0 overflow-y-auto p-6 md:p-12 lg:p-16 scrollbar-hide relative">
+                    <div className="max-w-7xl mx-auto relative animate-fadeIn">
+                        {/* 装饰性元素：科技感角落支架 */}
+                        <div className="absolute -top-2 -left-2 w-8 h-8 border-t-2 border-l-2 border-blue-500/20 rounded-tl-xl pointer-events-none" />
+                        <div className="absolute -top-2 -right-2 w-8 h-8 border-t-2 border-r-2 border-blue-500/20 rounded-tr-xl pointer-events-none" />
+                        <div className="absolute -bottom-2 -left-2 w-8 h-8 border-b-2 border-l-2 border-blue-500/20 rounded-bl-xl pointer-events-none" />
+                        <div className="absolute -bottom-2 -right-2 w-8 h-8 border-b-2 border-r-2 border-blue-500/20 rounded-br-xl pointer-events-none" />
 
-                    <div className="max-w-5xl mx-auto relative z-10">
-                        <Content customRef={tableRef} />
+                        {/* 核心内容容器：极致玻璃拟态与悬浮感 */}
+                        <div className="relative group">
+                            {/* 容器背后的动态光晕 */}
+                            <div className="absolute -inset-4 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5 rounded-[4rem] blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none" />
+
+                            <div className="relative bg-white/70 backdrop-blur-3xl rounded-[3.5rem] border border-white/80 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.06)] overflow-hidden transition-all duration-700 hover:shadow-[0_48px_96px_-12px_rgba(0,0,0,0.1)] hover:bg-white/85 ring-1 ring-white/50">
+                                {/* 顶部装饰条 */}
+                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500/20 to-transparent" />
+
+                                {/* 内部增加充足的呼吸空间 */}
+                                <div className="p-8 md:p-12 lg:p-14">
+                                    <Content customRef={tableRef} />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 底部优雅留白与装饰 */}
+                        <div className="h-24 flex items-center justify-center">
+                            <div className="w-1 h-1 rounded-full bg-blue-200 mx-1" />
+                            <div className="w-1 h-1 rounded-full bg-blue-300 mx-1" />
+                            <div className="w-1 h-1 rounded-full bg-blue-200 mx-1" />
+                        </div>
                     </div>
-                </AntContent>
-            </Layout>
+                </div>
+            </div>
         </Layout>
     );
 }
