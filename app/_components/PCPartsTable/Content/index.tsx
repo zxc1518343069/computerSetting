@@ -94,8 +94,7 @@ export function Content(props: ContentProps) {
             </div>
 
             {/* Main Table Area */}
-            <div className="flex-1 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                {/* 
+            {/*
                     Wrapping EditablePackageTable to ensure it fits nicely.
                     Since EditablePackageTable is now a clean card-like component, 
                     we can just render it or wrap it for padding if needed.
@@ -107,18 +106,17 @@ export function Content(props: ContentProps) {
                     So we rely on its internal style. It has `rounded-2xl bg-white shadow-sm ring-1`.
                     This matches our theme nicely.
                 */}
-                <EditablePackageTable
-                    items={tableData}
-                    onRowUpdate={handleTableDataChange}
-                    onAddRow={handleAddRow}
-                    onRemoveRow={handleRemoveRow}
-                    pricing={true}
-                    showProfit={false}
-                    showDiscountedPrice={true}
-                    discountedPrice={discountedPrice}
-                    onDiscountedPriceChange={setDiscountedPrice}
-                />
-            </div>
+            <EditablePackageTable
+                items={tableData}
+                onRowUpdate={handleTableDataChange}
+                onAddRow={handleAddRow}
+                onRemoveRow={handleRemoveRow}
+                pricing={true}
+                showProfit={false}
+                showDiscountedPrice={true}
+                discountedPrice={discountedPrice}
+                onDiscountedPriceChange={setDiscountedPrice}
+            />
 
             <InfoSection onReset={handleReset} />
 

@@ -25,12 +25,12 @@ function PackageRecomment(props: PackageRecommentProps) {
 
     return (
         <div className="flex flex-col h-full w-full relative">
-            {/* Toggle Button on Border */}
+            {/* Toggle Button - Adjusted position to prevent clipping */}
             <div
-                className="absolute right-0 top-8 z-50 cursor-pointer group translate-x-1/2"
+                className="absolute -right-3 top-8 z-50 cursor-pointer group"
                 onClick={onToggle}
             >
-                <div className="w-6 h-6 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm text-gray-400 group-hover:text-blue-600 group-hover:border-blue-200 transition-all">
+                <div className="w-6 h-6 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-md text-gray-400 group-hover:text-blue-600 group-hover:border-blue-200 transition-all transform hover:scale-110">
                     {collapsed ? (
                         <RightOutlined className="text-[10px]" />
                     ) : (
@@ -43,7 +43,7 @@ function PackageRecomment(props: PackageRecommentProps) {
             <div className="flex-1 flex flex-col overflow-hidden">
                 {collapsed ? (
                     // Mini Mode
-                    <div className="flex flex-col items-center py-6 space-y-6 h-full">
+                    <div className="flex flex-col items-center py-6 space-y-6 h-full overflow-hidden">
                         <Tooltip title="热门方案" placement="right">
                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-red-500 text-white shadow-lg shadow-orange-500/20 flex items-center justify-center cursor-pointer hover:scale-105 transition-transform">
                                 <FireFilled className="text-lg" />
@@ -63,7 +63,7 @@ function PackageRecomment(props: PackageRecommentProps) {
                             <div className="w-px h-full bg-gradient-to-b from-gray-100 via-gray-200 to-transparent" />
                         </div>
 
-                        <div className="writing-vertical-rl text-gray-400 text-xs font-medium tracking-widest opacity-50 select-none">
+                        <div className="writing-vertical-rl text-gray-400 text-xs font-medium tracking-widest opacity-50 select-none pb-4">
                             RECOMMEND
                         </div>
                     </div>
@@ -92,8 +92,8 @@ function PackageRecomment(props: PackageRecommentProps) {
                             />
                         </div>
 
-                        {/* List Area */}
-                        <div className="flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-gray-200 hover:scrollbar-thumb-gray-300 scrollbar-track-transparent">
+                        {/* List Area - Added overflow-x-hidden to prevent horizontal scroll */}
+                        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 scrollbar-thin scrollbar-thumb-gray-200 hover:scrollbar-thumb-gray-300 scrollbar-track-transparent">
                             {loadingPackages ? (
                                 <LoadingState />
                             ) : (
