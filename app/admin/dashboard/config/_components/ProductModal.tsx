@@ -1,15 +1,5 @@
 import React, { useState, useImperativeHandle, forwardRef, useMemo } from 'react';
-import {
-    Modal,
-    Form,
-    Select,
-    Input,
-    message,
-    InputNumber,
-    Switch,
-    Button,
-    Divider,
-} from 'antd';
+import { Modal, Form, Select, Input, message, InputNumber, Switch, Button, Divider } from 'antd';
 import {
     EditOutlined,
     PlusOutlined,
@@ -148,9 +138,7 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
                             </div>
                             {isEditMode ? '编辑产品' : '新增产品'}
                         </h2>
-                        <p className="text-gray-500 mt-1 ml-[52px]">
-                            填写产品基础信息与定价策略
-                        </p>
+                        <p className="text-gray-500 mt-1 ml-[52px]">填写产品基础信息与定价策略</p>
                     </div>
 
                     <Form
@@ -223,11 +211,7 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
                                     根据全局配置自动计算最终售价
                                 </div>
                             </div>
-                            <Form.Item
-                                name="is_use_premium"
-                                valuePropName="checked"
-                                noStyle
-                            >
+                            <Form.Item name="is_use_premium" valuePropName="checked" noStyle>
                                 <Switch />
                             </Form.Item>
                         </div>
@@ -304,7 +288,11 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
                                     <div className="flex justify-between items-end">
                                         <span className="text-gray-600 font-medium">最终售价</span>
                                         <span className="text-2xl font-bold text-orange-600 font-mono">
-                                            {formatPrice(Number(watchedSellingPrice) || Number(watchedPrice) || 0)}
+                                            {formatPrice(
+                                                Number(watchedSellingPrice) ||
+                                                    Number(watchedPrice) ||
+                                                    0
+                                            )}
                                         </span>
                                     </div>
                                     <div className="text-xs text-center text-gray-400 mt-2 bg-gray-50 py-2 rounded-lg">
