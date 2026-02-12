@@ -20,12 +20,7 @@ export default function GamesListPage() {
     const renderGameList = (games: typeof INITIAL_ONLINE_GAMES) => (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 pb-20">
             {games.map((game, index) => (
-                <GameCard
-                    key={game.id}
-                    game={game}
-                    index={index}
-                    activeTab={activeTab}
-                />
+                <GameCard key={game.id} game={game} index={index} activeTab={activeTab} />
             ))}
         </div>
     );
