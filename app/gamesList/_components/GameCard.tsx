@@ -14,8 +14,6 @@ interface GameCardProps {
 }
 
 export default function GameCard({ game, index, activeTab }: GameCardProps) {
-    const isTopThree = index < 3;
-
     return (
         <div className="group relative bg-white dark:bg-slate-900/40 rounded-2xl overflow-hidden border border-slate-100 dark:border-white/10 shadow-sm hover:shadow-2xl hover:shadow-blue-500/10 dark:hover:shadow-indigo-500/20 transition-all duration-500 hover:-translate-y-2 flex flex-col backdrop-blur-xl">
             {/* Rank Badge - Metallic/Cyber Look */}
