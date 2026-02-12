@@ -1,13 +1,16 @@
 'use client';
 import EditablePackageTable from '@/app/admin/dashboard/packages/components/EditablePackageTable';
 import { PACKAGE_CATEGORIES } from '@/const';
-import React, { useImperativeHandle, useState } from 'react';
+import React, { useImperativeHandle, useState, useMemo } from 'react';
 import { Package, PackageItem } from '@/app/_components/PCPartsTable/PackageRecomment';
 import { useTableControl } from './hooks/useTableControl';
 import { InfoSection } from './components/InfoSection';
 import { Button } from 'antd';
 import { BuildOutlined, ExperimentOutlined } from '@ant-design/icons';
 import { TestConfigModal } from './components/TestConfigModal';
+import { ExportButton } from './components/ExportButton';
+import { usePackageTableData } from '@/app/admin/dashboard/packages/components/EditablePackageTable/hooks/usePackageTableData';
+import { usePackageCalculator } from '@/app/admin/dashboard/packages/components/EditablePackageTable/hooks/usePackageCalculator';
 
 export interface CustomRef {
     processPkgToTableData: (pkg: Package) => void;
@@ -30,6 +33,10 @@ export function Content(props: ContentProps) {
     } = useTableControl();
 
     const [testModalVisible, setTestModalVisible] = useState(false);
+
+    // 获取产品和定价数据
+    const { products, pricingConfig, loading } = usePackageTableData();
+    const { getItemMetrics, totalPrice } = usePackageCalculator(products, pricingConfig, tableData);
 
     useImperativeHandle(
         props.customRef,
@@ -67,6 +74,20 @@ export function Content(props: ContentProps) {
         [setTableData]
     );
 
+    // 导出数据
+    const exportData = useMemo(() => ({
+        items: tableData,
+        products,
+        totalPrice,
+        discountedPrice: discountedPrice > 0 ? discountedPrice : undefined,
+        getItemMetrics,
+    }), [tableData, products, totalPrice, discountedPrice, getItemMetrics]);
+
+    // 是否有有效配置
+    const hasValidItems = useMemo(() => {
+        return tableData.some(item => item.product_id && item.product_id > 0);
+    }, [tableData]);
+
     return (
         <div className="flex flex-col gap-6 h-full">
             {/* Header Area: 科技感标题与操作 */}
@@ -96,6 +117,10 @@ export function Content(props: ContentProps) {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
+                    <ExportButton 
+                        data={exportData} 
+                        disabled={!hasValidItems || loading}
+                    />
                     <Button
                         type="primary"
                         size="large"

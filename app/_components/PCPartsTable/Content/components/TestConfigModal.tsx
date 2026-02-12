@@ -25,9 +25,9 @@ interface TestConfigModalProps {
 
 interface GameTestResult {
     gameId: number;
-    fps1080p: number;
-    fps2k: number;
-    fps4k: number;
+    fps1080p: string;
+    fps2k: string;
+    fps4k: string;
 }
 
 // --- Helper Functions ---
@@ -37,7 +37,7 @@ const estimateFPS = (
     gameType: 'online' | 'single',
     resolution: '1080p' | '2k' | '4k'
 ) => {
-    if (baseScore === 0) return 0;
+    if (baseScore === 0) return '0';
 
     let multiplier = 1;
     if (resolution === '2k') multiplier = 0.7;
@@ -47,16 +47,24 @@ const estimateFPS = (
     const typeMultiplier = gameType === 'online' ? 1.5 : 0.8;
 
     const baseFPS = baseScore * multiplier * typeMultiplier;
-    const variance = Math.random() * 20 - 10; // +/- 10 FPS variance
+    
+    // Create a range (e.g., +/- 10%)
+    const min = Math.max(10, Math.round(baseFPS * 0.9));
+    const max = Math.max(10, Math.round(baseFPS * 1.1));
 
-    return Math.max(10, Math.round(baseFPS + variance));
+    if (min === max) return `${min}`;
+    return `${min}-${max}`;
 };
 
-const getFPSColor = (fps: number) => {
-    if (fps === 0) return '#e2e8f0'; // Slate 200
-    if (fps >= 144) return '#10b981'; // Emerald 500
-    if (fps >= 60) return '#3b82f6'; // Blue 500
-    if (fps >= 30) return '#f59e0b'; // Amber 500
+const getFPSColor = (fpsRange: string) => {
+    if (!fpsRange || fpsRange === '0') return '#e2e8f0'; // Slate 200
+    
+    // Extract the minimum value from the range string "min-max" or "val"
+    const minVal = parseInt(fpsRange.split('-')[0]);
+    
+    if (minVal >= 144) return '#10b981'; // Emerald 500
+    if (minVal >= 60) return '#3b82f6'; // Blue 500
+    if (minVal >= 30) return '#f59e0b'; // Amber 500
     return '#ef4444'; // Red 500
 };
 
@@ -103,24 +111,13 @@ const HardwareBadge = ({
     </div>
 );
 
-const FpsBar = ({ fps, label }: { fps: number; label: string }) => (
+const FpsDisplay = ({ fpsRange, label }: { fpsRange: string; label: string }) => (
     <div className="flex-1 min-w-[80px]">
-        <div className="flex justify-between items-end mb-1.5">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                {label}
-            </span>
-            <span className="font-mono text-xs font-bold" style={{ color: getFPSColor(fps) }}>
-                {fps > 0 ? fps : '-'} <span className="text-[9px] opacity-60 font-sans">FPS</span>
-            </span>
+        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+            {label}
         </div>
-        <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-            <div
-                className="h-full rounded-full transition-all duration-1000 ease-out"
-                style={{
-                    width: `${Math.min(100, (fps / 240) * 100)}%`,
-                    backgroundColor: getFPSColor(fps),
-                }}
-            />
+        <div className="font-mono text-sm font-bold" style={{ color: getFPSColor(fpsRange) }}>
+            {fpsRange && fpsRange !== '0' ? fpsRange : '-'} <span className="text-[10px] opacity-60 font-sans ml-1">FPS</span>
         </div>
     </div>
 );
@@ -399,13 +396,13 @@ export const TestConfigModal: React.FC<TestConfigModalProps> = ({ visible, onClo
                                     {/* FPS Columns */}
                                     <div className="flex-1 flex flex-col md:flex-row gap-4 md:gap-0 p-4 md:p-0">
                                         <div className="flex-1 md:px-6 md:border-r border-slate-50 md:flex md:items-center">
-                                            <FpsBar fps={result.fps1080p} label="1080P" />
+                                            <FpsDisplay fpsRange={result.fps1080p} label="1080P" />
                                         </div>
                                         <div className="flex-1 md:px-6 md:border-r border-slate-50 md:flex md:items-center">
-                                            <FpsBar fps={result.fps2k} label="2K" />
+                                            <FpsDisplay fpsRange={result.fps2k} label="2K" />
                                         </div>
                                         <div className="flex-1 md:px-6 md:flex md:items-center">
-                                            <FpsBar fps={result.fps4k} label="4K" />
+                                            <FpsDisplay fpsRange={result.fps4k} label="4K" />
                                         </div>
                                     </div>
 
