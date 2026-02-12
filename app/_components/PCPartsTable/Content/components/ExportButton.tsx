@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button, Dropdown, message, App } from 'antd';
+import { Button, Dropdown, App } from 'antd';
 import type { MenuProps } from 'antd';
 import {
     DownloadOutlined,
-    PictureOutlined,
     CopyOutlined,
     FileImageOutlined,
     LoadingOutlined,

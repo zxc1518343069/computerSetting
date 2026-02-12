@@ -5,6 +5,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import zhCN from 'antd/locale/zh_CN';
 import { AntdGlobalRegistry } from '@/lib/AntdGlobal';
+import NextTopLoader from 'nextjs-toploader';
 
 const geistSans = Geist({
     variable: '--font-geist-sans',
@@ -29,6 +30,17 @@ export default function RootLayout({
     return (
         <html lang="en">
             <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+                <NextTopLoader
+                    color="#4f46e5"
+                    initialPosition={0.08}
+                    crawlSpeed={200}
+                    height={3}
+                    crawl={true}
+                    showSpinner={false}
+                    easing="ease"
+                    speed={200}
+                    shadow="0 0 10px #4f46e5,0 0 5px #4f46e5"
+                />
                 <AntdRegistry>
                     <ConfigProvider locale={zhCN}>
                         <App>

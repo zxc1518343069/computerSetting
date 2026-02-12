@@ -10,25 +10,7 @@ export interface Product {
 }
 
 export interface PricingConfig {
-    id: number;
-    unified_pricing: boolean;
-    unified_rate: number;
-    rounding_type: 'none' | 'integer' | 'ten';
-    cpu_rate: number;
-    motherboard_rate: number;
-    ram_rate: number;
-    gpu_rate: number;
-    storage_rate: number;
-    psu_rate: number;
-    case_rate: number;
-    cooling_rate: number;
-    monitor_rate: number;
-    created_at?: string;
-    updated_at?: string;
-}
-
-// 前端使用的 PricingConfig 接口 (camelCase)
-export interface PricingConfigFrontend {
+    id?: number;
     unifiedPricing: boolean;
     unifiedRate: number;
     roundingType: 'none' | 'integer' | 'ten';
@@ -41,7 +23,12 @@ export interface PricingConfigFrontend {
     case: number;
     cooling: number;
     monitor: number;
+    created_at?: string;
+    updated_at?: string;
 }
+
+// 兼容旧代码的别名
+export type PricingConfigFrontend = PricingConfig;
 
 export interface Package {
     id: number;

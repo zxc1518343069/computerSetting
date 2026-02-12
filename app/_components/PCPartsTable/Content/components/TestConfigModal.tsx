@@ -287,6 +287,7 @@ export const TestConfigModal: React.FC<TestConfigModalProps> = ({ visible, onClo
                         options={allGames.map((g) => ({
                             label: (
                                 <div className="flex items-center gap-2 py-1">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img
                                         src={g.icon}
                                         alt=""
@@ -372,6 +373,7 @@ export const TestConfigModal: React.FC<TestConfigModalProps> = ({ visible, onClo
                                     {/* Game Info Column */}
                                     <div className="md:w-[35%] md:h-full md:border-r border-slate-50 p-4 flex items-center gap-4 bg-slate-50/30 group-hover:bg-white transition-colors">
                                         <div className="w-10 h-10 rounded-lg bg-slate-200 overflow-hidden shrink-0 shadow-inner relative group-hover:scale-105 transition-transform">
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
                                             <img
                                                 src={game.icon}
                                                 alt={game.name}
