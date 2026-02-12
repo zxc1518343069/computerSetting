@@ -85,8 +85,9 @@ export const ExportButton: React.FC<ExportButtonProps> = ({ data, disabled }) =>
                 type="primary"
                 icon={loading ? <LoadingOutlined /> : <FileImageOutlined />}
                 loading={loading}
+                size={'large'}
                 disabled={disabled}
-                className="h-10 px-5 bg-gradient-to-r from-blue-600 to-indigo-600 border-none rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all font-medium"
+                className="h-12 min-w-[130px] px-6 bg-gradient-to-r from-blue-600 to-indigo-600 border-none rounded-2xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 font-bold text-sm"
             >
                 导出报价单
             </Button>

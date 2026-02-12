@@ -12,6 +12,7 @@ export function PCPartsTable() {
     const tableRef = useRef<CustomRef | null>(null);
     const [collapsed, setCollapsed] = useState(false);
     const [tempPackages, setTempPackages] = useState<Package[]>([]);
+    const [sidebarMode, setSidebarMode] = useState<'popular' | 'temporary'>('popular');
 
     const handleSaveTempPackage = useCallback(
         (pkg: Package) => {
@@ -20,6 +21,7 @@ export function PCPartsTable() {
                 return;
             }
             setTempPackages((prev) => [...prev, pkg]);
+            setSidebarMode('temporary'); // 自动切换到临时方案
             message.success('方案已临时保存');
         },
         [tempPackages.length]
@@ -73,6 +75,8 @@ export function PCPartsTable() {
                             onToggle={() => setCollapsed(!collapsed)}
                             tempPackages={tempPackages}
                             onDeleteTempPackage={handleDeleteTempPackage}
+                            mode={sidebarMode}
+                            onModeChange={setSidebarMode}
                             onApplyPackage={(pkg) => {
                                 tableRef.current?.processPkgToTableData(pkg);
                             }}
@@ -94,9 +98,8 @@ export function PCPartsTable() {
                         </div>
                     </div>
                 </div>
-
                 {/* 主工作区：舞台化陈列 */}
-                <div className="flex-1 pt-0 overflow-y-auto p-6 md:p-12 lg:p-16 scrollbar-hide relative">
+                <div className="flex-1 overflow-y-auto pt-5 px-6 pb-6 md:px-12 md:pb-12 lg:px-16 lg:pb-16 scrollbar-hide relative">
                     <div className="max-w-7xl mx-auto relative animate-fadeIn">
                         {/* 装饰性元素：科技感角落支架 */}
                         <div className="absolute -top-2 -left-2 w-8 h-8 border-t-2 border-l-2 border-blue-500/20 rounded-tl-xl pointer-events-none" />

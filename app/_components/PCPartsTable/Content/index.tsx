@@ -126,7 +126,7 @@ export function Content(props: ContentProps) {
     };
 
     return (
-        <div className="flex flex-col gap-6 h-full">
+        <div className="flex flex-col gap-4 h-full">
             {/* Header Area: 科技感标题与操作 */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 px-1">
                 <div className="relative">
@@ -158,19 +158,22 @@ export function Content(props: ContentProps) {
                         icon={<SaveOutlined />}
                         size="large"
                         onClick={handleSaveTemp}
-                        className="h-12 px-6 rounded-2xl border-gray-200 hover:border-blue-400 hover:text-blue-600 transition-all duration-300 font-bold text-sm"
+                        className="h-12 min-w-[130px] px-6 rounded-2xl border-gray-200 bg-white hover:border-blue-400 hover:text-blue-600 transition-all duration-300 font-bold text-sm shadow-sm"
                     >
                         临时保存
                     </Button>
+                    <div className="w-px h-8 bg-gray-200 mx-1" />
                     <ExportButton data={exportData} disabled={!hasValidItems || loading} />
+                    <div className="w-px h-8 bg-gray-200 mx-1" />
                     <Button
                         type="primary"
                         size="large"
                         icon={<ExperimentOutlined />}
                         onClick={() => setTestModalVisible(true)}
-                        className="h-12 px-6 bg-gray-900 hover:bg-blue-600 border-none shadow-xl shadow-gray-200 hover:shadow-blue-200 rounded-2xl transition-all duration-300 font-bold text-sm"
+                        className="h-12 min-w-[130px] px-6 bg-gray-900 hover:bg-blue-600 border-none shadow-xl shadow-gray-200 hover:shadow-blue-200 rounded-2xl transition-all duration-300 font-bold text-sm group relative overflow-hidden"
                     >
-                        测试配置
+                        <span className="relative z-10">测试配置</span>
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/0 via-white/10 to-blue-600/0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] transition-transform" />
                     </Button>
                 </div>
             </div>

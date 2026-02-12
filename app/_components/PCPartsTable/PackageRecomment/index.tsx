@@ -23,12 +23,32 @@ export interface PackageRecommentProps {
     onToggle: () => void;
     tempPackages?: Package[];
     onDeleteTempPackage?: (id: string | number) => void;
+    mode?: 'popular' | 'temporary';
+    onModeChange?: (mode: 'popular' | 'temporary') => void;
 }
 
 function PackageRecomment(props: PackageRecommentProps) {
-    const { onApplyPackage, collapsed, onToggle, tempPackages = [], onDeleteTempPackage } = props;
+    const {
+        onApplyPackage,
+        collapsed,
+        onToggle,
+        tempPackages = [],
+        onDeleteTempPackage,
+        mode: controlledMode,
+        onModeChange,
+    } = props;
     const { packages, loading: loadingPackages } = usePackages();
-    const [mode, setMode] = useState<'popular' | 'temporary'>('popular');
+    const [internalMode, setInternalMode] = useState<'popular' | 'temporary'>('popular');
+
+    const mode = controlledMode ?? internalMode;
+    const setMode = (newMode: 'popular' | 'temporary') => {
+        if (onModeChange) {
+            onModeChange(newMode);
+        } else {
+            setInternalMode(newMode);
+        }
+    };
+
     const { searchQuery, setSearchQuery, filteredPackages } = usePackageSearch(
         mode === 'popular' ? packages : tempPackages
     );
@@ -119,7 +139,11 @@ function PackageRecomment(props: PackageRecommentProps) {
                                     value={mode}
                                     onChange={(v) => setMode(v as 'popular' | 'temporary')}
                                     options={[
-                                        { label: '热门', value: 'popular', icon: <FireFilled /> },
+                                        {
+                                            label: '热门',
+                                            value: 'popular',
+                                            icon: <FireFilled style={{ color: 'red' }} />,
+                                        },
                                         {
                                             label: '临时',
                                             value: 'temporary',
