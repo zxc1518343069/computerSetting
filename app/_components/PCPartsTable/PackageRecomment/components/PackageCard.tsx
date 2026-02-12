@@ -55,8 +55,13 @@ export function PackageCard({ pkg, onApply, pricingConfig }: PackageCardProps) {
                 {icon}
             </div>
             <div className="flex-1 min-w-0">
-                <div className="text-[10px] text-gray-400 leading-none mb-0.5">{label}</div>
-                <div className="text-xs font-medium text-gray-700 truncate" title={value}>
+                <div className="text-[10px] text-gray-400 dark:text-gray-500 leading-none mb-0.5">
+                    {label}
+                </div>
+                <div
+                    className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate"
+                    title={value}
+                >
                     {value || '-'}
                 </div>
             </div>
@@ -65,25 +70,25 @@ export function PackageCard({ pkg, onApply, pricingConfig }: PackageCardProps) {
 
     return (
         <div
-            className="group relative bg-white rounded-2xl border border-gray-100 p-5 transition-all duration-300 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.1)] hover:-translate-y-1 cursor-pointer overflow-hidden"
+            className="group relative bg-white dark:bg-[#1f1f1f] rounded-2xl border border-gray-100 dark:border-gray-800 p-5 transition-all duration-300 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.5)] hover:-translate-y-1 cursor-pointer overflow-hidden"
             onClick={onApply}
         >
             {/* 顶部：名称与价格 */}
             <div className="flex justify-between items-start mb-4 relative z-10">
                 <div className="flex-1 pr-4 overflow-hidden">
-                    <div className="font-bold text-gray-800 text-base truncate group-hover:text-blue-600 transition-colors">
+                    <div className="font-bold text-gray-800 dark:text-gray-100 text-base truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                         {pkg.name}
                     </div>
-                    <div className="text-xs text-gray-400 mt-1 truncate">
+                    <div className="text-xs text-gray-400 dark:text-gray-500 mt-1 truncate">
                         {pkg.description || '暂无描述'}
                     </div>
                 </div>
                 <div className="text-right flex flex-col items-end">
-                    <div className="text-blue-600 font-black text-lg leading-none tracking-tight">
+                    <div className="text-blue-600 dark:text-blue-400 font-black text-lg leading-none tracking-tight">
                         <span className="text-xs font-bold mr-0.5 opacity-80">¥</span>
                         {displayedPrice.toFixed(0)}
                     </div>
-                    <div className="text-[10px] text-gray-400 mt-1 bg-gray-50 px-1.5 py-0.5 rounded">
+                    <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 bg-gray-50 dark:bg-gray-800 px-1.5 py-0.5 rounded">
                         {pkg.items.length} 配件
                     </div>
                 </div>
@@ -112,22 +117,22 @@ export function PackageCard({ pkg, onApply, pricingConfig }: PackageCardProps) {
             </div>
 
             {/* 底部操作 */}
-            <div className="relative z-10 pt-3 border-t border-gray-50 flex justify-end">
+            <div className="relative z-10 pt-3 border-t border-gray-50 dark:border-gray-800 flex justify-end">
                 <Button
                     type="primary"
                     size="small"
                     icon={<CopyOutlined />}
-                    className="bg-gray-900 hover:bg-blue-600 border-none shadow-lg shadow-gray-200 hover:shadow-blue-200 text-xs h-8 px-4 rounded-lg transition-all duration-300 transform group-hover:translate-x-0 translate-x-2 opacity-0 group-hover:opacity-100"
+                    className="bg-gray-900 dark:bg-blue-600 hover:bg-blue-600 border-none shadow-lg shadow-gray-200 dark:shadow-none hover:shadow-blue-200 text-xs h-8 px-4 rounded-lg transition-all duration-300 transform group-hover:translate-x-0 translate-x-2 opacity-0 group-hover:opacity-100"
                 >
                     应用此方案
                 </Button>
-                <span className="text-xs text-gray-300 absolute left-0 top-1/2 -translate-y-1/2 group-hover:opacity-0 transition-opacity duration-200">
+                <span className="text-xs text-gray-300 dark:text-gray-600 absolute left-0 top-1/2 -translate-y-1/2 group-hover:opacity-0 transition-opacity duration-200">
                     点击查看详情
                 </span>
             </div>
 
             {/* 悬浮光效装饰 */}
-            <div className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-blue-50 to-purple-50 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-500 opacity-50" />
+            <div className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-500 opacity-50" />
             <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
         </div>
     );

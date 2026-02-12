@@ -66,14 +66,14 @@ export const ProductRow: React.FC<ProductRowProps> = ({
 
     return (
         <tr
-            className={`group transition-all duration-300 ${disabled ? 'hover:bg-slate-50/50' : 'hover:bg-indigo-50/30'} relative`}
+            className={`group transition-all duration-300 ${disabled ? 'hover:bg-slate-50/50 dark:hover:bg-white/5' : 'hover:bg-indigo-50/30 dark:hover:bg-indigo-900/20'} relative`}
         >
             {/* 类别标签 */}
             <td className="px-6 py-4 align-middle whitespace-nowrap">
                 {isFirst && (
                     <div className="flex items-center gap-3">
                         <div className={`w-1 h-5 rounded-full ${categoryColor} opacity-60`}></div>
-                        <span className="text-sm font-bold text-slate-500 tracking-tight">
+                        <span className="text-sm font-bold text-slate-500 dark:text-gray-400 tracking-tight">
                             {categoryName}
                         </span>
                     </div>
@@ -83,7 +83,9 @@ export const ProductRow: React.FC<ProductRowProps> = ({
             {/* 产品选择 */}
             <td className="px-6 py-4 align-middle min-w-[280px]">
                 <div className="flex items-center gap-4">
-                    {!isFirst && <div className="w-1 h-1 rounded-full bg-slate-200 ml-1"></div>}
+                    {!isFirst && (
+                        <div className="w-1 h-1 rounded-full bg-slate-200 dark:bg-gray-700 ml-1"></div>
+                    )}
 
                     <div className="flex-1">
                         <div className="relative group/select">

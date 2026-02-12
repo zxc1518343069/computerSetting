@@ -43,21 +43,23 @@ export const TableFooter: React.FC<TableFooterProps> = ({
     // Profit Logic
     const { totalCost = 0, totalProfit = 0, profitRate = 0 } = metrics || {};
     const isProfitable = totalProfit > 0;
-    const profitBg = isProfitable ? 'bg-emerald-50' : 'bg-rose-50';
+    const profitBg = isProfitable
+        ? 'bg-emerald-50 dark:bg-emerald-900/20'
+        : 'bg-rose-50 dark:bg-rose-900/20';
 
     return (
-        <tfoot className="bg-slate-50/30 border-t border-gray-100/50">
+        <tfoot className="bg-slate-50/30 dark:bg-[#1f1f1f]/30 border-t border-gray-100/50 dark:border-gray-800/50">
             <tr>
                 <td colSpan={colCount} className="p-0">
                     <div className="flex flex-col lg:flex-row items-stretch justify-between gap-6 px-8 py-8">
                         {/* 左侧：成本与利润分析卡片 */}
                         {metrics && pricing && (
-                            <div className="flex-1 bg-white/60 backdrop-blur-sm rounded-2xl border border-white p-6 flex items-center gap-10 shadow-sm">
+                            <div className="flex-1 bg-white/60 dark:bg-[#1f1f1f]/60 backdrop-blur-sm rounded-2xl border border-white dark:border-white/10 p-6 flex items-center gap-10 shadow-sm">
                                 <div className="space-y-1">
-                                    <Text className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block">
+                                    <Text className="text-[10px] font-black text-slate-400 dark:text-gray-500 uppercase tracking-[0.2em] block">
                                         基础成本
                                     </Text>
-                                    <div className="text-xl font-bold text-slate-500 tabular-nums">
+                                    <div className="text-xl font-bold text-slate-500 dark:text-gray-300 tabular-nums">
                                         <span className="text-xs mr-1 font-medium">¥</span>
                                         {totalCost.toLocaleString(undefined, {
                                             minimumFractionDigits: 2,
@@ -65,21 +67,21 @@ export const TableFooter: React.FC<TableFooterProps> = ({
                                     </div>
                                 </div>
 
-                                <div className="w-px h-10 bg-slate-100"></div>
+                                <div className="w-px h-10 bg-slate-100 dark:bg-gray-700"></div>
 
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-2">
                                         <Text
-                                            className={`text-[10px] font-black uppercase tracking-[0.2em] ${isProfitable ? 'text-emerald-600' : 'text-rose-600'}`}
+                                            className={`text-[10px] font-black uppercase tracking-[0.2em] ${isProfitable ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}
                                         >
                                             预计毛利
                                         </Text>
                                         <Tooltip title="毛利率 = (售价 - 成本) / 售价">
-                                            <InfoCircleOutlined className="text-[10px] text-slate-300 cursor-help" />
+                                            <InfoCircleOutlined className="text-[10px] text-slate-300 dark:text-gray-600 cursor-help" />
                                         </Tooltip>
                                     </div>
                                     <div
-                                        className={`text-xl font-black flex items-baseline gap-3 tabular-nums ${isProfitable ? 'text-emerald-700' : 'text-rose-700'}`}
+                                        className={`text-xl font-black flex items-baseline gap-3 tabular-nums ${isProfitable ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'}`}
                                     >
                                         <span>
                                             <span className="text-xs mr-1 font-bold">¥</span>
@@ -88,7 +90,7 @@ export const TableFooter: React.FC<TableFooterProps> = ({
                                             })}
                                         </span>
                                         <span
-                                            className={`text-[10px] px-2 py-0.5 rounded font-black ${profitBg} ${isProfitable ? 'text-emerald-600' : 'text-rose-600'}`}
+                                            className={`text-[10px] px-2 py-0.5 rounded font-black ${profitBg} ${isProfitable ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}
                                         >
                                             {(profitRate * 100).toFixed(1)}%
                                         </span>
@@ -99,10 +101,10 @@ export const TableFooter: React.FC<TableFooterProps> = ({
 
                         {/* 右侧：最终结算卡片 */}
                         <div
-                            className={`flex-1 bg-white rounded-2xl border ${hasDiscount ? 'border-blue-100 shadow-blue-100/20' : 'border-slate-100'} p-6 flex items-center justify-between shadow-sm relative overflow-hidden`}
+                            className={`flex-1 bg-white dark:bg-[#1f1f1f] rounded-2xl border ${hasDiscount ? 'border-blue-100 dark:border-blue-900/30 shadow-blue-100/20 dark:shadow-blue-900/10' : 'border-slate-100 dark:border-gray-800'} p-6 flex items-center justify-between shadow-sm relative overflow-hidden`}
                         >
                             {hasDiscount && (
-                                <div className="absolute -right-6 -top-6 w-20 h-20 bg-blue-50 rounded-full blur-2xl opacity-50" />
+                                <div className="absolute -right-6 -top-6 w-20 h-20 bg-blue-50 dark:bg-blue-900/20 rounded-full blur-2xl opacity-50" />
                             )}
 
                             <div className="flex items-center gap-8">
@@ -110,11 +112,11 @@ export const TableFooter: React.FC<TableFooterProps> = ({
                                 <div
                                     className={`flex flex-col transition-all duration-500 ${hasDiscount ? 'opacity-30 scale-90' : 'opacity-60'}`}
                                 >
-                                    <Text className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">
+                                    <Text className="text-[10px] font-black text-slate-500 dark:text-gray-400 uppercase tracking-[0.2em] mb-1">
                                         配置总价
                                     </Text>
                                     <div
-                                        className={`font-bold tracking-tight tabular-nums ${hasDiscount ? 'text-lg text-slate-400 line-through' : 'text-2xl text-slate-700'}`}
+                                        className={`font-bold tracking-tight tabular-nums ${hasDiscount ? 'text-lg text-slate-400 dark:text-gray-500 line-through' : 'text-2xl text-slate-700 dark:text-gray-200'}`}
                                     >
                                         <span className="text-xs mr-1">¥</span>
                                         {totalPrice.toLocaleString(undefined, {
@@ -124,7 +126,7 @@ export const TableFooter: React.FC<TableFooterProps> = ({
                                 </div>
 
                                 {hasDiscount && (
-                                    <div className="text-slate-200 flex items-center animate-pulse">
+                                    <div className="text-slate-200 dark:text-gray-700 flex items-center animate-pulse">
                                         <ArrowRightOutlined style={{ fontSize: 18 }} />
                                     </div>
                                 )}
@@ -133,7 +135,7 @@ export const TableFooter: React.FC<TableFooterProps> = ({
                                 {showDiscount && (
                                     <div className="flex flex-col">
                                         <div className="flex items-center gap-2 mb-1">
-                                            <Text className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em]">
+                                            <Text className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em]">
                                                 最终成交金额
                                             </Text>
                                             {hasDiscount && discountedPrice < totalPrice && (
@@ -145,7 +147,7 @@ export const TableFooter: React.FC<TableFooterProps> = ({
                                         </div>
                                         <div className="flex items-center">
                                             <span
-                                                className={`text-xl font-black mr-1 ${hasDiscount ? 'text-blue-600' : 'text-slate-300'}`}
+                                                className={`text-xl font-black mr-1 ${hasDiscount ? 'text-blue-600 dark:text-blue-400' : 'text-slate-300 dark:text-gray-600'}`}
                                             >
                                                 ¥
                                             </span>

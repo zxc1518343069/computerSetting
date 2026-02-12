@@ -1,16 +1,11 @@
+/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import { Package } from '@/app/_components/PCPartsTable/PackageRecomment';
 import { usePackageTableData } from '@/app/admin/dashboard/packages/components/EditablePackageTable/hooks/usePackageTableData';
 import { EditablePartRow } from '@/app/admin/dashboard/packages/types';
 import { INITIAL_ONLINE_GAMES, INITIAL_SINGLE_GAMES } from '@/const/games';
-import {
-    DashboardOutlined,
-    ExperimentOutlined,
-    SwapOutlined,
-    ThunderboltFilled,
-    WarningFilled,
-} from '@ant-design/icons';
+import { DashboardOutlined, ExperimentOutlined, SwapOutlined } from '@ant-design/icons';
 import { Button, Divider, Modal, Select, Table, Tag, Typography } from 'antd';
 import React, { useMemo, useState } from 'react';
 
@@ -21,16 +16,6 @@ interface TestConfigModalProps {
     onClose: () => void;
     items: EditablePartRow[];
     tempPackages?: Package[];
-}
-
-interface GameTestResult {
-    gameId: number;
-    configs: {
-        configId: string;
-        fps1080p: string;
-        fps2k: string;
-        fps4k: string;
-    }[];
 }
 
 // --- Helper Functions ---
@@ -73,50 +58,9 @@ const getFPSColor = (fpsRange: string) => {
 
 // --- Components ---
 
-const HardwareBadge = ({
-    label,
-    value,
-    missing,
-}: {
-    label: string;
-    value?: string;
-    missing?: boolean;
-}) => (
-    <div
-        className={`
-        flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-300
-        ${
-            missing
-                ? 'bg-red-50 border-red-100 text-red-600'
-                : 'bg-white border-slate-100 text-slate-700 shadow-sm'
-        }
-    `}
-    >
-        <div
-            className={`
-            w-8 h-8 rounded-lg flex items-center justify-center text-lg shrink-0
-            ${missing ? 'bg-red-100' : 'bg-slate-100 text-slate-500'}
-        `}
-        >
-            {missing ? <WarningFilled /> : <ThunderboltFilled />}
-        </div>
-        <div className="min-w-0">
-            <div className="text-[10px] uppercase tracking-wider font-bold opacity-60 mb-0.5">
-                {label}
-            </div>
-            <div
-                className="text-sm font-medium truncate max-w-[120px] md:max-w-[180px]"
-                title={value}
-            >
-                {value || '未选择'}
-            </div>
-        </div>
-    </div>
-);
-
 const FpsDisplay = ({ fpsRange, label }: { fpsRange: string; label: string }) => (
     <div className="flex-1 min-w-[80px]">
-        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+        <div className="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider mb-1">
             {label}
         </div>
         <div className="font-mono text-sm font-bold" style={{ color: getFPSColor(fpsRange) }}>
@@ -261,11 +205,11 @@ export const TestConfigModal: React.FC<TestConfigModalProps> = ({
             }}
         >
             {/* Header Section */}
-            <div className="bg-white border-b border-slate-100 p-6 shrink-0 z-20 relative">
+            <div className="bg-white dark:bg-[#1f1f1f] border-b border-slate-100 dark:border-gray-800 p-6 shrink-0 z-20 relative">
                 <div className="flex justify-between items-start mb-6">
                     <div>
                         <Title level={4} className="!mb-1 flex items-center gap-2">
-                            <ExperimentOutlined className="text-blue-600" />
+                            <ExperimentOutlined className="text-blue-600 dark:text-blue-400" />
                             性能实验室 & 方案对比
                         </Title>
                         <Text type="secondary" className="text-xs">
@@ -294,7 +238,7 @@ export const TestConfigModal: React.FC<TestConfigModalProps> = ({
 
                 {/* Config Selector */}
                 <div className="mb-6">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    <div className="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider mb-2">
                         选择对比方案 (最多支持多选)
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -305,8 +249,8 @@ export const TestConfigModal: React.FC<TestConfigModalProps> = ({
                                 onChange={() => handleConfigToggle(m.id)}
                                 className={`px-4 py-1.5 rounded-lg border transition-all ${
                                     selectedConfigIds.includes(m.id)
-                                        ? 'bg-blue-50 border-blue-200 text-blue-600'
-                                        : 'bg-slate-50 border-slate-100 text-slate-500'
+                                        ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400'
+                                        : 'bg-slate-50 dark:bg-[#2a2a2a] border-slate-100 dark:border-gray-700 text-slate-500 dark:text-gray-400'
                                 }`}
                             >
                                 {m.name}
@@ -334,8 +278,10 @@ export const TestConfigModal: React.FC<TestConfigModalProps> = ({
                                             alt=""
                                             className="w-6 h-6 rounded object-cover shadow-sm"
                                         />
-                                        <span className="font-medium text-slate-700">{g.name}</span>
-                                        <span className="text-xs text-slate-400 ml-auto">
+                                        <span className="font-medium text-slate-700 dark:text-gray-200">
+                                            {g.name}
+                                        </span>
+                                        <span className="text-xs text-slate-400 dark:text-gray-500 ml-auto">
                                             {INITIAL_ONLINE_GAMES.some((og) => og.id === g.id)
                                                 ? '网游'
                                                 : '单机'}
@@ -353,11 +299,11 @@ export const TestConfigModal: React.FC<TestConfigModalProps> = ({
             </div>
 
             {/* Content Section */}
-            <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
+            <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50 dark:bg-[#141414]">
                 {viewMode === 'performance' ? (
                     <div className="space-y-6">
                         {selectedGameIds.length === 0 ? (
-                            <div className="h-64 flex flex-col items-center justify-center text-slate-400 bg-white rounded-3xl border border-dashed border-slate-200">
+                            <div className="h-64 flex flex-col items-center justify-center text-slate-400 dark:text-gray-500 bg-white dark:bg-[#1f1f1f] rounded-3xl border border-dashed border-slate-200 dark:border-gray-800">
                                 <ExperimentOutlined className="text-4xl mb-4 opacity-20" />
                                 <p>请选择游戏以开始性能测试</p>
                             </div>
@@ -370,19 +316,19 @@ export const TestConfigModal: React.FC<TestConfigModalProps> = ({
                                 return (
                                     <div
                                         key={gameId}
-                                        className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden"
+                                        className="bg-white dark:bg-[#1f1f1f] rounded-3xl border border-slate-100 dark:border-gray-800 shadow-sm overflow-hidden"
                                     >
-                                        <div className="px-6 py-4 border-b border-slate-50 bg-slate-50/30 flex items-center gap-4">
+                                        <div className="px-6 py-4 border-b border-slate-50 dark:border-gray-800 bg-slate-50/30 dark:bg-[#2a2a2a]/30 flex items-center gap-4">
                                             <img
                                                 src={game.icon}
                                                 alt=""
                                                 className="w-10 h-10 rounded-xl object-cover shadow-md"
                                             />
                                             <div>
-                                                <div className="font-bold text-slate-800">
+                                                <div className="font-bold text-slate-800 dark:text-gray-200">
                                                     {game.name}
                                                 </div>
-                                                <div className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">
+                                                <div className="text-[10px] text-slate-400 dark:text-gray-500 uppercase font-bold tracking-widest">
                                                     {isOnline ? 'Online Game' : 'Single Player'}
                                                 </div>
                                             </div>
@@ -392,13 +338,13 @@ export const TestConfigModal: React.FC<TestConfigModalProps> = ({
                                                 {selectedMetrics.map((m) => (
                                                     <div
                                                         key={m.id}
-                                                        className="flex items-center gap-6 p-4 rounded-2xl bg-slate-50/50 border border-slate-100"
+                                                        className="flex items-center gap-6 p-4 rounded-2xl bg-slate-50/50 dark:bg-[#2a2a2a]/50 border border-slate-100 dark:border-gray-700"
                                                     >
                                                         <div className="w-24 shrink-0">
-                                                            <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">
+                                                            <div className="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase mb-1">
                                                                 方案
                                                             </div>
-                                                            <div className="text-sm font-bold text-blue-600 truncate">
+                                                            <div className="text-sm font-bold text-blue-600 dark:text-blue-400 truncate">
                                                                 {m.name}
                                                             </div>
                                                         </div>
@@ -437,7 +383,7 @@ export const TestConfigModal: React.FC<TestConfigModalProps> = ({
                         )}
                     </div>
                 ) : (
-                    <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div className="bg-white dark:bg-[#1f1f1f] rounded-3xl border border-slate-100 dark:border-gray-800 shadow-sm overflow-hidden">
                         <Table
                             pagination={false}
                             columns={[
@@ -447,20 +393,22 @@ export const TestConfigModal: React.FC<TestConfigModalProps> = ({
                                     key: 'category',
                                     width: 120,
                                     render: (text) => (
-                                        <span className="font-bold text-slate-500">{text}</span>
+                                        <span className="font-bold text-slate-500 dark:text-gray-400">
+                                            {text}
+                                        </span>
                                     ),
                                 },
                                 ...selectedMetrics.map((m) => ({
                                     title: m.name,
                                     dataIndex: m.id,
                                     key: m.id,
-                                    render: (val: any) => (
+                                    render: (val: { name?: string; price?: number } | null) => (
                                         <div className="py-2">
-                                            <div className="font-medium text-slate-800">
+                                            <div className="font-medium text-slate-800 dark:text-gray-200">
                                                 {val?.name || '-'}
                                             </div>
                                             {val?.price && (
-                                                <div className="text-xs text-blue-500 font-mono mt-1">
+                                                <div className="text-xs text-blue-500 dark:text-blue-400 font-mono mt-1">
                                                     ¥{val.price}
                                                 </div>
                                             )}

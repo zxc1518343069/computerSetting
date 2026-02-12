@@ -33,12 +33,12 @@ export function PCPartsTable() {
     }, []);
 
     return (
-        <Layout className="h-screen overflow-hidden bg-[#F8FAFC] relative">
+        <Layout className="h-screen overflow-hidden bg-[#F8FAFC] dark:bg-[#000000] relative">
             {/* 极简背景装饰：营造数字化舞台感 */}
             <div
                 className="absolute inset-0 opacity-[0.03] pointer-events-none"
                 style={{
-                    backgroundImage: `radial-gradient(#000 1px, transparent 1px)`,
+                    backgroundImage: `radial-gradient(var(--grid-dot-color) 1px, transparent 1px)`,
                     backgroundSize: '40px 40px',
                 }}
             />
@@ -65,7 +65,7 @@ export function PCPartsTable() {
             <div className="flex flex-1 overflow-hidden relative z-10">
                 {/* 侧边栏：极致玻璃拟态 */}
                 <div
-                    className={`relative flex flex-col border-r border-white/40 bg-white/60 backdrop-blur-3xl shadow-[20px_0_50px_-20px_rgba(0,0,0,0.03)] z-20 transition-all duration-500 ease-in-out ${
+                    className={`relative flex flex-col border-r border-white/40 dark:border-white/5 bg-white/60 dark:bg-[#141414]/60 backdrop-blur-3xl shadow-[20px_0_50px_-20px_rgba(0,0,0,0.03)] z-20 transition-all duration-500 ease-in-out ${
                         collapsed ? 'w-[88px]' : 'w-[400px]'
                     }`}
                 >
@@ -85,7 +85,7 @@ export function PCPartsTable() {
 
                     {/* 联系信息：轻量化处理 */}
                     <div
-                        className={`border-t border-gray-100/30 bg-white/20 backdrop-blur-md transition-all duration-300 ${collapsed ? 'p-4' : 'p-8'}`}
+                        className={`border-t border-gray-100/30 dark:border-white/5 bg-white/20 dark:bg-white/5 backdrop-blur-md transition-all duration-300 ${collapsed ? 'p-4' : 'p-8'}`}
                     >
                         <div
                             className={
@@ -112,7 +112,7 @@ export function PCPartsTable() {
                             {/* 容器背后的动态光晕 */}
                             <div className="absolute -inset-4 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5 rounded-[4rem] blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none" />
 
-                            <div className="relative bg-white/70 backdrop-blur-3xl rounded-[3.5rem] border border-white/80 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.06)] overflow-hidden transition-all duration-700 hover:shadow-[0_48px_96px_-12px_rgba(0,0,0,0.1)] hover:bg-white/85 ring-1 ring-white/50">
+                            <div className="relative bg-white/70 dark:bg-[#141414]/70 backdrop-blur-3xl rounded-[3.5rem] border border-white/80 dark:border-white/10 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.06)] overflow-hidden transition-all duration-700 hover:shadow-[0_48px_96px_-12px_rgba(0,0,0,0.1)] hover:bg-white/85 dark:hover:bg-[#141414]/90 ring-1 ring-white/50 dark:ring-white/10">
                                 {/* 顶部装饰条 */}
                                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500/20 to-transparent" />
 

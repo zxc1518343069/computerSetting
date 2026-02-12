@@ -1,4 +1,5 @@
 'use client';
+import ThemeToggle from '@/app/_components/ThemeToggle';
 import Time from '@/app/_components/Time';
 import { AppstoreOutlined, ThunderboltFilled, TrophyOutlined } from '@ant-design/icons';
 import { Layout } from 'antd';
@@ -32,8 +33,8 @@ export default function SiteHeader() {
             sticky top-0 z-50 px-6 md:px-8 h-16 flex items-center justify-between transition-all duration-300
             ${
                 scrolled
-                    ? 'bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-sm'
-                    : 'bg-white/80 backdrop-blur-sm border-b border-transparent'
+                    ? 'bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-sm dark:bg-[#141414]/95 dark:border-slate-800/80'
+                    : 'bg-white/80 backdrop-blur-sm border-b border-transparent dark:bg-[#141414]/80'
             }
         `}
         >
@@ -59,7 +60,11 @@ export default function SiteHeader() {
                         href="/"
                         className={`
                         relative h-full flex items-center gap-2 text-sm font-bold transition-colors duration-300
-                        ${isActive('/') ? 'text-blue-600' : 'text-slate-500 hover:text-slate-800'}
+                        ${
+                            isActive('/')
+                                ? 'text-blue-600'
+                                : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+                        }
                     `}
                     >
                         <AppstoreOutlined className="text-lg" />
@@ -80,7 +85,7 @@ export default function SiteHeader() {
                         ${
                             isActive('/gamesList')
                                 ? 'text-blue-600'
-                                : 'text-slate-500 hover:text-slate-800'
+                                : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
                         }
                     `}
                     >
@@ -99,7 +104,10 @@ export default function SiteHeader() {
                 </nav>
             </div>
 
-            <Time />
+            <div className="flex items-center gap-4">
+                <ThemeToggle />
+                <Time />
+            </div>
         </Header>
     );
 }

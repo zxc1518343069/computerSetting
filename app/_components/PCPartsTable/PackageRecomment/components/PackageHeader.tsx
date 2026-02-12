@@ -1,7 +1,7 @@
 export function PackageHeader() {
     return (
-        <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mr-2 shadow-lg">
+        <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mr-2 shadow-lg shadow-blue-500/20">
                 <svg
                     className="w-4 h-4 text-white"
                     fill="none"

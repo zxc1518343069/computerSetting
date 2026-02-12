@@ -131,11 +131,11 @@ export function Content(props: ContentProps) {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 px-1">
                 <div className="relative">
                     <div className="flex items-center gap-3 mb-1">
-                        <div className="px-2 py-0.5 rounded-md bg-blue-50 text-[10px] font-bold text-blue-600 uppercase tracking-widest border border-blue-100">
+                        <div className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/20 text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest border border-blue-100 dark:border-blue-800">
                             Configuration
                         </div>
-                        <div className="w-1 h-1 rounded-full bg-gray-300" />
-                        <div className="text-[10px] font-medium text-gray-400 uppercase tracking-widest">
+                        <div className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
+                        <div className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-widest">
                             v2.0.4
                         </div>
                     </div>
@@ -144,10 +144,10 @@ export function Content(props: ContentProps) {
                             <BuildOutlined className="text-xl" />
                         </div>
                         <div>
-                            <h2 className="text-2xl font-black text-gray-800 m-0 tracking-tight">
+                            <h2 className="text-2xl font-black text-gray-800 dark:text-gray-100 m-0 tracking-tight">
                                 配置工坊
                             </h2>
-                            <p className="text-xs text-gray-400 m-0 font-medium">
+                            <p className="text-xs text-gray-400 dark:text-gray-500 m-0 font-medium">
                                 自定义您的专属电脑配置清单 · 实时价格计算
                             </p>
                         </div>
@@ -158,19 +158,19 @@ export function Content(props: ContentProps) {
                         icon={<SaveOutlined />}
                         size="large"
                         onClick={handleSaveTemp}
-                        className="h-12 min-w-[130px] px-6 rounded-2xl border-gray-200 bg-white hover:border-blue-400 hover:text-blue-600 transition-all duration-300 font-bold text-sm shadow-sm"
+                        className="h-12 min-w-[130px] px-6 rounded-2xl border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1f1f1f] hover:border-blue-400 dark:hover:border-blue-600 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-300 font-bold text-sm shadow-sm dark:shadow-none dark:text-gray-200"
                     >
                         临时保存
                     </Button>
-                    <div className="w-px h-8 bg-gray-200 mx-1" />
+                    <div className="w-px h-8 bg-gray-200 dark:bg-gray-700 mx-1" />
                     <ExportButton data={exportData} disabled={!hasValidItems || loading} />
-                    <div className="w-px h-8 bg-gray-200 mx-1" />
+                    <div className="w-px h-8 bg-gray-200 dark:bg-gray-700 mx-1" />
                     <Button
                         type="primary"
                         size="large"
                         icon={<ExperimentOutlined />}
                         onClick={() => setTestModalVisible(true)}
-                        className="h-12 min-w-[130px] px-6 bg-gray-900 hover:bg-blue-600 border-none shadow-xl shadow-gray-200 hover:shadow-blue-200 rounded-2xl transition-all duration-300 font-bold text-sm group relative overflow-hidden"
+                        className="h-12 min-w-[130px] px-6 bg-gray-900 dark:bg-blue-600 hover:bg-blue-600 border-none shadow-xl shadow-gray-200 dark:shadow-none hover:shadow-blue-200 rounded-2xl transition-all duration-300 font-bold text-sm group relative overflow-hidden"
                     >
                         <span className="relative z-10">测试配置</span>
                         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/0 via-white/10 to-blue-600/0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] transition-transform" />
