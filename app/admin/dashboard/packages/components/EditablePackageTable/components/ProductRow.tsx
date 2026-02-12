@@ -166,7 +166,9 @@ export const ProductRow: React.FC<ProductRowProps> = ({
                             onChange={(val) => onUpdate(item.id, { custom_price: val || 0 })}
                             disabled={disabled}
                             className="w-32 !rounded-xl !bg-slate-50/50 dark:!bg-white/5 !border-none !shadow-sm font-mono font-bold text-right"
-                            prefix={<span className="text-slate-300 dark:text-gray-600 text-xs">¥</span>}
+                            prefix={
+                                <span className="text-slate-300 dark:text-gray-600 text-xs">¥</span>
+                            }
                             controls={false}
                         />
                     ) : selectedProduct ? (
@@ -179,7 +181,9 @@ export const ProductRow: React.FC<ProductRowProps> = ({
                             </span>
                             {showProfit && (
                                 <div className="flex items-center gap-1.5 opacity-60">
-                                    <span className="text-[9px] font-bold text-slate-400 dark:text-gray-500">进</span>
+                                    <span className="text-[9px] font-bold text-slate-400 dark:text-gray-500">
+                                        进
+                                    </span>
                                     <span className="text-[10px] text-slate-500 dark:text-gray-400 font-mono">
                                         ¥{metrics.unitCost.toFixed(0)}
                                     </span>

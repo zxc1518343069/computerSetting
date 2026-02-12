@@ -118,7 +118,9 @@ export const PackageModal = forwardRef<PackageModalRef, PackageModalProps>(({ on
                         <LayoutOutlined style={{ fontSize: 24 }} />
                     </div>
                     <div>
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 m-0">{titleMap[mode]}</h3>
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 m-0">
+                            {titleMap[mode]}
+                        </h3>
                         <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest m-0 mt-1">
                             {mode === 'create'
                                 ? 'System Initialization'
@@ -226,7 +228,9 @@ export const PackageModal = forwardRef<PackageModalRef, PackageModalProps>(({ on
                     <div className="flex items-center justify-between px-2">
                         <div className="flex items-center gap-3">
                             <div className="w-2 h-6 bg-indigo-600 rounded-full"></div>
-                            <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100">硬件配置清单</h4>
+                            <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                                硬件配置清单
+                            </h4>
                         </div>
                         <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>

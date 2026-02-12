@@ -220,7 +220,9 @@ const SpecItem = ({
             className="text-[11px] font-bold text-gray-600 dark:text-gray-300 truncate flex-1"
             title={value || '未配置'}
         >
-            {value || <span className="text-gray-300 dark:text-gray-600 italic font-normal">未配置</span>}
+            {value || (
+                <span className="text-gray-300 dark:text-gray-600 italic font-normal">未配置</span>
+            )}
         </div>
     </div>
 );

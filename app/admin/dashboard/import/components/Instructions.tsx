@@ -55,7 +55,9 @@ export const Instructions: React.FC = () => {
                             <h4 className="mb-1 font-bold text-gray-800 dark:text-gray-100 group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors">
                                 {step.title}
                             </h4>
-                            <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">{step.desc}</p>
+                            <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                                {step.desc}
+                            </p>
                         </div>
                     </div>
                 ))}

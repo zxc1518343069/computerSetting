@@ -81,7 +81,9 @@ export default function ConfigPage() {
                             <DatabaseOutlined />
                         </div>
                         <div>
-                            <div className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">总产品数</div>
+                            <div className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">
+                                总产品数
+                            </div>
                             <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
                                 {stats.totalProducts}
                             </div>
@@ -93,7 +95,9 @@ export default function ConfigPage() {
                             <DollarOutlined />
                         </div>
                         <div>
-                            <div className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">平均成本</div>
+                            <div className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">
+                                平均成本
+                            </div>
                             <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
                                 {formatPrice(stats.avgPrice)}
                             </div>
@@ -105,7 +109,9 @@ export default function ConfigPage() {
                             <AppstoreOutlined />
                         </div>
                         <div>
-                            <div className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">覆盖分类</div>
+                            <div className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">
+                                覆盖分类
+                            </div>
                             <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
                                 {stats.activeCategories}
                                 <span className="text-gray-400 dark:text-gray-500 text-lg font-normal ml-2">
@@ -138,7 +144,9 @@ export default function ConfigPage() {
                                 style={{ width: 200 }}
                                 value={queryParams.category}
                                 onChange={(val) => handleSearch('category', val)}
-                                suffixIcon={<FilterOutlined className="text-gray-400 dark:text-gray-500" />}
+                                suffixIcon={
+                                    <FilterOutlined className="text-gray-400 dark:text-gray-500" />
+                                }
                                 className="bg-gray-100/50 dark:bg-[#2a2a2a]/50 hover:bg-gray-100 dark:hover:bg-[#2a2a2a] rounded-xl h-10 flex items-center"
                                 showSearch
                                 optionFilterProp="children"

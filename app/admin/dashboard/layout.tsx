@@ -163,7 +163,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
                 {/* 底部操作区 */}
                 <div className="p-4 border-t border-gray-100/80 dark:border-gray-800 bg-gray-50/30 dark:bg-[#1f1f1f]/30 backdrop-blur-sm space-y-2">
-                    <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'px-4'}`}>
+                    <div
+                        className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'px-4'}`}
+                    >
                         <ThemeToggle />
                     </div>
                     {/* 退出按钮 */}

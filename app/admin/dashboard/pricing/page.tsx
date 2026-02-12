@@ -85,7 +85,9 @@ export default function PricingPage() {
                     <div className="absolute inset-0 border-4 border-blue-100 dark:border-blue-900/20 rounded-full"></div>
                     <div className="absolute inset-0 border-4 border-blue-500 rounded-full border-t-transparent animate-spin"></div>
                 </div>
-                <p className="text-slate-500 dark:text-gray-400 font-medium tracking-wide">配置加载中...</p>
+                <p className="text-slate-500 dark:text-gray-400 font-medium tracking-wide">
+                    配置加载中...
+                </p>
             </div>
         );
     }
