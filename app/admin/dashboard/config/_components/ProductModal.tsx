@@ -12,6 +12,7 @@ import React, { forwardRef, useImperativeHandle, useMemo, useState } from 'react
 import { usePricing } from '../hooks/usePricing';
 import { saveProductService } from '../services';
 import { Product, ProductModalRef } from '../types';
+import { useTheme } from '@/app/_components/ThemeProvider';
 
 const { Option } = Select;
 
@@ -24,6 +25,8 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
     const [isEditMode, setIsEditMode] = useState(false);
     const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
     const [form] = Form.useForm();
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
 
     // 引入定价计算逻辑
     const { getSellingPriceInfo } = usePricing();
@@ -126,19 +129,26 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
             width={800}
             footer={null}
             className="custom-modal"
-            styles={{ content: { padding: 0, borderRadius: '16px', overflow: 'hidden' } }}
+            styles={{
+                content: {
+                    padding: 0,
+                    borderRadius: '16px',
+                    overflow: 'hidden',
+                    background: isDark ? '#1f1f1f' : 'white',
+                },
+            }}
         >
             <div className="flex flex-col md:flex-row h-full">
                 {/* 左侧表单区域 */}
-                <div className="flex-1 p-8 bg-white">
+                <div className="flex-1 p-8 bg-white dark:bg-[#1f1f1f]">
                     <div className="mb-8">
-                        <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center">
                                 {isEditMode ? <EditOutlined /> : <PlusOutlined />}
                             </div>
                             {isEditMode ? '编辑产品' : '新增产品'}
                         </h2>
-                        <p className="text-gray-500 mt-1 ml-[52px]">填写产品基础信息与定价策略</p>
+                        <p className="text-gray-500 dark:text-gray-400 mt-1 ml-[52px]">填写产品基础信息与定价策略</p>
                     </div>
 
                     <Form
@@ -167,47 +177,49 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
 
                         <Form.Item
                             name="name"
-                            label="产品名称"
+                            label={<span className="dark:text-gray-300">产品名称</span>}
                             rules={[{ required: true, message: '请输入产品名称' }]}
                         >
-                            <Input placeholder="例如: Intel Core i9-13900K" />
+                            <Input placeholder="例如: Intel Core i9-13900K" className="dark:bg-[#2a2a2a] dark:border-gray-700 dark:text-gray-200" />
                         </Form.Item>
 
                         <div className="grid grid-cols-2 gap-4">
                             <Form.Item
                                 name="price"
-                                label="基础成本 (¥)"
+                                label={<span className="dark:text-gray-300">基础成本 (¥)</span>}
                                 rules={[{ required: true, message: '请输入价格' }]}
                             >
                                 <InputNumber
-                                    prefix="¥"
+                                    prefix={<span className="dark:text-gray-500">¥</span>}
                                     style={{ width: '100%' }}
                                     min={0}
                                     precision={2}
                                     placeholder="0.00"
+                                    className="dark:bg-[#2a2a2a] dark:border-gray-700 dark:text-gray-200"
                                 />
                             </Form.Item>
 
                             <Form.Item
                                 name="selling_price"
-                                label="手动定价 (¥)"
+                                label={<span className="dark:text-gray-300">手动定价 (¥)</span>}
                                 tooltip="若填写，将覆盖自动计算的价格"
                             >
                                 <InputNumber
-                                    prefix="¥"
+                                    prefix={<span className="dark:text-gray-500">¥</span>}
                                     style={{ width: '100%' }}
                                     min={0}
                                     precision={2}
                                     placeholder="可选"
                                     disabled={watchedIsUsePremium}
+                                    className="dark:bg-[#2a2a2a] dark:border-gray-700 dark:text-gray-200"
                                 />
                             </Form.Item>
                         </div>
 
-                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 mb-0 flex items-center justify-between">
+                        <div className="bg-gray-50 dark:bg-[#2a2a2a] p-4 rounded-xl border border-gray-100 dark:border-gray-700 mb-0 flex items-center justify-between">
                             <div>
-                                <div className="font-medium text-gray-800">自动溢价计算</div>
-                                <div className="text-xs text-gray-500 mt-1">
+                                <div className="font-medium text-gray-800 dark:text-gray-200">自动溢价计算</div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                     根据全局配置自动计算最终售价
                                 </div>
                             </div>
@@ -218,7 +230,7 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
                     </Form>
 
                     <div className="flex justify-end gap-3 mt-8">
-                        <Button size="large" onClick={handleCancel}>
+                        <Button size="large" onClick={handleCancel} className="dark:bg-[#2a2a2a] dark:text-gray-300 dark:border-gray-700 dark:hover:text-white">
                             取消
                         </Button>
                         <Button
@@ -226,7 +238,7 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
                             size="large"
                             onClick={handleSubmit}
                             loading={loading}
-                            className="bg-blue-600 hover:bg-blue-500"
+                            className="bg-blue-600 hover:bg-blue-500 dark:bg-blue-600 dark:hover:bg-blue-500 border-none"
                         >
                             保存提交
                         </Button>
@@ -234,24 +246,24 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
                 </div>
 
                 {/* 右侧预览区域 */}
-                <div className="w-full md:w-[320px] bg-gray-50/80 border-l border-gray-100 p-8 flex flex-col justify-center relative overflow-hidden">
+                <div className="w-full md:w-[320px] bg-gray-50/80 dark:bg-[#1f1f1f]/80 border-l border-gray-100 dark:border-gray-800 p-8 flex flex-col justify-center relative overflow-hidden">
                     {/* 背景装饰 */}
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-30 -translate-y-1/2 translate-x-1/2"></div>
-                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-100 rounded-full mix-blend-multiply filter blur-3xl opacity-30 translate-y-1/2 -translate-x-1/2"></div>
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-blue-100 dark:bg-blue-900/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-30 -translate-y-1/2 translate-x-1/2"></div>
+                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-100 dark:bg-purple-900/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-30 translate-y-1/2 -translate-x-1/2"></div>
 
                     <div className="relative z-10">
                         <div className="text-center mb-6">
-                            <div className="w-16 h-16 mx-auto bg-white rounded-2xl shadow-sm flex items-center justify-center text-3xl mb-3">
+                            <div className="w-16 h-16 mx-auto bg-white dark:bg-[#2a2a2a] rounded-2xl shadow-sm flex items-center justify-center text-3xl mb-3">
                                 {currentCategoryConfig?.icon || '📦'}
                             </div>
-                            <h3 className="font-bold text-gray-800 text-lg">价格预览</h3>
-                            <p className="text-gray-500 text-sm">实时计算最终售价</p>
+                            <h3 className="font-bold text-gray-800 dark:text-gray-100 text-lg">价格预览</h3>
+                            <p className="text-gray-500 dark:text-gray-400 text-sm">实时计算最终售价</p>
                         </div>
 
-                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-4">
+                        <div className="bg-white dark:bg-[#2a2a2a] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 space-y-4">
                             <div className="flex justify-between items-center text-sm">
-                                <span className="text-gray-500">基础成本</span>
-                                <span className="font-mono font-medium">
+                                <span className="text-gray-500 dark:text-gray-400">基础成本</span>
+                                <span className="font-mono font-medium dark:text-gray-200">
                                     {formatPrice(Number(watchedPrice) || 0)}
                                 </span>
                             </div>
@@ -259,35 +271,35 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
                             {watchedIsUsePremium ? (
                                 <>
                                     <div className="flex justify-between items-center text-sm">
-                                        <span className="text-gray-500">溢价率</span>
-                                        <span className="text-emerald-600 font-medium bg-emerald-50 px-2 py-0.5 rounded-full text-xs">
+                                        <span className="text-gray-500 dark:text-gray-400">溢价率</span>
+                                        <span className="text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full text-xs">
                                             +{previewPriceInfo.rate.toFixed(1)}%
                                         </span>
                                     </div>
                                     <Divider style={{ margin: '8px 0' }} />
                                     <div className="flex justify-between items-end">
-                                        <span className="text-gray-600 font-medium">最终售价</span>
-                                        <span className="text-2xl font-bold text-emerald-600 font-mono">
+                                        <span className="text-gray-600 dark:text-gray-300 font-medium">最终售价</span>
+                                        <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">
                                             {formatPrice(previewPriceInfo.price)}
                                         </span>
                                     </div>
-                                    <div className="text-xs text-center text-gray-400 mt-2 bg-gray-50 py-2 rounded-lg">
-                                        <CheckCircleFilled className="text-emerald-500 mr-1" />
+                                    <div className="text-xs text-center text-gray-400 dark:text-gray-500 mt-2 bg-gray-50 dark:bg-[#1f1f1f] py-2 rounded-lg">
+                                        <CheckCircleFilled className="text-emerald-500 dark:text-emerald-400 mr-1" />
                                         已应用自动溢价策略
                                     </div>
                                 </>
                             ) : (
                                 <>
                                     <div className="flex justify-between items-center text-sm">
-                                        <span className="text-gray-500">定价模式</span>
-                                        <span className="text-orange-600 font-medium bg-orange-50 px-2 py-0.5 rounded-full text-xs">
+                                        <span className="text-gray-500 dark:text-gray-400">定价模式</span>
+                                        <span className="text-orange-600 dark:text-orange-400 font-medium bg-orange-50 dark:bg-orange-900/20 px-2 py-0.5 rounded-full text-xs">
                                             手动定价
                                         </span>
                                     </div>
                                     <Divider style={{ margin: '8px 0' }} />
                                     <div className="flex justify-between items-end">
-                                        <span className="text-gray-600 font-medium">最终售价</span>
-                                        <span className="text-2xl font-bold text-orange-600 font-mono">
+                                        <span className="text-gray-600 dark:text-gray-300 font-medium">最终售价</span>
+                                        <span className="text-2xl font-bold text-orange-600 dark:text-orange-400 font-mono">
                                             {formatPrice(
                                                 Number(watchedSellingPrice) ||
                                                     Number(watchedPrice) ||
@@ -295,8 +307,8 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
                                             )}
                                         </span>
                                     </div>
-                                    <div className="text-xs text-center text-gray-400 mt-2 bg-gray-50 py-2 rounded-lg">
-                                        <CalculatorOutlined className="text-orange-500 mr-1" />
+                                    <div className="text-xs text-center text-gray-400 dark:text-gray-500 mt-2 bg-gray-50 dark:bg-[#1f1f1f] py-2 rounded-lg">
+                                        <CalculatorOutlined className="text-orange-500 dark:text-orange-400 mr-1" />
                                         使用手动指定价格
                                     </div>
                                 </>

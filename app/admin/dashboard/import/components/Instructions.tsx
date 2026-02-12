@@ -31,12 +31,12 @@ export const Instructions: React.FC = () => {
     ];
 
     return (
-        <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white/60 p-8 backdrop-blur-xl shadow-sm">
+        <div className="relative overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-[#1f1f1f]/60 p-8 backdrop-blur-xl shadow-sm">
             <div className="mb-8 flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-900 text-white">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900">
                     <span className="font-bold text-sm">i</span>
                 </div>
-                <h3 className="text-lg font-bold text-gray-800">操作指南</h3>
+                <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">操作指南</h3>
             </div>
 
             <div className="grid gap-8 md:grid-cols-4">
@@ -44,25 +44,25 @@ export const Instructions: React.FC = () => {
                     <div key={index} className="relative flex flex-col gap-4 group">
                         {/* Connector Line */}
                         {index < steps.length - 1 && (
-                            <div className="absolute left-6 top-6 hidden h-0.5 w-full bg-gray-100 md:block group-hover:bg-blue-100 transition-colors" />
+                            <div className="absolute left-6 top-6 hidden h-0.5 w-full bg-gray-100 dark:bg-gray-800 md:block group-hover:bg-blue-100 dark:group-hover:bg-blue-900 transition-colors" />
                         )}
 
-                        <div className="relative z-10 flex h-12 w-12 items-center justify-center rounded-xl bg-white border border-gray-100 text-gray-400 shadow-sm transition-all duration-300 group-hover:border-blue-200 group-hover:bg-blue-50 group-hover:text-blue-600 group-hover:scale-110">
+                        <div className="relative z-10 flex h-12 w-12 items-center justify-center rounded-xl bg-white dark:bg-[#2a2a2a] border border-gray-100 dark:border-gray-700 text-gray-400 dark:text-gray-500 shadow-sm transition-all duration-300 group-hover:border-blue-200 dark:group-hover:border-blue-800 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/30 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:scale-110">
                             <span className="text-xl">{step.icon}</span>
                         </div>
 
                         <div>
-                            <h4 className="mb-1 font-bold text-gray-800 group-hover:text-blue-700 transition-colors">
+                            <h4 className="mb-1 font-bold text-gray-800 dark:text-gray-100 group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors">
                                 {step.title}
                             </h4>
-                            <p className="text-xs leading-relaxed text-gray-500">{step.desc}</p>
+                            <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">{step.desc}</p>
                         </div>
                     </div>
                 ))}
             </div>
 
             {/* Background Decoration */}
-            <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-gray-50 opacity-50 blur-3xl pointer-events-none" />
+            <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-gray-50 dark:bg-gray-900 opacity-50 dark:opacity-20 blur-3xl pointer-events-none" />
         </div>
     );
 };

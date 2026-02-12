@@ -27,7 +27,7 @@ export const CATEGORY_CONFIG: Record<string, CategoryConfigItem> = {
         label: 'CPU(处理器)',
         icon: '🔲',
         antColor: 'magenta',
-        twColor: 'bg-blue-100 text-blue-600',
+        twColor: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
         solidColor: 'bg-blue-500',
     },
     motherboard: {
@@ -36,7 +36,7 @@ export const CATEGORY_CONFIG: Record<string, CategoryConfigItem> = {
         label: 'Motherboard(主板)',
         icon: '🔌',
         antColor: 'red',
-        twColor: 'bg-purple-100 text-purple-600',
+        twColor: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400',
         solidColor: 'bg-indigo-500',
     },
     ram: {
@@ -45,7 +45,7 @@ export const CATEGORY_CONFIG: Record<string, CategoryConfigItem> = {
         label: 'RAM(内存)',
         icon: '💾',
         antColor: 'volcano',
-        twColor: 'bg-green-100 text-green-600',
+        twColor: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
         solidColor: 'bg-cyan-500',
     },
     gpu: {
@@ -54,7 +54,7 @@ export const CATEGORY_CONFIG: Record<string, CategoryConfigItem> = {
         label: 'GPU(显卡)',
         icon: '🎮',
         antColor: 'orange',
-        twColor: 'bg-red-100 text-red-600',
+        twColor: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
         solidColor: 'bg-purple-500',
     },
     storage: {
@@ -63,7 +63,7 @@ export const CATEGORY_CONFIG: Record<string, CategoryConfigItem> = {
         label: 'Storage(存储)',
         icon: '💿',
         antColor: 'gold',
-        twColor: 'bg-yellow-100 text-yellow-600',
+        twColor: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400',
         solidColor: 'bg-emerald-500',
     },
     psu: {
@@ -72,7 +72,7 @@ export const CATEGORY_CONFIG: Record<string, CategoryConfigItem> = {
         label: 'PSU(电源)',
         icon: '⚡',
         antColor: 'lime',
-        twColor: 'bg-orange-100 text-orange-600',
+        twColor: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400',
         solidColor: 'bg-orange-500',
     },
     case: {
@@ -81,7 +81,7 @@ export const CATEGORY_CONFIG: Record<string, CategoryConfigItem> = {
         label: 'Case(机箱)',
         icon: '📦',
         antColor: 'green',
-        twColor: 'bg-gray-100 text-gray-600',
+        twColor: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
         solidColor: 'bg-slate-500',
     },
     cooling: {
@@ -90,7 +90,7 @@ export const CATEGORY_CONFIG: Record<string, CategoryConfigItem> = {
         label: 'Cooling(散热)',
         icon: '❄️',
         antColor: 'cyan',
-        twColor: 'bg-cyan-100 text-cyan-600',
+        twColor: 'bg-cyan-100 text-cyan-600 dark:bg-cyan-900/30 dark:text-cyan-400',
         solidColor: 'bg-sky-500',
     },
     monitor: {
@@ -99,7 +99,7 @@ export const CATEGORY_CONFIG: Record<string, CategoryConfigItem> = {
         label: 'Monitor(显示器)',
         icon: '🖥️',
         antColor: 'blue',
-        twColor: 'bg-indigo-100 text-indigo-600',
+        twColor: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400',
         solidColor: 'bg-rose-500',
     },
 };

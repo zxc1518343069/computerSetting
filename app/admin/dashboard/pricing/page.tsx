@@ -82,10 +82,10 @@ export default function PricingPage() {
         return (
             <div className="min-h-[60vh] flex flex-col items-center justify-center">
                 <div className="relative w-16 h-16 mb-4">
-                    <div className="absolute inset-0 border-4 border-blue-100 rounded-full"></div>
+                    <div className="absolute inset-0 border-4 border-blue-100 dark:border-blue-900/20 rounded-full"></div>
                     <div className="absolute inset-0 border-4 border-blue-500 rounded-full border-t-transparent animate-spin"></div>
                 </div>
-                <p className="text-slate-500 font-medium tracking-wide">配置加载中...</p>
+                <p className="text-slate-500 dark:text-gray-400 font-medium tracking-wide">配置加载中...</p>
             </div>
         );
     }
@@ -94,17 +94,17 @@ export default function PricingPage() {
         <div className="max-w-6xl mx-auto relative p-4 sm:p-6">
             {/* 背景装饰 */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full overflow-hidden pointer-events-none z-0">
-                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-100/40 rounded-full blur-3xl opacity-50 mix-blend-multiply animate-blob"></div>
-                <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-purple-100/40 rounded-full blur-3xl opacity-50 mix-blend-multiply animate-blob animation-delay-2000"></div>
+                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-100/40 dark:bg-blue-900/20 rounded-full blur-3xl opacity-50 mix-blend-multiply dark:mix-blend-screen animate-blob"></div>
+                <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-purple-100/40 dark:bg-purple-900/20 rounded-full blur-3xl opacity-50 mix-blend-multiply dark:mix-blend-screen animate-blob animation-delay-2000"></div>
             </div>
 
             <div className="relative z-10">
                 {/* 页面标题 */}
                 <div className="mb-10 text-center sm:text-left">
-                    <h1 className="text-4xl font-black text-slate-800 mb-3 tracking-tight">
+                    <h1 className="text-4xl font-black text-slate-800 dark:text-gray-100 mb-3 tracking-tight">
                         溢价配置管理
                     </h1>
-                    <p className="text-slate-500 text-lg font-light">
+                    <p className="text-slate-500 dark:text-gray-400 text-lg font-light">
                         灵活配置产品溢价策略，支持统一或分品类精准控制利润
                     </p>
                 </div>
@@ -112,14 +112,14 @@ export default function PricingPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* 左侧配置主区域 */}
                     <div className="lg:col-span-2 space-y-6">
-                        <div className="bg-white/80 backdrop-blur-xl rounded-3xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
+                        <div className="bg-white/80 dark:bg-[#1f1f1f]/80 backdrop-blur-xl rounded-3xl border border-white/60 dark:border-gray-800/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
                             {/* 取整策略配置 */}
-                            <div className="p-6 sm:p-8 border-b border-slate-100 bg-blue-50/30">
+                            <div className="p-6 sm:p-8 border-b border-slate-100 dark:border-gray-800 bg-blue-50/30 dark:bg-blue-900/10">
                                 <div>
-                                    <h3 className="text-lg font-bold text-slate-800 mb-1">
+                                    <h3 className="text-lg font-bold text-slate-800 dark:text-gray-100 mb-1">
                                         价格取整策略
                                     </h3>
-                                    <p className="text-slate-500 text-xs mb-4">
+                                    <p className="text-slate-500 dark:text-gray-400 text-xs mb-4">
                                         自动处理溢价后的小数，提升报价专业度
                                     </p>
                                 </div>
@@ -152,13 +152,13 @@ export default function PricingPage() {
                                                 relative p-3 rounded-xl border-2 cursor-pointer transition-all duration-200
                                                 ${
                                                     config.roundingType === opt.key
-                                                        ? 'border-indigo-500 bg-white shadow-sm'
-                                                        : 'border-transparent bg-white/50 hover:bg-white hover:border-indigo-200'
+                                                        ? 'border-indigo-500 dark:border-indigo-600 bg-white dark:bg-[#2a2a2a] shadow-sm'
+                                                        : 'border-transparent bg-white/50 dark:bg-[#1f1f1f]/50 hover:bg-white dark:hover:bg-[#2a2a2a] hover:border-indigo-200 dark:hover:border-indigo-800'
                                                 }
                                             `}
                                         >
                                             <div
-                                                className={`font-bold text-sm mb-0.5 ${config.roundingType === opt.key ? 'text-indigo-600' : 'text-slate-600'}`}
+                                                className={`font-bold text-sm mb-0.5 ${config.roundingType === opt.key ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-gray-300'}`}
                                             >
                                                 {opt.label}
                                             </div>
@@ -171,13 +171,13 @@ export default function PricingPage() {
                             </div>
 
                             {/* 模式切换 */}
-                            <div className="p-6 sm:p-8 border-b border-slate-100">
+                            <div className="p-6 sm:p-8 border-b border-slate-100 dark:border-gray-800">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <h3 className="text-xl font-bold text-slate-800 mb-1">
+                                        <h3 className="text-xl font-bold text-slate-800 dark:text-gray-100 mb-1">
                                             定价模式
                                         </h3>
-                                        <p className="text-slate-500 text-sm">
+                                        <p className="text-slate-500 dark:text-gray-400 text-sm">
                                             选择适合当前的定价策略
                                         </p>
                                     </div>
@@ -188,15 +188,15 @@ export default function PricingPage() {
                                             checked={config.unifiedPricing}
                                             onChange={(e) => handleUnifiedChange(e.target.checked)}
                                         />
-                                        <div className="w-16 h-9 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-100 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-7 after:w-7 after:transition-all peer-checked:bg-blue-600 shadow-inner"></div>
+                                        <div className="w-16 h-9 bg-slate-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-100 dark:peer-focus:ring-blue-900/20 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-7 after:w-7 after:transition-all peer-checked:bg-blue-600 shadow-inner"></div>
                                     </label>
                                 </div>
                                 <div className="mt-6 grid grid-cols-2 gap-4">
                                     <div
                                         className={`p-4 rounded-xl border-2 transition-all cursor-pointer ${
                                             config.unifiedPricing
-                                                ? 'border-blue-500 bg-blue-50/50 text-blue-700'
-                                                : 'border-transparent bg-slate-50 text-slate-500 opacity-50'
+                                                ? 'border-blue-500 dark:border-blue-600 bg-blue-50/50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
+                                                : 'border-transparent bg-slate-50 dark:bg-[#1f1f1f] text-slate-500 dark:text-gray-500 opacity-50'
                                         }`}
                                         onClick={() => handleUnifiedChange(true)}
                                     >
@@ -206,8 +206,8 @@ export default function PricingPage() {
                                     <div
                                         className={`p-4 rounded-xl border-2 transition-all cursor-pointer ${
                                             !config.unifiedPricing
-                                                ? 'border-blue-500 bg-blue-50/50 text-blue-700'
-                                                : 'border-transparent bg-slate-50 text-slate-500 opacity-50'
+                                                ? 'border-blue-500 dark:border-blue-600 bg-blue-50/50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
+                                                : 'border-transparent bg-slate-50 dark:bg-[#1f1f1f] text-slate-500 dark:text-gray-500 opacity-50'
                                         }`}
                                         onClick={() => handleUnifiedChange(false)}
                                     >
@@ -218,10 +218,10 @@ export default function PricingPage() {
                             </div>
 
                             {/* 具体配置表单 */}
-                            <div className="p-6 sm:p-8 bg-white/40">
+                            <div className="p-6 sm:p-8 bg-white/40 dark:bg-white/5">
                                 {config.unifiedPricing ? (
                                     <div className="max-w-lg">
-                                        <label className="block text-sm font-bold text-slate-700 mb-4">
+                                        <label className="block text-sm font-bold text-slate-700 dark:text-gray-300 mb-4">
                                             设置统一溢价比例
                                         </label>
                                         <div className="relative group">
@@ -230,7 +230,7 @@ export default function PricingPage() {
                                                 step="0.1"
                                                 min="0"
                                                 max="100"
-                                                className="w-full pl-6 pr-12 py-4 text-2xl font-bold text-slate-800 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all shadow-sm group-hover:border-blue-300"
+                                                className="w-full pl-6 pr-12 py-4 text-2xl font-bold text-slate-800 dark:text-gray-100 bg-white dark:bg-[#141414] border border-slate-200 dark:border-gray-700 rounded-2xl focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900/20 focus:border-blue-500 transition-all shadow-sm group-hover:border-blue-300 dark:group-hover:border-blue-700"
                                                 value={config.unifiedRate}
                                                 onChange={(e) =>
                                                     handleUnifiedRateChange(e.target.value)
@@ -238,12 +238,12 @@ export default function PricingPage() {
                                                 placeholder="0.0"
                                             />
                                             <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">
-                                                <span className="text-lg font-bold text-slate-400">
+                                                <span className="text-lg font-bold text-slate-400 dark:text-gray-600">
                                                     %
                                                 </span>
                                             </div>
                                         </div>
-                                        <p className="mt-3 text-sm text-slate-500 flex items-center gap-2">
+                                        <p className="mt-3 text-sm text-slate-500 dark:text-gray-400 flex items-center gap-2">
                                             <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
                                             例如：设置为 20%，则 ¥100 的商品售价为 ¥120
                                         </p>
@@ -251,7 +251,7 @@ export default function PricingPage() {
                                 ) : (
                                     <div className="animate-fadeIn">
                                         <div className="flex items-center gap-3 mb-6">
-                                            <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600">
+                                            <div className="p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg text-indigo-600 dark:text-indigo-400">
                                                 <svg
                                                     className="w-5 h-5"
                                                     fill="none"
@@ -266,7 +266,7 @@ export default function PricingPage() {
                                                     />
                                                 </svg>
                                             </div>
-                                            <h3 className="font-bold text-slate-700">
+                                            <h3 className="font-bold text-slate-700 dark:text-gray-200">
                                                 品类详细配置
                                             </h3>
                                         </div>
@@ -274,7 +274,7 @@ export default function PricingPage() {
                                             {PACKAGE_CATEGORIES_LIST.map((cat) => (
                                                 <div
                                                     key={cat.key}
-                                                    className="group bg-white border border-slate-200 rounded-2xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200"
+                                                    className="group bg-white dark:bg-[#1f1f1f] border border-slate-200 dark:border-gray-800 rounded-2xl p-4 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md transition-all duration-200"
                                                 >
                                                     <div className="flex items-center justify-between mb-3">
                                                         <div className="flex items-center gap-3">
@@ -283,7 +283,7 @@ export default function PricingPage() {
                                                             >
                                                                 {cat.icon}
                                                             </div>
-                                                            <span className="font-bold text-slate-700 text-sm">
+                                                            <span className="font-bold text-slate-700 dark:text-gray-200 text-sm">
                                                                 {cat.name}
                                                             </span>
                                                         </div>
@@ -294,7 +294,7 @@ export default function PricingPage() {
                                                             step="0.1"
                                                             min="0"
                                                             max="100"
-                                                            className="w-full px-4 py-2.5 pr-10 text-lg font-bold text-slate-800 bg-slate-50 border border-transparent rounded-xl focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                                                            className="w-full px-4 py-2.5 pr-10 text-lg font-bold text-slate-800 dark:text-gray-100 bg-slate-50 dark:bg-[#141414] border border-transparent rounded-xl focus:bg-white dark:focus:bg-[#1f1f1f] focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/20 transition-all"
                                                             value={
                                                                 config[
                                                                     cat.key as keyof PricingConfig
@@ -320,8 +320,8 @@ export default function PricingPage() {
                         </div>
 
                         {/* 底部操作栏 */}
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/60 backdrop-blur-md rounded-2xl p-4 border border-white/60 shadow-sm">
-                            <div className="flex items-center gap-2 text-slate-500 text-sm px-2">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/60 dark:bg-[#1f1f1f]/60 backdrop-blur-md rounded-2xl p-4 border border-white/60 dark:border-gray-800/60 shadow-sm">
+                            <div className="flex items-center gap-2 text-slate-500 dark:text-gray-400 text-sm px-2">
                                 <svg
                                     className="w-5 h-5 text-emerald-500"
                                     fill="none"
@@ -340,7 +340,7 @@ export default function PricingPage() {
                             <button
                                 onClick={handleSave}
                                 disabled={saving}
-                                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-slate-900 text-white px-8 py-3.5 rounded-xl hover:bg-slate-800 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 font-bold shadow-xl shadow-slate-200 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
+                                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-slate-900 dark:bg-blue-600 text-white px-8 py-3.5 rounded-xl hover:bg-slate-800 dark:hover:bg-blue-500 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 font-bold shadow-xl shadow-slate-200 dark:shadow-none disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
                             >
                                 {saving ? (
                                     <>
@@ -371,7 +371,7 @@ export default function PricingPage() {
 
                     {/* 右侧说明区域 */}
                     <div className="lg:col-span-1">
-                        <div className="sticky top-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl p-6 text-white shadow-2xl shadow-blue-200 overflow-hidden">
+                        <div className="sticky top-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl p-6 text-white shadow-2xl shadow-blue-200 dark:shadow-none overflow-hidden">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
                             <div className="relative z-10">
                                 <h3 className="text-xl font-bold mb-6 flex items-center gap-2">

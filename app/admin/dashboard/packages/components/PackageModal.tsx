@@ -6,6 +6,7 @@ import { Button, Form, Input, message, Modal } from 'antd';
 import React, { forwardRef, useImperativeHandle, useState } from 'react';
 import { savePackageService } from '../services';
 import { EditablePartRow, Package, PackageModalRef } from '../types';
+import { useTheme } from '@/app/_components/ThemeProvider';
 
 interface PackageModalProps {
     onSuccess: () => void;
@@ -17,6 +18,8 @@ export const PackageModal = forwardRef<PackageModalRef, PackageModalProps>(({ on
     const [currentPackage, setCurrentPackage] = useState<Package | undefined>(undefined);
     const [items, setItems] = useState<EditablePartRow[]>([]);
     const [form] = Form.useForm();
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
 
     useImperativeHandle(ref, () => ({
         open: (mode, pkg) => {
@@ -115,8 +118,8 @@ export const PackageModal = forwardRef<PackageModalRef, PackageModalProps>(({ on
                         <LayoutOutlined style={{ fontSize: 24 }} />
                     </div>
                     <div>
-                        <h3 className="text-xl font-bold text-gray-900 m-0">{titleMap[mode]}</h3>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest m-0 mt-1">
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 m-0">{titleMap[mode]}</h3>
+                        <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest m-0 mt-1">
                             {mode === 'create'
                                 ? 'System Initialization'
                                 : `Package ID: ${currentPackage?.id || 'NEW'}`}
@@ -129,16 +132,16 @@ export const PackageModal = forwardRef<PackageModalRef, PackageModalProps>(({ on
             width={1400}
             centered
             closeIcon={
-                <div className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-gray-100 transition-colors">
+                <div className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
                     <CloseOutlined />
                 </div>
             }
             footer={
-                <div className="flex items-center justify-end gap-4 px-8 py-6 bg-gray-50/50 rounded-b-[2.5rem] border-t border-gray-100">
+                <div className="flex items-center justify-end gap-4 px-8 py-6 bg-gray-50/50 dark:bg-[#1f1f1f]/50 rounded-b-[2.5rem] border-t border-gray-100 dark:border-gray-800">
                     <Button
                         onClick={handleCancel}
                         size="large"
-                        className="h-12 px-8 rounded-xl border-gray-200 font-bold text-gray-500 hover:text-gray-800 hover:bg-white transition-all"
+                        className="h-12 px-8 rounded-xl border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1f1f1f] font-bold text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-white dark:hover:bg-[#2a2a2a] transition-all"
                     >
                         {isView ? '关闭窗口' : '取消编辑'}
                     </Button>
@@ -163,20 +166,21 @@ export const PackageModal = forwardRef<PackageModalRef, PackageModalProps>(({ on
                     overflow: 'hidden',
                     border: 'none',
                     boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)',
+                    background: isDark ? '#1f1f1f' : 'white',
                 },
                 header: {
                     padding: '32px 40px',
-                    borderBottom: '1px solid #f1f5f9',
+                    borderBottom: isDark ? '1px solid #374151' : '1px solid #f1f5f9',
                     margin: 0,
-                    background: 'white',
+                    background: isDark ? '#1f1f1f' : 'white',
                 },
-                body: { padding: '40px', background: '#FBFCFD' },
+                body: { padding: '40px', background: isDark ? '#141414' : '#FBFCFD' },
             }}
         >
             <div className="space-y-10">
                 {/* 方案身份表单 */}
-                <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden">
-                    <div className="absolute -right-10 -top-10 w-40 h-40 bg-indigo-50 rounded-full blur-3xl opacity-50" />
+                <div className="bg-white dark:bg-[#1f1f1f] p-8 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden">
+                    <div className="absolute -right-10 -top-10 w-40 h-40 bg-indigo-50 dark:bg-indigo-900/20 rounded-full blur-3xl opacity-50" />
                     <Form
                         form={form}
                         layout="vertical"
@@ -187,7 +191,7 @@ export const PackageModal = forwardRef<PackageModalRef, PackageModalProps>(({ on
                             <Form.Item
                                 name="name"
                                 label={
-                                    <span className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">
+                                    <span className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">
                                         方案名称
                                     </span>
                                 }
@@ -195,7 +199,7 @@ export const PackageModal = forwardRef<PackageModalRef, PackageModalProps>(({ on
                             >
                                 <Input
                                     placeholder="例如：极客电竞主机 2024"
-                                    className="h-12 rounded-xl border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 font-bold text-base"
+                                    className="h-12 rounded-xl border-gray-200 dark:border-gray-700 bg-white dark:bg-[#141414] text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 font-bold text-base"
                                 />
                             </Form.Item>
                         </div>
@@ -203,14 +207,14 @@ export const PackageModal = forwardRef<PackageModalRef, PackageModalProps>(({ on
                             <Form.Item
                                 name="description"
                                 label={
-                                    <span className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">
+                                    <span className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">
                                         方案描述
                                     </span>
                                 }
                             >
                                 <Input
                                     placeholder="简要描述该方案的定位、适用人群或核心卖点..."
-                                    className="h-12 rounded-xl border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 text-base"
+                                    className="h-12 rounded-xl border-gray-200 dark:border-gray-700 bg-white dark:bg-[#141414] text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 text-base"
                                 />
                             </Form.Item>
                         </div>
@@ -222,15 +226,15 @@ export const PackageModal = forwardRef<PackageModalRef, PackageModalProps>(({ on
                     <div className="flex items-center justify-between px-2">
                         <div className="flex items-center gap-3">
                             <div className="w-2 h-6 bg-indigo-600 rounded-full"></div>
-                            <h4 className="text-lg font-bold text-gray-900">硬件配置清单</h4>
+                            <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100">硬件配置清单</h4>
                         </div>
-                        <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                        <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
                             实时价格计算已就绪
                         </div>
                     </div>
 
-                    <div className="rounded-[2.5rem] overflow-hidden border border-gray-100 shadow-sm bg-white">
+                    <div className="rounded-[2.5rem] overflow-hidden border border-gray-100 dark:border-gray-800 shadow-sm bg-white dark:bg-[#1f1f1f]">
                         <EditablePackageTable
                             items={items}
                             onRowUpdate={handleRowUpdate}

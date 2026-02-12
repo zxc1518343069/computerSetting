@@ -50,41 +50,41 @@ export const PackageCard: React.FC<PackageCardProps> = ({
     const themes = [
         {
             name: 'blue',
-            bg: 'bg-blue-50/50',
-            border: 'border-blue-100',
-            iconBg: 'bg-blue-100 text-blue-600',
-            hoverBorder: 'hover:border-blue-300',
-            glow: 'hover:shadow-blue-200/50',
+            bg: 'bg-blue-50/50 dark:bg-blue-900/10',
+            border: 'border-blue-100 dark:border-blue-900/30',
+            iconBg: 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400',
+            hoverBorder: 'hover:border-blue-300 dark:hover:border-blue-700',
+            glow: 'hover:shadow-blue-200/50 dark:hover:shadow-blue-900/20',
             gradient: 'from-blue-500 to-cyan-400',
             btn: 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/20',
         },
         {
             name: 'purple',
-            bg: 'bg-purple-50/50',
-            border: 'border-purple-100',
-            iconBg: 'bg-purple-100 text-purple-600',
-            hoverBorder: 'hover:border-purple-300',
-            glow: 'hover:shadow-purple-200/50',
+            bg: 'bg-purple-50/50 dark:bg-purple-900/10',
+            border: 'border-purple-100 dark:border-purple-900/30',
+            iconBg: 'bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-400',
+            hoverBorder: 'hover:border-purple-300 dark:hover:border-purple-700',
+            glow: 'hover:shadow-purple-200/50 dark:hover:shadow-purple-900/20',
             gradient: 'from-purple-500 to-pink-400',
             btn: 'bg-purple-600 hover:bg-purple-500 shadow-purple-600/20',
         },
         {
             name: 'green',
-            bg: 'bg-emerald-50/50',
-            border: 'border-emerald-100',
-            iconBg: 'bg-emerald-100 text-emerald-600',
-            hoverBorder: 'hover:border-emerald-300',
-            glow: 'hover:shadow-emerald-200/50',
+            bg: 'bg-emerald-50/50 dark:bg-emerald-900/10',
+            border: 'border-emerald-100 dark:border-emerald-900/30',
+            iconBg: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400',
+            hoverBorder: 'hover:border-emerald-300 dark:hover:border-emerald-700',
+            glow: 'hover:shadow-emerald-200/50 dark:hover:shadow-emerald-900/20',
             gradient: 'from-emerald-500 to-teal-400',
             btn: 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/20',
         },
         {
             name: 'amber',
-            bg: 'bg-amber-50/50',
-            border: 'border-amber-100',
-            iconBg: 'bg-amber-100 text-amber-600',
-            hoverBorder: 'hover:border-amber-300',
-            glow: 'hover:shadow-amber-200/50',
+            bg: 'bg-amber-50/50 dark:bg-amber-900/10',
+            border: 'border-amber-100 dark:border-amber-900/30',
+            iconBg: 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400',
+            hoverBorder: 'hover:border-amber-300 dark:hover:border-amber-700',
+            glow: 'hover:shadow-amber-200/50 dark:hover:shadow-amber-900/20',
             gradient: 'from-amber-500 to-orange-400',
             btn: 'bg-amber-600 hover:bg-amber-500 shadow-amber-600/20',
         },
@@ -115,7 +115,7 @@ export const PackageCard: React.FC<PackageCardProps> = ({
                         >
                             ID: {pkg.id}
                         </span>
-                        <div className="text-[10px] text-gray-400 mt-1 font-medium">
+                        <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 font-medium">
                             {dayjs(pkg.updated_at).format('YYYY.MM.DD')}
                         </div>
                     </div>
@@ -123,10 +123,10 @@ export const PackageCard: React.FC<PackageCardProps> = ({
 
                 {/* 标题与描述 */}
                 <div className="mb-6">
-                    <h3 className="text-xl font-bold text-gray-800 group-hover:text-black transition-colors truncate mb-2">
+                    <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 group-hover:text-black dark:group-hover:text-white transition-colors truncate mb-2">
                         {pkg.name}
                     </h3>
-                    <p className="text-xs leading-relaxed text-gray-500 line-clamp-2 h-8">
+                    <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400 line-clamp-2 h-8">
                         {pkg.description || '该配置方案经过专业调优，旨在提供卓越的性能表现。'}
                     </p>
                 </div>
@@ -148,18 +148,18 @@ export const PackageCard: React.FC<PackageCardProps> = ({
                 </div>
 
                 {/* 底部：价格与操作 */}
-                <div className="mt-auto pt-6 border-t border-gray-100/50">
+                <div className="mt-auto pt-6 border-t border-gray-100/50 dark:border-gray-800/50">
                     <div className="flex justify-between items-end mb-6">
                         <div>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">
+                            <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest block mb-1">
                                 套餐总价
                             </span>
-                            <div className="text-2xl font-black text-gray-900 tabular-nums flex items-baseline">
+                            <div className="text-2xl font-black text-gray-900 dark:text-gray-100 tabular-nums flex items-baseline">
                                 <span className="text-sm font-bold mr-1">¥</span>
                                 {Number(pkg.total_price).toLocaleString()}
                             </div>
                         </div>
-                        <Tag className="m-0 px-2 py-0.5 rounded-md bg-white/50 border-gray-100 text-gray-500 text-[10px] font-bold backdrop-blur-sm">
+                        <Tag className="m-0 px-2 py-0.5 rounded-md bg-white/50 dark:bg-white/5 border-gray-100 dark:border-gray-800 text-gray-500 dark:text-gray-400 text-[10px] font-bold backdrop-blur-sm">
                             {pkg.items.length} 件配件
                         </Tag>
                     </div>
@@ -177,7 +177,7 @@ export const PackageCard: React.FC<PackageCardProps> = ({
                             <Button
                                 icon={<EyeOutlined />}
                                 onClick={() => onView(pkg)}
-                                className="h-11 w-11 flex items-center justify-center rounded-xl border-gray-200 text-gray-400 hover:text-blue-500 hover:border-blue-200 transition-all"
+                                className="h-11 w-11 flex items-center justify-center rounded-xl border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1f1f1f] text-gray-400 dark:text-gray-500 hover:text-blue-500 dark:hover:text-blue-400 hover:border-blue-200 dark:hover:border-blue-800 transition-all"
                             />
                         </Tooltip>
                         <Popconfirm
@@ -191,7 +191,7 @@ export const PackageCard: React.FC<PackageCardProps> = ({
                                 danger
                                 type="text"
                                 icon={<DeleteOutlined />}
-                                className="h-11 w-11 flex items-center justify-center rounded-xl bg-red-50/50 hover:bg-red-100 border-none transition-all"
+                                className="h-11 w-11 flex items-center justify-center rounded-xl bg-red-50/50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 border-none transition-all"
                             />
                         </Popconfirm>
                     </div>
@@ -217,10 +217,10 @@ const SpecItem = ({
             {icon}
         </div>
         <div
-            className="text-[11px] font-bold text-gray-600 truncate flex-1"
+            className="text-[11px] font-bold text-gray-600 dark:text-gray-300 truncate flex-1"
             title={value || '未配置'}
         >
-            {value || <span className="text-gray-300 italic font-normal">未配置</span>}
+            {value || <span className="text-gray-300 dark:text-gray-600 italic font-normal">未配置</span>}
         </div>
     </div>
 );

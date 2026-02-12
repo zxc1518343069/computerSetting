@@ -47,12 +47,12 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                     <div className="flex items-center gap-2">
                         <div
                             className={`w-8 h-8 rounded-lg flex items-center justify-center text-lg shadow-sm ${
-                                config?.twColor?.split(' ')[0] || 'bg-gray-100'
+                                config?.twColor?.split(' ')[0] || 'bg-gray-100 dark:bg-gray-800'
                             }`}
                         >
                             {config?.icon || '📦'}
                         </div>
-                        <span className="font-medium text-gray-700">
+                        <span className="font-medium text-gray-700 dark:text-gray-300">
                             {config?.name || category}
                         </span>
                     </div>
@@ -65,7 +65,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
             key: 'name',
             sorter: (a, b) => a.name.localeCompare(b.name),
             render: (text) => (
-                <Text strong className="text-gray-800 text-[15px]">
+                <Text strong className="text-gray-800 dark:text-gray-100 text-[15px]">
                     {text}
                 </Text>
             ),
@@ -78,15 +78,15 @@ export const ProductTable: React.FC<ProductTableProps> = ({
             width: 140,
             sorter: (a, b) => a.price - b.price,
             render: (price) => (
-                <div className="font-mono text-gray-500 font-medium">{formatPrice(price)}</div>
+                <div className="font-mono text-gray-500 dark:text-gray-400 font-medium">{formatPrice(price)}</div>
             ),
         },
         {
             title: (
                 <div className="flex items-center justify-end gap-1 cursor-help group">
-                    <span className="group-hover:text-blue-600 transition-colors">最终售价</span>
+                    <span className="group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">最终售价</span>
                     <Tooltip title="优先级: 手动定价 > 溢价配置 > 基础价格">
-                        <InfoCircleOutlined className="text-xs text-gray-400 group-hover:text-blue-600 transition-colors" />
+                        <InfoCircleOutlined className="text-xs text-gray-400 dark:text-gray-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
                     </Tooltip>
                 </div>
             ),
@@ -98,13 +98,13 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                 if (record.selling_price !== undefined && record.selling_price !== null) {
                     return (
                         <div className="flex flex-col items-end">
-                            <span className="text-orange-600 font-bold font-mono text-lg">
+                            <span className="text-orange-600 dark:text-orange-400 font-bold font-mono text-lg">
                                 {formatPrice(record.selling_price)}
                             </span>
                             <Tag
                                 color="orange"
                                 bordered={false}
-                                className="mr-0 text-[10px] px-1 leading-tight bg-orange-50 text-orange-600"
+                                className="mr-0 text-[10px] px-1 leading-tight bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400"
                             >
                                 手动定价
                             </Tag>
@@ -116,10 +116,10 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                 if (record.is_use_premium === false) {
                     return (
                         <div className="flex flex-col items-end opacity-60">
-                            <span className="text-gray-700 font-bold font-mono text-lg">
+                            <span className="text-gray-700 dark:text-gray-200 font-bold font-mono text-lg">
                                 {formatPrice(record.price)}
                             </span>
-                            <span className="text-[10px] text-gray-400">无溢价</span>
+                            <span className="text-[10px] text-gray-400 dark:text-gray-500">无溢价</span>
                         </div>
                     );
                 }
@@ -128,11 +128,11 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                 const { price, rate } = getSellingPriceInfo(record);
                 return (
                     <div className="flex flex-col items-end">
-                        <span className="text-emerald-600 font-bold font-mono text-lg">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold font-mono text-lg">
                             {formatPrice(price)}
                         </span>
                         {rate > 0 && (
-                            <div className="flex items-center gap-1 text-[10px] text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">
+                            <div className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-1.5 py-0.5 rounded-full">
                                 <RiseOutlined />
                                 <span>+{rate.toFixed(1)}%</span>
                             </div>
@@ -154,7 +154,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                             size="small"
                             icon={<EditOutlined />}
                             onClick={() => onEdit(record)}
-                            className="text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+                            className="text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-700 dark:hover:text-blue-300"
                         />
                     </Tooltip>
                     <Popconfirm
@@ -171,7 +171,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                                 danger
                                 size="small"
                                 icon={<DeleteOutlined />}
-                                className="hover:bg-red-50"
+                                className="hover:bg-red-50 dark:hover:bg-red-900/20"
                             />
                         </Tooltip>
                     </Popconfirm>
@@ -181,7 +181,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
     ];
 
     return (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+        <div className="bg-white dark:bg-[#1f1f1f] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-5">
             <Table
                 columns={columns}
                 dataSource={products}
@@ -189,14 +189,14 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                 loading={loading}
                 pagination={{
                     pageSize: 10,
-                    showTotal: (total) => <span className="text-gray-400">共 {total} 条记录</span>,
+                    showTotal: (total) => <span className="text-gray-400 dark:text-gray-500">共 {total} 条记录</span>,
                     showSizeChanger: true,
                     position: ['bottomRight'],
                     className: '!mb-0 !mt-4',
                 }}
                 scroll={{ x: 1000 }}
                 size="middle"
-                rowClassName="group hover:bg-gray-50/50 transition-colors cursor-default"
+                rowClassName="group hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors cursor-default"
                 className="custom-table"
             />
             <style jsx global>{`
@@ -208,9 +208,17 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                     border-bottom: 1px solid #f3f4f6;
                     padding: 16px 16px;
                 }
+                .dark .custom-table .ant-table-thead > tr > th {
+                    background: #141414;
+                    color: #9ca3af;
+                    border-bottom: 1px solid #374151;
+                }
                 .custom-table .ant-table-tbody > tr > td {
                     padding: 16px 16px;
                     border-bottom: 1px solid #f9fafb;
+                }
+                .dark .custom-table .ant-table-tbody > tr > td {
+                    border-bottom: 1px solid #1f2937;
                 }
                 .custom-table .ant-table-tbody > tr:last-child > td {
                     border-bottom: none;
@@ -218,6 +226,13 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                 /* 修复分页样式 */
                 .custom-table .ant-pagination {
                     margin-right: 0 !important;
+                }
+                .dark .ant-pagination-item-active {
+                    background: #1f2937;
+                    border-color: #3b82f6;
+                }
+                .dark .ant-pagination-item-active a {
+                    color: #3b82f6;
                 }
             `}</style>
         </div>

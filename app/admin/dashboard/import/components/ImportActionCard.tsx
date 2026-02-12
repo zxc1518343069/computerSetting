@@ -17,27 +17,27 @@ export const ImportActionCard: React.FC<ImportActionCardProps> = ({
 }) => {
     const styles = {
         blue: {
-            bg: 'bg-blue-50/50',
-            border: 'border-blue-100',
-            iconBg: 'bg-blue-100 text-blue-600',
-            hoverBorder: 'group-hover:border-blue-300',
-            glow: 'group-hover:shadow-blue-200/50',
+            bg: 'bg-blue-50/50 dark:bg-blue-900/10',
+            border: 'border-blue-100 dark:border-blue-900/30',
+            iconBg: 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400',
+            hoverBorder: 'group-hover:border-blue-300 dark:group-hover:border-blue-700',
+            glow: 'group-hover:shadow-blue-200/50 dark:group-hover:shadow-blue-900/20',
             gradient: 'from-blue-500 to-cyan-400',
         },
         purple: {
-            bg: 'bg-purple-50/50',
-            border: 'border-purple-100',
-            iconBg: 'bg-purple-100 text-purple-600',
-            hoverBorder: 'group-hover:border-purple-300',
-            glow: 'group-hover:shadow-purple-200/50',
+            bg: 'bg-purple-50/50 dark:bg-purple-900/10',
+            border: 'border-purple-100 dark:border-purple-900/30',
+            iconBg: 'bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-400',
+            hoverBorder: 'group-hover:border-purple-300 dark:group-hover:border-purple-700',
+            glow: 'group-hover:shadow-purple-200/50 dark:group-hover:shadow-purple-900/20',
             gradient: 'from-purple-500 to-pink-400',
         },
         green: {
-            bg: 'bg-emerald-50/50',
-            border: 'border-emerald-100',
-            iconBg: 'bg-emerald-100 text-emerald-600',
-            hoverBorder: 'group-hover:border-emerald-300',
-            glow: 'group-hover:shadow-emerald-200/50',
+            bg: 'bg-emerald-50/50 dark:bg-emerald-900/10',
+            border: 'border-emerald-100 dark:border-emerald-900/30',
+            iconBg: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400',
+            hoverBorder: 'group-hover:border-emerald-300 dark:group-hover:border-emerald-700',
+            glow: 'group-hover:shadow-emerald-200/50 dark:group-hover:shadow-emerald-900/20',
             gradient: 'from-emerald-500 to-teal-400',
         },
     };
@@ -60,11 +60,11 @@ export const ImportActionCard: React.FC<ImportActionCardProps> = ({
                     <div className="text-4xl">{icon}</div>
                 </div>
 
-                <h3 className="mb-3 text-xl font-bold text-gray-800 group-hover:text-black transition-colors">
+                <h3 className="mb-3 text-xl font-bold text-gray-800 dark:text-gray-100 group-hover:text-black dark:group-hover:text-white transition-colors">
                     {title}
                 </h3>
 
-                <p className="mb-8 text-sm leading-relaxed text-gray-500 group-hover:text-gray-600 flex-grow">
+                <p className="mb-8 text-sm leading-relaxed text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 flex-grow">
                     {description}
                 </p>
 

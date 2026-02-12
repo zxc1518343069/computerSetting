@@ -30,11 +30,11 @@ export const ExtraRows: React.FC<ExtraRowsProps> = ({ pricing, disabled }) => {
                     <span className="text-gray-300 dark:text-gray-600 text-xs font-mono">1</span>
                 </td>
                 {pricing && (
-                    <td className="px-8 py-5 text-right text-gray-200 dark:text-gray-700 font-mono">
+                    <td className="px-8 py-5 text-right text-gray-200 dark:text-gray-800 font-mono">
                         ---
                     </td>
                 )}
-                <td className="px-8 py-5 text-right text-gray-300 dark:text-gray-600 font-mono">
+                <td className="px-8 py-5 text-right text-gray-300 dark:text-gray-800 font-mono">
                     ---
                 </td>
             </tr>

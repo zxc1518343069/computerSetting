@@ -12,6 +12,7 @@ import {
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
+import ThemeToggle from '@/app/_components/ThemeToggle';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter();
@@ -62,10 +63,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     ];
 
     return (
-        <div className="flex h-screen bg-[#F8FAFC] overflow-hidden font-sans selection:bg-indigo-500/30">
+        <div className="flex h-screen bg-[#F8FAFC] dark:bg-black overflow-hidden font-sans selection:bg-indigo-500/30">
             {/* 侧边栏 */}
             <aside
-                className={`relative flex flex-col border-r border-gray-200/60 bg-white/80 backdrop-blur-xl shadow-[4px_0_24px_rgba(0,0,0,0.02)] transition-all duration-500 ease-in-out z-30 ${
+                className={`relative flex flex-col border-r border-gray-200/60 dark:border-gray-800/60 bg-white/80 dark:bg-[#1f1f1f]/80 backdrop-blur-xl shadow-[4px_0_24px_rgba(0,0,0,0.02)] transition-all duration-500 ease-in-out z-30 ${
                     isSidebarCollapsed ? 'w-[88px]' : 'w-[280px]'
                 }`}
             >
@@ -90,10 +91,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                     : 'opacity-100 w-auto scale-100'
                             }`}
                         >
-                            <h2 className="text-lg font-bold text-gray-900 tracking-tight leading-none mb-1">
+                            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 tracking-tight leading-none mb-1">
                                 明远装机
                             </h2>
-                            <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">
+                            <p className="text-[11px] text-gray-400 dark:text-gray-500 font-medium uppercase tracking-wider">
                                 Admin Console
                             </p>
                         </div>
@@ -103,7 +104,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {/* 悬浮折叠按钮 */}
                 <button
                     onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                    className="absolute -right-3 top-28 bg-white border border-gray-200 text-gray-400 hover:text-indigo-600 hover:border-indigo-200 hover:shadow-md rounded-full p-1.5 transition-all duration-300 z-40 shadow-sm"
+                    className="absolute -right-3 top-28 bg-white dark:bg-[#1f1f1f] border border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800 hover:shadow-md rounded-full p-1.5 transition-all duration-300 z-40 shadow-sm"
                 >
                     {isSidebarCollapsed ? (
                         <MenuUnfoldOutlined className="text-xs" />
@@ -122,8 +123,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                 href={item.path}
                                 className={`group relative flex items-center px-4 py-3.5 rounded-xl transition-all duration-300 ease-out ${
                                     isActive
-                                        ? 'bg-indigo-50/80 text-indigo-600 shadow-sm'
-                                        : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                                        ? 'bg-indigo-50/80 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                                        : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-100'
                                 } ${isSidebarCollapsed ? 'justify-center' : ''}`}
                             >
                                 {/* 激活状态指示点 */}
@@ -134,8 +135,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                 <span
                                     className={`text-xl flex-shrink-0 transition-all duration-300 ${
                                         isActive
-                                            ? 'text-indigo-600 scale-110'
-                                            : 'text-gray-400 group-hover:text-gray-600 group-hover:scale-105'
+                                            ? 'text-indigo-600 dark:text-indigo-400 scale-110'
+                                            : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300 group-hover:scale-105'
                                     }`}
                                 >
                                     {item.icon}
@@ -161,21 +162,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </nav>
 
                 {/* 底部操作区 */}
-                <div className="p-4 border-t border-gray-100/80 bg-gray-50/30 backdrop-blur-sm">
+                <div className="p-4 border-t border-gray-100/80 dark:border-gray-800 bg-gray-50/30 dark:bg-[#1f1f1f]/30 backdrop-blur-sm space-y-2">
+                    <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'px-4'}`}>
+                        <ThemeToggle />
+                    </div>
                     {/* 退出按钮 */}
                     <button
                         onClick={handleLogout}
                         className={`flex items-center w-full rounded-xl transition-all duration-300 group ${
                             isSidebarCollapsed
-                                ? 'justify-center p-3 hover:bg-red-50 hover:text-red-500'
-                                : 'px-4 py-3 hover:bg-red-50'
+                                ? 'justify-center p-3 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500'
+                                : 'px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/20'
                         }`}
                     >
-                        <span className="text-gray-400 group-hover:text-red-500 transition-colors text-lg">
+                        <span className="text-gray-400 dark:text-gray-500 group-hover:text-red-500 transition-colors text-lg">
                             <LogoutOutlined />
                         </span>
                         <span
-                            className={`ml-3 font-medium text-gray-500 group-hover:text-red-600 transition-all duration-300 whitespace-nowrap ${
+                            className={`ml-3 font-medium text-gray-500 dark:text-gray-400 group-hover:text-red-600 dark:group-hover:text-red-400 transition-all duration-300 whitespace-nowrap ${
                                 isSidebarCollapsed ? 'opacity-0 w-0 hidden' : 'opacity-100'
                             }`}
                         >
@@ -186,10 +190,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </aside>
 
             {/* 主内容区域 */}
-            <main className="flex-1 overflow-y-auto scroll-smooth relative bg-[#F8FAFC]">
+            <main className="flex-1 overflow-y-auto scroll-smooth relative bg-[#F8FAFC] dark:bg-black">
                 {/* 顶部装饰光晕 */}
-                <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-indigo-100/40 blur-[100px] rounded-full pointer-events-none -z-10 mix-blend-multiply" />
-                <div className="fixed bottom-0 left-0 w-[500px] h-[500px] bg-purple-100/40 blur-[100px] rounded-full pointer-events-none -z-10 mix-blend-multiply" />
+                <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-indigo-100/40 dark:bg-indigo-900/10 blur-[100px] rounded-full pointer-events-none -z-10 mix-blend-multiply dark:mix-blend-screen" />
+                <div className="fixed bottom-0 left-0 w-[500px] h-[500px] bg-purple-100/40 dark:bg-purple-900/10 blur-[100px] rounded-full pointer-events-none -z-10 mix-blend-multiply dark:mix-blend-screen" />
 
                 <div className="relative z-10 p-6 md:p-8 lg:p-10 max-w-[1600px] mx-auto min-h-full">
                     {children}
