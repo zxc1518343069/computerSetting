@@ -5,8 +5,13 @@ import { Package } from '@/app/_components/PCPartsTable/PackageRecomment';
 import { usePackageTableData } from '@/app/admin/dashboard/packages/components/EditablePackageTable/hooks/usePackageTableData';
 import { EditablePartRow } from '@/app/admin/dashboard/packages/types';
 import { INITIAL_ONLINE_GAMES, INITIAL_SINGLE_GAMES } from '@/const/games';
-import { DashboardOutlined, ExperimentOutlined, SwapOutlined } from '@ant-design/icons';
-import { Button, Divider, Modal, Select, Table, Tag, Typography } from 'antd';
+import {
+    DashboardOutlined,
+    ExperimentOutlined,
+    SwapOutlined,
+    TableOutlined,
+} from '@ant-design/icons';
+import { Divider, Modal, Select, Table, Typography, Segmented } from 'antd';
 import React, { useMemo, useState } from 'react';
 
 const { Title, Text } = Typography;
@@ -56,19 +61,71 @@ const getFPSColor = (fpsRange: string) => {
     return '#ef4444'; // Red 500
 };
 
-// --- Components ---
-
-const FpsDisplay = ({ fpsRange, label }: { fpsRange: string; label: string }) => (
-    <div className="flex-1 min-w-[80px]">
-        <div className="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider mb-1">
-            {label}
+const PerformanceLegend = () => (
+    <div className="flex items-center gap-4 px-4 py-2 bg-slate-50/50 dark:bg-white/5 rounded-xl border border-slate-100 dark:border-white/10">
+        <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-[#10b981]" />
+            <span className="text-[10px] font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider">
+                电竞级 (144+)
+            </span>
         </div>
-        <div className="font-mono text-sm font-bold" style={{ color: getFPSColor(fpsRange) }}>
-            {fpsRange && fpsRange !== '0' ? fpsRange : '-'}{' '}
-            <span className="text-[10px] opacity-60 font-sans ml-1">FPS</span>
+        <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-[#3b82f6]" />
+            <span className="text-[10px] font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider">
+                流畅级 (60+)
+            </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-[#f59e0b]" />
+            <span className="text-[10px] font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider">
+                及格级 (30+)
+            </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-[#ef4444]" />
+            <span className="text-[10px] font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider">
+                吃力级 (&lt;30)
+            </span>
         </div>
     </div>
 );
+
+const FpsDisplay = ({ fpsRange, label }: { fpsRange: string; label: string }) => {
+    const color = getFPSColor(fpsRange);
+    const minVal = fpsRange && fpsRange !== '0' ? parseInt(fpsRange.split('-')[0]) : 0;
+
+    const getLevelLabel = (fps: number) => {
+        if (fps >= 144) return '电竞级';
+        if (fps >= 60) return '流畅级';
+        if (fps >= 30) return '及格级';
+        return '吃力级';
+    };
+
+    return (
+        <div className="flex-1 min-w-[100px] group/fps">
+            <div className="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                {label}
+                {minVal > 0 && (
+                    <span
+                        className="px-1.5 py-0.5 rounded-md text-[8px] text-white font-bold"
+                        style={{ backgroundColor: color }}
+                    >
+                        {getLevelLabel(minVal)}
+                    </span>
+                )}
+            </div>
+            <div className="flex items-baseline gap-1">
+                <div
+                    className="font-mono text-xl font-black tracking-tighter transition-transform group-hover/fps:scale-110 origin-left duration-300"
+                    style={{ color }}
+                >
+                    {fpsRange && fpsRange !== '0' ? fpsRange : '-'}
+                </div>
+                <span className="text-[10px] font-bold opacity-40 dark:text-white">FPS</span>
+            </div>
+        </div>
+    );
+};
 
 export const TestConfigModal: React.FC<TestConfigModalProps> = ({
     visible,
@@ -79,7 +136,7 @@ export const TestConfigModal: React.FC<TestConfigModalProps> = ({
     const { products } = usePackageTableData();
     const [selectedGameIds, setSelectedGameIds] = useState<number[]>([]);
     const [selectedConfigIds, setSelectedConfigIds] = useState<string[]>(['current']);
-    const [viewMode, setViewMode] = useState<'performance' | 'hardware'>('performance');
+    const [viewMode, setViewMode] = useState<'performance' | 'specs'>('performance');
 
     const allGames = useMemo(() => [...INITIAL_ONLINE_GAMES, ...INITIAL_SINGLE_GAMES], []);
 
@@ -182,19 +239,21 @@ export const TestConfigModal: React.FC<TestConfigModalProps> = ({
             open={visible}
             onCancel={onClose}
             footer={null}
-            width={1000}
+            width={1100}
             centered
             className="test-config-modal-v2"
             styles={{
                 content: {
-                    borderRadius: '24px',
+                    borderRadius: '32px',
                     padding: '0',
                     overflow: 'hidden',
-                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-                    height: '85vh',
-                    maxHeight: '900px',
+                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                    height: '90vh',
+                    maxHeight: '950px',
                     display: 'flex',
                     flexDirection: 'column',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    position: 'relative',
                 },
                 body: {
                     flex: 1,
@@ -204,108 +263,174 @@ export const TestConfigModal: React.FC<TestConfigModalProps> = ({
                 },
             }}
         >
+            {/* Background Effects */}
+            <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden -z-10">
+                <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-blue-500/5 blur-[120px] rounded-full" />
+                <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-purple-500/5 blur-[120px] rounded-full" />
+            </div>
+
             {/* Header Section */}
-            <div className="bg-white dark:bg-[#1f1f1f] border-b border-slate-100 dark:border-gray-800 p-6 shrink-0 z-20 relative">
-                <div className="flex justify-between items-start mb-6">
+            <div className="bg-white dark:bg-[#121212] border-b border-slate-100 dark:border-white/5 p-8 shrink-0 z-20 relative">
+                <div className="flex justify-between items-start mb-8 pr-12">
                     <div>
-                        <Title level={4} className="!mb-1 flex items-center gap-2">
-                            <ExperimentOutlined className="text-blue-600 dark:text-blue-400" />
-                            性能实验室 & 方案对比
-                        </Title>
-                        <Text type="secondary" className="text-xs">
-                            多维度游戏帧率预测与硬件配置深度对比
-                        </Text>
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="w-10 h-10 rounded-2xl bg-blue-600/10 dark:bg-blue-400/10 flex items-center justify-center">
+                                <ExperimentOutlined className="text-xl text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <div>
+                                <Title
+                                    level={3}
+                                    className="!mb-0 !text-slate-900 dark:!text-white tracking-tight"
+                                >
+                                    性能实验室
+                                </Title>
+                                <Text type="secondary" className="text-xs font-medium opacity-60">
+                                    多维度游戏帧率预测与硬件配置深度对比
+                                </Text>
+                            </div>
+                        </div>
                     </div>
-                    <div className="flex gap-2">
-                        <Button
-                            type={viewMode === 'performance' ? 'primary' : 'default'}
-                            icon={<DashboardOutlined />}
-                            onClick={() => setViewMode('performance')}
-                            className="rounded-lg"
-                        >
-                            性能对比
-                        </Button>
-                        <Button
-                            type={viewMode === 'hardware' ? 'primary' : 'default'}
-                            icon={<SwapOutlined />}
-                            onClick={() => setViewMode('hardware')}
-                            className="rounded-lg"
-                        >
-                            硬件对比
-                        </Button>
-                    </div>
+                    <PerformanceLegend />
                 </div>
 
                 {/* Config Selector */}
-                <div className="mb-6">
-                    <div className="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider mb-2">
-                        选择对比方案 (最多支持多选)
+                <div className="mb-8">
+                    <div className="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <div className="w-1 h-3 bg-blue-500 rounded-full" />
+                        选择对比方案 (支持多选)
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                        {configMetrics.map((m) => (
-                            <Tag.CheckableTag
-                                key={m.id}
-                                checked={selectedConfigIds.includes(m.id)}
-                                onChange={() => handleConfigToggle(m.id)}
-                                className={`px-4 py-1.5 rounded-lg border transition-all ${
-                                    selectedConfigIds.includes(m.id)
-                                        ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400'
-                                        : 'bg-slate-50 dark:bg-[#2a2a2a] border-slate-100 dark:border-gray-700 text-slate-500 dark:text-gray-400'
-                                }`}
-                            >
-                                {m.name}
-                            </Tag.CheckableTag>
-                        ))}
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {configMetrics.map((m) => {
+                            const isSelected = selectedConfigIds.includes(m.id);
+                            return (
+                                <div
+                                    key={m.id}
+                                    onClick={() => handleConfigToggle(m.id)}
+                                    className={`group cursor-pointer relative p-4 rounded-2xl border transition-all duration-300 ${
+                                        isSelected
+                                            ? 'bg-blue-50/50 dark:bg-blue-500/10 border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.15)] dark:shadow-[0_0_20px_rgba(59,130,246,0.1)]'
+                                            : 'bg-slate-50/50 dark:bg-white/5 border-slate-100 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/20'
+                                    }`}
+                                >
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div
+                                            className={`text-sm font-bold truncate pr-4 ${
+                                                isSelected
+                                                    ? 'text-blue-600 dark:text-blue-400'
+                                                    : 'text-slate-700 dark:text-gray-300'
+                                            }`}
+                                        >
+                                            {m.name}
+                                        </div>
+                                        {isSelected && (
+                                            <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
+                                                <div className="w-2 h-2 rounded-full bg-white" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="space-y-1">
+                                        <div className="text-[10px] text-slate-400 dark:text-gray-500 flex items-center gap-1">
+                                            <span className="font-bold opacity-50">CPU</span>
+                                            <span className="truncate">
+                                                {m.hardware.cpu?.name || '未配置'}
+                                            </span>
+                                        </div>
+                                        <div className="text-[10px] text-slate-400 dark:text-gray-500 flex items-center gap-1">
+                                            <span className="font-bold opacity-50">GPU</span>
+                                            <span className="truncate">
+                                                {m.hardware.gpu?.name || '未配置'}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Hover Effect */}
+                                    {!isSelected && (
+                                        <div className="absolute inset-0 rounded-2xl bg-blue-500/0 group-hover:bg-blue-500/[0.02] transition-colors" />
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
 
-                {viewMode === 'performance' && (
-                    <div className="relative">
-                        <Select
-                            mode="multiple"
-                            size="large"
-                            className="w-full"
-                            placeholder={
-                                isHardwareMissing
-                                    ? '部分方案硬件配置不全...'
-                                    : '添加游戏进行对比测试...'
-                            }
-                            options={allGames.map((g) => ({
+                {/* View Switcher & Game Selector */}
+                <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
+                    <Segmented
+                        size="large"
+                        value={viewMode}
+                        onChange={(value) => setViewMode(value as 'performance' | 'specs')}
+                        className="custom-segmented-v2 shrink-0"
+                        options={[
+                            {
                                 label: (
-                                    <div className="flex items-center gap-2 py-1">
-                                        <img
-                                            src={g.icon}
-                                            alt=""
-                                            className="w-6 h-6 rounded object-cover shadow-sm"
-                                        />
-                                        <span className="font-medium text-slate-700 dark:text-gray-200">
-                                            {g.name}
-                                        </span>
-                                        <span className="text-xs text-slate-400 dark:text-gray-500 ml-auto">
-                                            {INITIAL_ONLINE_GAMES.some((og) => og.id === g.id)
-                                                ? '网游'
-                                                : '单机'}
-                                        </span>
+                                    <div className="flex items-center gap-2 px-2">
+                                        <DashboardOutlined />
+                                        <span>性能看板</span>
                                     </div>
                                 ),
-                                value: g.id,
-                            }))}
-                            value={selectedGameIds}
-                            onChange={handleGameChange}
-                            maxTagCount="responsive"
-                        />
-                    </div>
-                )}
+                                value: 'performance',
+                            },
+                            {
+                                label: (
+                                    <div className="flex items-center gap-2 px-2">
+                                        <TableOutlined />
+                                        <span>规格矩阵</span>
+                                    </div>
+                                ),
+                                value: 'specs',
+                            },
+                        ]}
+                    />
+
+                    {viewMode === 'performance' && (
+                        <div className="flex-1 relative">
+                            <Select
+                                mode="multiple"
+                                size="large"
+                                allowClear
+                                className="w-full custom-select-v2"
+                                placeholder={
+                                    isHardwareMissing
+                                        ? '部分方案硬件配置不全...'
+                                        : '添加游戏进行对比测试...'
+                                }
+                                options={allGames.map((g) => ({
+                                    label: (
+                                        <div className="flex items-center gap-2 py-1">
+                                            <img
+                                                src={g.icon}
+                                                alt=""
+                                                className="w-6 h-6 rounded object-cover shadow-sm"
+                                            />
+                                            <span className="font-medium text-slate-700 dark:text-gray-200">
+                                                {g.name}
+                                            </span>
+                                            <span className="text-xs text-slate-400 dark:text-gray-500 ml-auto">
+                                                {INITIAL_ONLINE_GAMES.some((og) => og.id === g.id)
+                                                    ? '网游'
+                                                    : '单机'}
+                                            </span>
+                                        </div>
+                                    ),
+                                    value: g.id,
+                                }))}
+                                value={selectedGameIds}
+                                onChange={handleGameChange}
+                                maxTagCount="responsive"
+                            />
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Content Section */}
-            <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50 dark:bg-[#141414]">
-                {viewMode === 'performance' ? (
-                    <div className="space-y-6">
-                        {selectedGameIds.length === 0 ? (
-                            <div className="h-64 flex flex-col items-center justify-center text-slate-400 dark:text-gray-500 bg-white dark:bg-[#1f1f1f] rounded-3xl border border-dashed border-slate-200 dark:border-gray-800">
+            <div className="flex-1 overflow-y-auto p-8 bg-slate-50/50 dark:bg-[#0a0a0a]">
+                <div className="space-y-8">
+                    {viewMode === 'performance' ? (
+                        selectedGameIds.length === 0 ? (
+                            <div className="h-64 flex flex-col items-center justify-center text-slate-400 dark:text-gray-500 bg-white dark:bg-[#121212] rounded-[32px] border border-dashed border-slate-200 dark:border-white/5">
                                 <ExperimentOutlined className="text-4xl mb-4 opacity-20" />
-                                <p>请选择游戏以开始性能测试</p>
+                                <p className="font-medium">请选择游戏以开始性能测试</p>
                             </div>
                         ) : (
                             selectedGameIds.map((gameId) => {
@@ -316,63 +441,80 @@ export const TestConfigModal: React.FC<TestConfigModalProps> = ({
                                 return (
                                     <div
                                         key={gameId}
-                                        className="bg-white dark:bg-[#1f1f1f] rounded-3xl border border-slate-100 dark:border-gray-800 shadow-sm overflow-hidden"
+                                        className="bg-white dark:bg-[#121212] rounded-[32px] border border-slate-100 dark:border-white/5 shadow-sm overflow-hidden"
                                     >
-                                        <div className="px-6 py-4 border-b border-slate-50 dark:border-gray-800 bg-slate-50/30 dark:bg-[#2a2a2a]/30 flex items-center gap-4">
-                                            <img
-                                                src={game.icon}
-                                                alt=""
-                                                className="w-10 h-10 rounded-xl object-cover shadow-md"
-                                            />
+                                        <div className="px-8 py-6 border-b border-slate-50 dark:border-white/5 bg-slate-50/30 dark:bg-white/[0.02] flex items-center gap-6">
+                                            <div className="relative">
+                                                <img
+                                                    src={game.icon}
+                                                    alt=""
+                                                    className="w-14 h-14 rounded-2xl object-cover shadow-xl z-10 relative"
+                                                />
+                                                <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full -z-0" />
+                                            </div>
                                             <div>
-                                                <div className="font-bold text-slate-800 dark:text-gray-200">
+                                                <div className="text-xl font-bold text-slate-900 dark:text-white mb-1">
                                                     {game.name}
                                                 </div>
-                                                <div className="text-[10px] text-slate-400 dark:text-gray-500 uppercase font-bold tracking-widest">
-                                                    {isOnline ? 'Online Game' : 'Single Player'}
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[10px] text-slate-400 dark:text-gray-500 uppercase font-bold tracking-widest">
+                                                        {isOnline ? 'Online Game' : 'Single Player'}
+                                                    </span>
+                                                    <div className="w-1 h-1 rounded-full bg-slate-300 dark:bg-gray-700" />
+                                                    <span className="text-[10px] text-blue-500 dark:text-blue-400 font-bold uppercase tracking-widest">
+                                                        Performance Test
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="p-6">
-                                            <div className="grid grid-cols-1 gap-4">
+                                        <div className="p-8">
+                                            <div className="grid grid-cols-1 gap-6">
                                                 {selectedMetrics.map((m) => (
                                                     <div
                                                         key={m.id}
-                                                        className="flex items-center gap-6 p-4 rounded-2xl bg-slate-50/50 dark:bg-[#2a2a2a]/50 border border-slate-100 dark:border-gray-700"
+                                                        className="flex items-center gap-8 p-6 rounded-3xl bg-slate-50/50 dark:bg-white/[0.03] border border-slate-100 dark:border-white/5 hover:border-blue-500/30 transition-colors"
                                                     >
-                                                        <div className="w-24 shrink-0">
-                                                            <div className="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase mb-1">
-                                                                方案
+                                                        <div className="w-32 shrink-0">
+                                                            <div className="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase mb-2 tracking-widest">
+                                                                方案配置
                                                             </div>
-                                                            <div className="text-sm font-bold text-blue-600 dark:text-blue-400 truncate">
+                                                            <div className="text-sm font-bold text-blue-600 dark:text-blue-400 truncate mb-1">
                                                                 {m.name}
                                                             </div>
+                                                            <div className="text-[10px] text-slate-400 dark:text-gray-500 truncate opacity-60">
+                                                                {m.hardware.gpu?.name || '无显卡'}
+                                                            </div>
                                                         </div>
-                                                        <Divider type="vertical" className="h-8" />
-                                                        <FpsDisplay
-                                                            label="1080P"
-                                                            fpsRange={estimateFPS(
-                                                                m.score,
-                                                                isOnline ? 'online' : 'single',
-                                                                '1080p'
-                                                            )}
+                                                        <Divider
+                                                            type="vertical"
+                                                            className="h-12 border-slate-200 dark:border-white/10"
                                                         />
-                                                        <FpsDisplay
-                                                            label="2K"
-                                                            fpsRange={estimateFPS(
-                                                                m.score,
-                                                                isOnline ? 'online' : 'single',
-                                                                '2k'
-                                                            )}
-                                                        />
-                                                        <FpsDisplay
-                                                            label="4K"
-                                                            fpsRange={estimateFPS(
-                                                                m.score,
-                                                                isOnline ? 'online' : 'single',
-                                                                '4k'
-                                                            )}
-                                                        />
+                                                        <div className="flex-1 flex items-center gap-8">
+                                                            <FpsDisplay
+                                                                label="1080P"
+                                                                fpsRange={estimateFPS(
+                                                                    m.score,
+                                                                    isOnline ? 'online' : 'single',
+                                                                    '1080p'
+                                                                )}
+                                                            />
+                                                            <FpsDisplay
+                                                                label="2K"
+                                                                fpsRange={estimateFPS(
+                                                                    m.score,
+                                                                    isOnline ? 'online' : 'single',
+                                                                    '2k'
+                                                                )}
+                                                            />
+                                                            <FpsDisplay
+                                                                label="4K"
+                                                                fpsRange={estimateFPS(
+                                                                    m.score,
+                                                                    isOnline ? 'online' : 'single',
+                                                                    '4k'
+                                                                )}
+                                                            />
+                                                        </div>
                                                     </div>
                                                 ))}
                                             </div>
@@ -380,68 +522,84 @@ export const TestConfigModal: React.FC<TestConfigModalProps> = ({
                                     </div>
                                 );
                             })
-                        )}
-                    </div>
-                ) : (
-                    <div className="bg-white dark:bg-[#1f1f1f] rounded-3xl border border-slate-100 dark:border-gray-800 shadow-sm overflow-hidden">
-                        <Table
-                            pagination={false}
-                            columns={[
-                                {
-                                    title: '硬件类别',
-                                    dataIndex: 'category',
-                                    key: 'category',
-                                    width: 120,
-                                    render: (text) => (
-                                        <span className="font-bold text-slate-500 dark:text-gray-400">
-                                            {text}
-                                        </span>
-                                    ),
-                                },
-                                ...selectedMetrics.map((m) => ({
-                                    title: m.name,
-                                    dataIndex: m.id,
-                                    key: m.id,
-                                    render: (val: { name?: string; price?: number } | null) => (
-                                        <div className="py-2">
-                                            <div className="font-medium text-slate-800 dark:text-gray-200">
-                                                {val?.name || '-'}
-                                            </div>
-                                            {val?.price && (
-                                                <div className="text-xs text-blue-500 dark:text-blue-400 font-mono mt-1">
-                                                    ¥{val.price}
+                        )
+                    ) : (
+                        /* Hardware Comparison Table (Specs View) */
+                        <div className="bg-white dark:bg-[#121212] rounded-[32px] border border-slate-100 dark:border-white/5 shadow-sm overflow-hidden">
+                            <div className="px-8 py-6 border-b border-slate-50 dark:border-white/5 bg-slate-50/30 dark:bg-white/[0.02]">
+                                <div className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                    <SwapOutlined className="text-blue-500" />
+                                    硬件规格深度对比
+                                </div>
+                            </div>
+                            <div className="p-0">
+                                <Table
+                                    pagination={false}
+                                    className="custom-compare-table"
+                                    columns={[
+                                        {
+                                            title: '硬件类别',
+                                            dataIndex: 'category',
+                                            key: 'category',
+                                            width: 150,
+                                            render: (text) => (
+                                                <span className="font-bold text-slate-400 dark:text-gray-500 uppercase text-[10px] tracking-widest">
+                                                    {text}
+                                                </span>
+                                            ),
+                                        },
+                                        ...selectedMetrics.map((m) => ({
+                                            title: (
+                                                <div className="text-blue-600 dark:text-blue-400 font-bold">
+                                                    {m.name}
                                                 </div>
-                                            )}
-                                        </div>
-                                    ),
-                                })),
-                            ]}
-                            dataSource={[
-                                {
-                                    key: 'cpu',
-                                    category: '处理器 (CPU)',
-                                    ...Object.fromEntries(
-                                        selectedMetrics.map((m) => [m.id, m.hardware.cpu])
-                                    ),
-                                },
-                                {
-                                    key: 'gpu',
-                                    category: '显卡 (GPU)',
-                                    ...Object.fromEntries(
-                                        selectedMetrics.map((m) => [m.id, m.hardware.gpu])
-                                    ),
-                                },
-                                {
-                                    key: 'ram',
-                                    category: '内存 (RAM)',
-                                    ...Object.fromEntries(
-                                        selectedMetrics.map((m) => [m.id, m.hardware.ram])
-                                    ),
-                                },
-                            ]}
-                        />
-                    </div>
-                )}
+                                            ),
+                                            dataIndex: m.id,
+                                            key: m.id,
+                                            render: (
+                                                val: { name?: string; price?: number } | null
+                                            ) => (
+                                                <div className="py-2">
+                                                    <div className="font-medium text-slate-800 dark:text-gray-200 text-sm">
+                                                        {val?.name || '-'}
+                                                    </div>
+                                                    {val?.price && (
+                                                        <div className="text-[10px] text-blue-500 dark:text-blue-400 font-mono mt-1 font-bold">
+                                                            ¥{val.price.toLocaleString()}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ),
+                                        })),
+                                    ]}
+                                    dataSource={[
+                                        {
+                                            key: 'cpu',
+                                            category: '处理器 (CPU)',
+                                            ...Object.fromEntries(
+                                                selectedMetrics.map((m) => [m.id, m.hardware.cpu])
+                                            ),
+                                        },
+                                        {
+                                            key: 'gpu',
+                                            category: '显卡 (GPU)',
+                                            ...Object.fromEntries(
+                                                selectedMetrics.map((m) => [m.id, m.hardware.gpu])
+                                            ),
+                                        },
+                                        {
+                                            key: 'ram',
+                                            category: '内存 (RAM)',
+                                            ...Object.fromEntries(
+                                                selectedMetrics.map((m) => [m.id, m.hardware.ram])
+                                            ),
+                                        },
+                                    ]}
+                                />
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         </Modal>
     );
