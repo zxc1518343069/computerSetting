@@ -1,19 +1,18 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { Modal, Select, Typography, Button } from 'antd';
-import {
-    ExperimentOutlined,
-    DashboardOutlined,
-    WarningFilled,
-    ThunderboltFilled,
-    PlusOutlined,
-    DeleteOutlined,
-    InfoCircleOutlined,
-} from '@ant-design/icons';
-import { INITIAL_ONLINE_GAMES, INITIAL_SINGLE_GAMES } from '@/const/games';
+import { Package } from '@/app/_components/PCPartsTable/PackageRecomment';
 import { usePackageTableData } from '@/app/admin/dashboard/packages/components/EditablePackageTable/hooks/usePackageTableData';
 import { EditablePartRow } from '@/app/admin/dashboard/packages/types';
+import { INITIAL_ONLINE_GAMES, INITIAL_SINGLE_GAMES } from '@/const/games';
+import {
+    DashboardOutlined,
+    ExperimentOutlined,
+    SwapOutlined,
+    ThunderboltFilled,
+    WarningFilled,
+} from '@ant-design/icons';
+import { Button, Divider, Modal, Select, Table, Tag, Typography } from 'antd';
+import React, { useMemo, useState } from 'react';
 
 const { Title, Text } = Typography;
 
@@ -21,13 +20,17 @@ interface TestConfigModalProps {
     visible: boolean;
     onClose: () => void;
     items: EditablePartRow[];
+    tempPackages?: Package[];
 }
 
 interface GameTestResult {
     gameId: number;
-    fps1080p: string;
-    fps2k: string;
-    fps4k: string;
+    configs: {
+        configId: string;
+        fps1080p: string;
+        fps2k: string;
+        fps4k: string;
+    }[];
 }
 
 // --- Helper Functions ---
@@ -123,82 +126,111 @@ const FpsDisplay = ({ fpsRange, label }: { fpsRange: string; label: string }) =>
     </div>
 );
 
-export const TestConfigModal: React.FC<TestConfigModalProps> = ({ visible, onClose, items }) => {
+export const TestConfigModal: React.FC<TestConfigModalProps> = ({
+    visible,
+    onClose,
+    items,
+    tempPackages = [],
+}) => {
     const { products } = usePackageTableData();
     const [selectedGameIds, setSelectedGameIds] = useState<number[]>([]);
-    const [testResults, setTestResults] = useState<GameTestResult[]>([]);
+    const [selectedConfigIds, setSelectedConfigIds] = useState<string[]>(['current']);
+    const [viewMode, setViewMode] = useState<'performance' | 'hardware'>('performance');
 
     const allGames = useMemo(() => [...INITIAL_ONLINE_GAMES, ...INITIAL_SINGLE_GAMES], []);
 
-    // Extract core components
-    const coreComponents = useMemo(() => {
-        if (!products.length) return null;
+    // Available configurations for comparison
+    const availableConfigs = useMemo(() => {
+        const configs = [
+            {
+                id: 'current',
+                name: '当前配置',
+                items: items,
+            },
+        ];
 
-        const getProduct = (category: string) => {
-            const item = items.find((i) => i.category === category);
-            if (!item || !item.product_id) return null;
-            return products.find((p) => p.id === item.product_id);
-        };
+        tempPackages.forEach((pkg) => {
+            configs.push({
+                id: pkg.id.toString(),
+                name: pkg.name,
+                items: pkg.items.map((item) => ({
+                    id: item.id.toString(),
+                    category: item.product_category,
+                    product_id: item.product_id,
+                    quantity: item.quantity,
+                })),
+            });
+        });
 
-        return {
-            cpu: getProduct('cpu'),
-            gpu: getProduct('gpu'),
-            ram: getProduct('ram'),
-        };
-    }, [items, products]);
+        return configs;
+    }, [items, tempPackages]);
 
-    const isHardwareMissing = !coreComponents?.cpu || !coreComponents?.gpu;
+    // Calculate performance scores for each config
+    const configMetrics = useMemo(() => {
+        if (!products.length) return [];
 
-    // Calculate a mock "performance score"
-    const performanceScore = useMemo(() => {
-        if (!coreComponents) return 0;
-        let score = 100; // Base score
+        return availableConfigs.map((config) => {
+            const getProduct = (category: string) => {
+                const item = config.items.find((i) => i.category === category);
+                if (!item || !item.product_id) return null;
+                return products.find((p) => p.id === item.product_id);
+            };
 
-        const { cpu, gpu, ram } = coreComponents;
+            const cpu = getProduct('cpu');
+            const gpu = getProduct('gpu');
+            const ram = getProduct('ram');
 
-        if (cpu) {
-            if (cpu.name.includes('i9') || cpu.name.includes('R9')) score += 150;
-            else if (cpu.name.includes('i7') || cpu.name.includes('R7')) score += 100;
-            else if (cpu.name.includes('i5') || cpu.name.includes('R5')) score += 60;
-            else score += 30;
-        }
+            let score = 100;
+            if (cpu) {
+                if (cpu.name.includes('i9') || cpu.name.includes('R9')) score += 150;
+                else if (cpu.name.includes('i7') || cpu.name.includes('R7')) score += 100;
+                else if (cpu.name.includes('i5') || cpu.name.includes('R5')) score += 60;
+                else score += 30;
+            }
 
-        if (gpu) {
-            if (gpu.name.includes('4090')) score += 400;
-            else if (gpu.name.includes('4080')) score += 300;
-            else if (gpu.name.includes('4070')) score += 200;
-            else if (gpu.name.includes('4060')) score += 120;
-            else if (gpu.name.includes('3060')) score += 80;
-            else score += 40;
-        }
+            if (gpu) {
+                if (gpu.name.includes('4090')) score += 400;
+                else if (gpu.name.includes('4080')) score += 300;
+                else if (gpu.name.includes('4070')) score += 200;
+                else if (gpu.name.includes('4060')) score += 120;
+                else if (gpu.name.includes('3060')) score += 80;
+                else score += 40;
+            }
 
-        if (ram) {
-            if (ram.name.includes('32G') || ram.name.includes('32GB')) score += 40;
-            else if (ram.name.includes('16G') || ram.name.includes('16GB')) score += 20;
-        }
+            if (ram) {
+                if (ram.name.includes('32G') || ram.name.includes('32GB')) score += 40;
+                else if (ram.name.includes('16G') || ram.name.includes('16GB')) score += 20;
+            }
 
-        // If missing critical components, score is 0
-        if (!cpu || !gpu) return 0;
+            if (!cpu || !gpu) score = 0;
 
-        return score;
-    }, [coreComponents]);
-
-    // Update results when selected games change
-    useEffect(() => {
-        const newResults = selectedGameIds.map((gameId) => {
-            const isOnline = INITIAL_ONLINE_GAMES.some((g) => g.id === gameId);
             return {
-                gameId,
-                fps1080p: estimateFPS(performanceScore, isOnline ? 'online' : 'single', '1080p'),
-                fps2k: estimateFPS(performanceScore, isOnline ? 'online' : 'single', '2k'),
-                fps4k: estimateFPS(performanceScore, isOnline ? 'online' : 'single', '4k'),
+                id: config.id,
+                name: config.name,
+                score,
+                hardware: { cpu, gpu, ram },
             };
         });
-        setTestResults(newResults);
-    }, [selectedGameIds, performanceScore]);
+    }, [availableConfigs, products]);
+
+    const selectedMetrics = useMemo(() => {
+        return configMetrics.filter((m) => selectedConfigIds.includes(m.id));
+    }, [configMetrics, selectedConfigIds]);
+
+    const isHardwareMissing = selectedMetrics.some((m) => m.score === 0);
 
     const handleGameChange = (values: number[]) => {
         setSelectedGameIds(values);
+    };
+
+    const handleConfigToggle = (id: string) => {
+        setSelectedConfigIds((prev) => {
+            if (prev.includes(id)) {
+                if (prev.length === 1) return prev; // Keep at least one
+                return prev.filter((i) => i !== id);
+            }
+            return [...prev, id];
+        });
     };
 
     return (
@@ -206,7 +238,7 @@ export const TestConfigModal: React.FC<TestConfigModalProps> = ({ visible, onClo
             open={visible}
             onCancel={onClose}
             footer={null}
-            width={900}
+            width={1000}
             centered
             className="test-config-modal-v2"
             styles={{
@@ -215,8 +247,8 @@ export const TestConfigModal: React.FC<TestConfigModalProps> = ({ visible, onClo
                     padding: '0',
                     overflow: 'hidden',
                     boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-                    height: '80vh',
-                    maxHeight: '800px',
+                    height: '85vh',
+                    maxHeight: '900px',
                     display: 'flex',
                     flexDirection: 'column',
                 },
@@ -234,232 +266,234 @@ export const TestConfigModal: React.FC<TestConfigModalProps> = ({ visible, onClo
                     <div>
                         <Title level={4} className="!mb-1 flex items-center gap-2">
                             <ExperimentOutlined className="text-blue-600" />
-                            性能实验室
+                            性能实验室 & 方案对比
                         </Title>
                         <Text type="secondary" className="text-xs">
-                            多维度游戏帧率预测与硬件评估
+                            多维度游戏帧率预测与硬件配置深度对比
                         </Text>
                     </div>
                     <div className="flex gap-2">
-                        {/* Legend */}
-                        <div className="hidden md:flex items-center gap-3 px-3 py-1.5 bg-slate-50 rounded-lg border border-slate-100">
-                            <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-medium">
-                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> 144+
-                            </div>
-                            <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-medium">
-                                <div className="w-1.5 h-1.5 rounded-full bg-blue-500" /> 60+
-                            </div>
-                            <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-medium">
-                                <div className="w-1.5 h-1.5 rounded-full bg-amber-500" /> 30+
-                            </div>
-                        </div>
+                        <Button
+                            type={viewMode === 'performance' ? 'primary' : 'default'}
+                            icon={<DashboardOutlined />}
+                            onClick={() => setViewMode('performance')}
+                            className="rounded-lg"
+                        >
+                            性能对比
+                        </Button>
+                        <Button
+                            type={viewMode === 'hardware' ? 'primary' : 'default'}
+                            icon={<SwapOutlined />}
+                            onClick={() => setViewMode('hardware')}
+                            className="rounded-lg"
+                        >
+                            硬件对比
+                        </Button>
                     </div>
                 </div>
 
-                {/* Hardware Status Bar */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-                    <HardwareBadge
-                        label="CPU 处理器"
-                        value={coreComponents?.cpu?.name}
-                        missing={!coreComponents?.cpu}
-                    />
-                    <HardwareBadge
-                        label="GPU 显卡"
-                        value={coreComponents?.gpu?.name}
-                        missing={!coreComponents?.gpu}
-                    />
-                    <HardwareBadge
-                        label="RAM 内存"
-                        value={coreComponents?.ram?.name}
-                        missing={!coreComponents?.ram}
-                    />
+                {/* Config Selector */}
+                <div className="mb-6">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                        选择对比方案 (最多支持多选)
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {configMetrics.map((m) => (
+                            <Tag.CheckableTag
+                                key={m.id}
+                                checked={selectedConfigIds.includes(m.id)}
+                                onChange={() => handleConfigToggle(m.id)}
+                                className={`px-4 py-1.5 rounded-lg border transition-all ${
+                                    selectedConfigIds.includes(m.id)
+                                        ? 'bg-blue-50 border-blue-200 text-blue-600'
+                                        : 'bg-slate-50 border-slate-100 text-slate-500'
+                                }`}
+                            >
+                                {m.name}
+                            </Tag.CheckableTag>
+                        ))}
+                    </div>
                 </div>
 
-                {/* Game Selector */}
-                <div className="relative">
-                    <Select
-                        mode="multiple"
-                        size="large"
-                        className="w-full"
-                        placeholder={
-                            isHardwareMissing ? '请先完善硬件配置...' : '添加游戏进行对比测试...'
-                        }
-                        options={allGames.map((g) => ({
-                            label: (
-                                <div className="flex items-center gap-2 py-1">
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img
-                                        src={g.icon}
-                                        alt=""
-                                        className="w-6 h-6 rounded object-cover shadow-sm"
-                                    />
-                                    <span className="font-medium text-slate-700">{g.name}</span>
-                                    <span className="text-xs text-slate-400 ml-auto">
-                                        {INITIAL_ONLINE_GAMES.some((og) => og.id === g.id)
-                                            ? '网游'
-                                            : '单机'}
-                                    </span>
-                                </div>
-                            ),
-                            value: g.id,
-                        }))}
-                        onChange={handleGameChange}
-                        value={selectedGameIds}
-                        maxTagCount="responsive"
-                        style={{ width: '100%' }}
-                        dropdownStyle={{
-                            borderRadius: '16px',
-                            padding: '8px',
-                            boxShadow: '0 10px 40px -10px rgba(0,0,0,0.1)',
-                        }}
-                        suffixIcon={<PlusOutlined className="text-slate-400" />}
-                        // We allow selection even if hardware is missing, to let user explore
-                    />
-                </div>
-            </div>
-
-            {/* Main Content Area */}
-            <div className="flex-1 bg-slate-50/50 overflow-y-auto p-6 relative scroll-smooth">
-                {/* Background Decor */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-gradient-to-b from-blue-50/80 to-transparent rounded-full blur-3xl pointer-events-none -z-10" />
-
-                {isHardwareMissing && selectedGameIds.length > 0 && (
-                    <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 animate-fade-in">
-                        <WarningFilled className="text-red-500 mt-0.5 text-lg" />
-                        <div>
-                            <h4 className="text-sm font-bold text-red-700 mb-0.5">
-                                无法进行性能评估
-                            </h4>
-                            <p className="text-xs text-red-600/80">
-                                请在配置单中选择 CPU 和 显卡。缺少核心硬件数据，无法计算游戏帧率。
-                            </p>
-                        </div>
+                {viewMode === 'performance' && (
+                    <div className="relative">
+                        <Select
+                            mode="multiple"
+                            size="large"
+                            className="w-full"
+                            placeholder={
+                                isHardwareMissing
+                                    ? '部分方案硬件配置不全...'
+                                    : '添加游戏进行对比测试...'
+                            }
+                            options={allGames.map((g) => ({
+                                label: (
+                                    <div className="flex items-center gap-2 py-1">
+                                        <img
+                                            src={g.icon}
+                                            alt=""
+                                            className="w-6 h-6 rounded object-cover shadow-sm"
+                                        />
+                                        <span className="font-medium text-slate-700">{g.name}</span>
+                                        <span className="text-xs text-slate-400 ml-auto">
+                                            {INITIAL_ONLINE_GAMES.some((og) => og.id === g.id)
+                                                ? '网游'
+                                                : '单机'}
+                                        </span>
+                                    </div>
+                                ),
+                                value: g.id,
+                            }))}
+                            value={selectedGameIds}
+                            onChange={handleGameChange}
+                            maxTagCount="responsive"
+                        />
                     </div>
                 )}
+            </div>
 
-                {selectedGameIds.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center opacity-50 min-h-[300px]">
-                        <div className="w-20 h-20 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center mb-4 text-slate-300">
-                            <DashboardOutlined style={{ fontSize: '40px' }} />
-                        </div>
-                        <Title level={5} className="text-slate-500 !mb-1">
-                            开始您的测试
-                        </Title>
-                        <Text type="secondary" className="text-xs">
-                            在上方添加游戏，横向对比不同分辨率下的性能表现
-                        </Text>
-                    </div>
-                ) : (
-                    <div className="space-y-3">
-                        {/* Table Header (Visual only) */}
-                        <div className="hidden md:flex px-6 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                            <div className="w-[35%]">游戏项目</div>
-                            <div className="flex-1 px-2">1080P FHD</div>
-                            <div className="flex-1 px-2">2K QHD</div>
-                            <div className="flex-1 px-2">4K UHD</div>
-                            <div className="w-8"></div>
-                        </div>
+            {/* Content Section */}
+            <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
+                {viewMode === 'performance' ? (
+                    <div className="space-y-6">
+                        {selectedGameIds.length === 0 ? (
+                            <div className="h-64 flex flex-col items-center justify-center text-slate-400 bg-white rounded-3xl border border-dashed border-slate-200">
+                                <ExperimentOutlined className="text-4xl mb-4 opacity-20" />
+                                <p>请选择游戏以开始性能测试</p>
+                            </div>
+                        ) : (
+                            selectedGameIds.map((gameId) => {
+                                const game = allGames.find((g) => g.id === gameId);
+                                const isOnline = INITIAL_ONLINE_GAMES.some((g) => g.id === gameId);
+                                if (!game) return null;
 
-                        {/* Game Rows */}
-                        {testResults.map((result) => {
-                            const game = allGames.find((g) => g.id === result.gameId);
-                            if (!game) return null;
-
-                            return (
-                                <div
-                                    key={result.gameId}
-                                    className="group bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-blue-100 transition-all duration-300 p-4 md:p-0 md:h-20 flex flex-col md:flex-row md:items-center overflow-hidden"
-                                >
-                                    {/* Game Info Column */}
-                                    <div className="md:w-[35%] md:h-full md:border-r border-slate-50 p-4 flex items-center gap-4 bg-slate-50/30 group-hover:bg-white transition-colors">
-                                        <div className="w-10 h-10 rounded-lg bg-slate-200 overflow-hidden shrink-0 shadow-inner relative group-hover:scale-105 transition-transform">
-                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                return (
+                                    <div
+                                        key={gameId}
+                                        className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden"
+                                    >
+                                        <div className="px-6 py-4 border-b border-slate-50 bg-slate-50/30 flex items-center gap-4">
                                             <img
                                                 src={game.icon}
-                                                alt={game.name}
-                                                className="w-full h-full object-cover"
+                                                alt=""
+                                                className="w-10 h-10 rounded-xl object-cover shadow-md"
                                             />
-                                            <div className="absolute inset-0 ring-1 ring-inset ring-black/10 rounded-lg" />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <div className="font-bold text-slate-700 text-sm truncate leading-tight mb-0.5">
-                                                {game.name}
-                                            </div>
-                                            <div className="text-[10px] text-slate-400 flex items-center gap-1.5">
-                                                <span
-                                                    className={`w-1.5 h-1.5 rounded-full ${INITIAL_ONLINE_GAMES.some((g) => g.id === game.id) ? 'bg-blue-400' : 'bg-purple-400'}`}
-                                                />
-                                                {INITIAL_ONLINE_GAMES.some((g) => g.id === game.id)
-                                                    ? '多人竞技'
-                                                    : '3A大作'}
+                                            <div>
+                                                <div className="font-bold text-slate-800">
+                                                    {game.name}
+                                                </div>
+                                                <div className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">
+                                                    {isOnline ? 'Online Game' : 'Single Player'}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-
-                                    {/* FPS Columns */}
-                                    <div className="flex-1 flex flex-col md:flex-row gap-4 md:gap-0 p-4 md:p-0">
-                                        <div className="flex-1 md:px-6 md:border-r border-slate-50 md:flex md:items-center">
-                                            <FpsDisplay fpsRange={result.fps1080p} label="1080P" />
+                                        <div className="p-6">
+                                            <div className="grid grid-cols-1 gap-4">
+                                                {selectedMetrics.map((m) => (
+                                                    <div
+                                                        key={m.id}
+                                                        className="flex items-center gap-6 p-4 rounded-2xl bg-slate-50/50 border border-slate-100"
+                                                    >
+                                                        <div className="w-24 shrink-0">
+                                                            <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">
+                                                                方案
+                                                            </div>
+                                                            <div className="text-sm font-bold text-blue-600 truncate">
+                                                                {m.name}
+                                                            </div>
+                                                        </div>
+                                                        <Divider type="vertical" className="h-8" />
+                                                        <FpsDisplay
+                                                            label="1080P"
+                                                            fpsRange={estimateFPS(
+                                                                m.score,
+                                                                isOnline ? 'online' : 'single',
+                                                                '1080p'
+                                                            )}
+                                                        />
+                                                        <FpsDisplay
+                                                            label="2K"
+                                                            fpsRange={estimateFPS(
+                                                                m.score,
+                                                                isOnline ? 'online' : 'single',
+                                                                '2k'
+                                                            )}
+                                                        />
+                                                        <FpsDisplay
+                                                            label="4K"
+                                                            fpsRange={estimateFPS(
+                                                                m.score,
+                                                                isOnline ? 'online' : 'single',
+                                                                '4k'
+                                                            )}
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
-                                        <div className="flex-1 md:px-6 md:border-r border-slate-50 md:flex md:items-center">
-                                            <FpsDisplay fpsRange={result.fps2k} label="2K" />
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                ) : (
+                    <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+                        <Table
+                            pagination={false}
+                            columns={[
+                                {
+                                    title: '硬件类别',
+                                    dataIndex: 'category',
+                                    key: 'category',
+                                    width: 120,
+                                    render: (text) => (
+                                        <span className="font-bold text-slate-500">{text}</span>
+                                    ),
+                                },
+                                ...selectedMetrics.map((m) => ({
+                                    title: m.name,
+                                    dataIndex: m.id,
+                                    key: m.id,
+                                    render: (val: any) => (
+                                        <div className="py-2">
+                                            <div className="font-medium text-slate-800">
+                                                {val?.name || '-'}
+                                            </div>
+                                            {val?.price && (
+                                                <div className="text-xs text-blue-500 font-mono mt-1">
+                                                    ¥{val.price}
+                                                </div>
+                                            )}
                                         </div>
-                                        <div className="flex-1 md:px-6 md:flex md:items-center">
-                                            <FpsDisplay fpsRange={result.fps4k} label="4K" />
-                                        </div>
-                                    </div>
-
-                                    {/* Action Column */}
-                                    <div className="hidden md:flex w-12 h-full items-center justify-center border-l border-slate-50 bg-slate-50/30 group-hover:bg-white transition-colors">
-                                        <Button
-                                            type="text"
-                                            size="small"
-                                            icon={
-                                                <DeleteOutlined className="text-slate-300 group-hover:text-red-400 transition-colors" />
-                                            }
-                                            onClick={() =>
-                                                handleGameChange(
-                                                    selectedGameIds.filter(
-                                                        (id) => id !== result.gameId
-                                                    )
-                                                )
-                                            }
-                                        />
-                                    </div>
-
-                                    {/* Mobile Delete Button (visible only on small screens) */}
-                                    <div className="md:hidden mt-2 pt-2 border-t border-slate-50 flex justify-end">
-                                        <Button
-                                            type="text"
-                                            size="small"
-                                            danger
-                                            icon={<DeleteOutlined />}
-                                            onClick={() =>
-                                                handleGameChange(
-                                                    selectedGameIds.filter(
-                                                        (id) => id !== result.gameId
-                                                    )
-                                                )
-                                            }
-                                        >
-                                            移除
-                                        </Button>
-                                    </div>
-                                </div>
-                            );
-                        })}
+                                    ),
+                                })),
+                            ]}
+                            dataSource={[
+                                {
+                                    key: 'cpu',
+                                    category: '处理器 (CPU)',
+                                    ...Object.fromEntries(
+                                        selectedMetrics.map((m) => [m.id, m.hardware.cpu])
+                                    ),
+                                },
+                                {
+                                    key: 'gpu',
+                                    category: '显卡 (GPU)',
+                                    ...Object.fromEntries(
+                                        selectedMetrics.map((m) => [m.id, m.hardware.gpu])
+                                    ),
+                                },
+                                {
+                                    key: 'ram',
+                                    category: '内存 (RAM)',
+                                    ...Object.fromEntries(
+                                        selectedMetrics.map((m) => [m.id, m.hardware.ram])
+                                    ),
+                                },
+                            ]}
+                        />
                     </div>
                 )}
-            </div>
-
-            {/* Footer Note */}
-            <div className="bg-white border-t border-slate-100 p-3 text-center">
-                <div className="inline-flex items-center gap-1.5 text-[10px] text-slate-400 bg-slate-50 px-3 py-1 rounded-full">
-                    <InfoCircleOutlined />
-                    <span>
-                        数据基于硬件规格理论估算，仅供参考。实际帧率受驱动、散热及场景复杂度影响。
-                    </span>
-                </div>
             </div>
         </Modal>
     );

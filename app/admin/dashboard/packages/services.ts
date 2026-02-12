@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import api from '@/lib/request/axios';
-import { Package, PackageFormValues, PackageQueryParams, Product, PricingConfig } from './types';
+import { Package, PackageFormValues, PackageQueryParams, PricingConfig, Product } from './types';
 
 // ... existing package services ...
 

@@ -1,6 +1,6 @@
-import { NextRequest } from 'next/server';
+import { error, success } from '@/lib/request/apiResponse';
 import { supabase } from '@/lib/supabase';
-import { success, error } from '@/lib/request/apiResponse';
+import { NextRequest } from 'next/server';
 
 // 测试产品数据 (用于数据库连接失败或没有数据时的fallback)
 const MOCK_PRODUCTS = [

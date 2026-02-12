@@ -1,6 +1,6 @@
-import { NextRequest } from 'next/server';
+import { error, success } from '@/lib/request/apiResponse';
 import { supabase } from '@/lib/supabase';
-import { success, error } from '@/lib/request/apiResponse';
+import { NextRequest } from 'next/server';
 
 // GET - 获取单个产品详情
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -8,7 +8,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         const { id: idParam } = await params;
         const id = parseInt(idParam);
 
-        const { data, error: fetchError } = await supabase.from('products').select('*').eq('id', id).single();
+        const { data, error: fetchError } = await supabase
+            .from('products')
+            .select('*')
+            .eq('id', id)
+            .single();
 
         if (fetchError) {
             if (fetchError.code === 'PGRST116') {

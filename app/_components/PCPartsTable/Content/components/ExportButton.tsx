@@ -1,15 +1,19 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Button, Dropdown, App } from 'antd';
-import type { MenuProps } from 'antd';
 import {
-    DownloadOutlined,
+    copyQuoteImageToClipboard,
+    downloadQuoteImage,
+    QuoteExportData,
+} from '@/utils/canvasExport';
+import {
     CopyOutlined,
+    DownloadOutlined,
     FileImageOutlined,
     LoadingOutlined,
 } from '@ant-design/icons';
-import { downloadQuoteImage, copyQuoteImageToClipboard, QuoteExportData } from '@/utils/canvasExport';
+import type { MenuProps } from 'antd';
+import { App, Button, Dropdown } from 'antd';
+import React, { useState } from 'react';
 
 interface ExportButtonProps {
     data: QuoteExportData;
@@ -23,13 +27,13 @@ export const ExportButton: React.FC<ExportButtonProps> = ({ data, disabled }) =>
 
     const handleDownload = async () => {
         if (disabled || loading) return;
-        
+
         setLoading(true);
         try {
             // 生成文件名
             const timestamp = new Date().toISOString().slice(0, 10);
             const filename = `明远装机报价单_${timestamp}.png`;
-            
+
             downloadQuoteImage(data, filename);
             messageApi.success('报价单已下载');
         } catch (error) {
@@ -42,7 +46,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({ data, disabled }) =>
 
     const handleCopy = async () => {
         if (disabled || copyLoading) return;
-        
+
         setCopyLoading(true);
         try {
             const success = await copyQuoteImageToClipboard(data);
@@ -76,11 +80,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({ data, disabled }) =>
     ];
 
     return (
-        <Dropdown
-            menu={{ items: menuItems }}
-            trigger={['click']}
-            disabled={disabled}
-        >
+        <Dropdown menu={{ items: menuItems }} trigger={['click']} disabled={disabled}>
             <Button
                 type="primary"
                 icon={loading ? <LoadingOutlined /> : <FileImageOutlined />}

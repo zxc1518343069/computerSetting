@@ -1,10 +1,10 @@
-import React from 'react';
-import { Table, Tag, Tooltip, Button, Popconfirm, Typography } from 'antd';
-import { EditOutlined, DeleteOutlined, InfoCircleOutlined, RiseOutlined } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
-import { Product } from '../types';
 import { CATEGORY_CONFIG, categoryOptions } from '@/const/categories';
 import { formatPrice } from '@/utils';
+import { DeleteOutlined, EditOutlined, InfoCircleOutlined, RiseOutlined } from '@ant-design/icons';
+import { Button, Popconfirm, Table, Tag, Tooltip, Typography } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
+import React from 'react';
+import { Product } from '../types';
 
 const { Text } = Typography;
 

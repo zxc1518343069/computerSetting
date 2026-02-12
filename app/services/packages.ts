@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import api from '@/lib/request/axios';
 import type { Package } from '@/app/admin/dashboard/packages/types';
+import api from '@/lib/request/axios';
 
 export const createPackage = (data: Partial<Package>) => {
     return api.post<any, Package>(`/api/packages`, data);

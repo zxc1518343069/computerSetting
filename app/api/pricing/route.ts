@@ -1,6 +1,6 @@
-import { NextRequest } from 'next/server';
+import { error, success } from '@/lib/request/apiResponse';
 import { supabase } from '@/lib/supabase';
-import { success, error } from '@/lib/request/apiResponse';
+import { NextRequest } from 'next/server';
 
 // GET - 获取溢价配置
 export async function GET() {
@@ -19,35 +19,41 @@ export async function GET() {
 
         if (!data) {
             // 如果没有配置,返回默认值
-            return success({
-                unifiedPricing: true,
-                unifiedRate: 0,
-                cpu: 0,
-                motherboard: 0,
-                ram: 0,
-                gpu: 0,
-                storage: 0,
-                psu: 0,
-                case: 0,
-                cooling: 0,
-                monitor: 0,
-            }, '获取默认溢价配置成功');
+            return success(
+                {
+                    unifiedPricing: true,
+                    unifiedRate: 0,
+                    cpu: 0,
+                    motherboard: 0,
+                    ram: 0,
+                    gpu: 0,
+                    storage: 0,
+                    psu: 0,
+                    case: 0,
+                    cooling: 0,
+                    monitor: 0,
+                },
+                '获取默认溢价配置成功'
+            );
         }
 
-        return success({
-            unifiedPricing: data.unified_pricing,
-            unifiedRate: parseFloat(data.unified_rate),
-            cpu: parseFloat(data.cpu_rate),
-            motherboard: parseFloat(data.motherboard_rate),
-            ram: parseFloat(data.ram_rate),
-            gpu: parseFloat(data.gpu_rate),
-            storage: parseFloat(data.storage_rate),
-            psu: parseFloat(data.psu_rate),
-            case: parseFloat(data.case_rate),
-            cooling: parseFloat(data.cooling_rate),
-            monitor: parseFloat(data.monitor_rate),
-            roundingType: data.rounding_type,
-        }, '获取溢价配置成功');
+        return success(
+            {
+                unifiedPricing: data.unified_pricing,
+                unifiedRate: parseFloat(data.unified_rate),
+                cpu: parseFloat(data.cpu_rate),
+                motherboard: parseFloat(data.motherboard_rate),
+                ram: parseFloat(data.ram_rate),
+                gpu: parseFloat(data.gpu_rate),
+                storage: parseFloat(data.storage_rate),
+                psu: parseFloat(data.psu_rate),
+                case: parseFloat(data.case_rate),
+                cooling: parseFloat(data.cooling_rate),
+                monitor: parseFloat(data.monitor_rate),
+                roundingType: data.rounding_type,
+            },
+            '获取溢价配置成功'
+        );
     } catch (e) {
         console.error('Get pricing config error:', e);
         return error(500, '获取溢价配置失败');

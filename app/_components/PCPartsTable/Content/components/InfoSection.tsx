@@ -1,5 +1,5 @@
+import { InfoCircleOutlined, ReloadOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
-import { ReloadOutlined, InfoCircleOutlined } from '@ant-design/icons';
 
 interface InfoSectionProps {
     onReset: () => void;

@@ -1,5 +1,5 @@
 import { useRequest } from 'ahooks';
-import { fetchProductsService, fetchPricingConfigService } from '../../../services';
+import { fetchPricingConfigService, fetchProductsService } from '../../../services';
 
 export const usePackageTableData = () => {
     // Parallel fetching of products and pricing config

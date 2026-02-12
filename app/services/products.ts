@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import api from '@/lib/request/axios';
 import type { Product } from '@/const/types';
+import api from '@/lib/request/axios';
 
 export const createProduct = (data: Partial<Product>) => {
     return api.post<any, Product>(`/api/products`, data);

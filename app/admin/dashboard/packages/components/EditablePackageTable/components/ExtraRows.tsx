@@ -1,6 +1,6 @@
-import React from 'react';
+import { GiftOutlined, PlusCircleOutlined } from '@ant-design/icons';
 import { Input } from 'antd';
-import { PlusCircleOutlined, GiftOutlined } from '@ant-design/icons';
+import React from 'react';
 
 interface ExtraRowsProps {
     pricing: boolean;
@@ -53,4 +53,3 @@ export const ExtraRows: React.FC<ExtraRowsProps> = ({ pricing, disabled }) => {
         </>
     );
 };
-

@@ -1,10 +1,10 @@
+import { AntdGlobalRegistry } from '@/lib/AntdGlobal';
 import { AntdRegistry } from '@ant-design/nextjs-registry';
-import { ConfigProvider, App } from 'antd';
+import { App, ConfigProvider } from 'antd';
+import zhCN from 'antd/locale/zh_CN';
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
-import zhCN from 'antd/locale/zh_CN';
-import { AntdGlobalRegistry } from '@/lib/AntdGlobal';
 import NextTopLoader from 'nextjs-toploader';
 
 const geistSans = Geist({

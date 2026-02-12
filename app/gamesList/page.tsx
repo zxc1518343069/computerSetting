@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Layout, Input, Tabs, Tag } from 'antd';
-import { SearchOutlined, FireFilled, GlobalOutlined, DesktopOutlined } from '@ant-design/icons';
 import SiteHeader from '@/app/_components/SiteHeader';
 import { INITIAL_ONLINE_GAMES, INITIAL_SINGLE_GAMES } from '@/const/games';
+import { DesktopOutlined, FireFilled, GlobalOutlined, SearchOutlined } from '@ant-design/icons';
+import { Input, Layout, Tabs, Tag } from 'antd';
+import React, { useState } from 'react';
 
 const { Content } = Layout;
 

@@ -1,22 +1,22 @@
 'use client';
 
-import React, { useRef, useMemo } from 'react';
-import { Input, Select, Button, Tooltip } from 'antd';
+import { CATEGORY_CONFIG, categoryOptions } from '@/const/categories';
+import { formatPrice } from '@/utils';
 import {
+    AppstoreOutlined,
+    DatabaseOutlined,
+    DollarOutlined,
+    FilterOutlined,
     PlusOutlined,
     ReloadOutlined,
     SearchOutlined,
-    FilterOutlined,
-    DatabaseOutlined,
-    DollarOutlined,
-    AppstoreOutlined,
 } from '@ant-design/icons';
-import { usePricing, useProductList } from './hooks';
-import { ProductTable } from './_components/ProductTable';
+import { Button, Input, Select, Tooltip } from 'antd';
+import React, { useMemo, useRef } from 'react';
 import { ProductModal } from './_components/ProductModal';
+import { ProductTable } from './_components/ProductTable';
+import { usePricing, useProductList } from './hooks';
 import { ProductModalRef } from './types';
-import { CATEGORY_CONFIG, categoryOptions } from '@/const/categories';
-import { formatPrice } from '@/utils';
 
 const { Option } = Select;
 

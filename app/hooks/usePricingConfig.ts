@@ -1,5 +1,5 @@
-import { useRequest } from 'ahooks';
 import { PricingConfig } from '@/const/types';
+import { useRequest } from 'ahooks';
 
 const fetchPricingConfig = async (): Promise<PricingConfig> => {
     const response = await fetch('/api/pricing');

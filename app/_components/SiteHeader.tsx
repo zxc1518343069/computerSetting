@@ -1,10 +1,10 @@
 'use client';
-import React, { useState, useEffect } from 'react';
-import { Layout } from 'antd';
-import { ThunderboltFilled, AppstoreOutlined, TrophyOutlined } from '@ant-design/icons';
 import Time from '@/app/_components/Time';
+import { AppstoreOutlined, ThunderboltFilled, TrophyOutlined } from '@ant-design/icons';
+import { Layout } from 'antd';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import React, { useEffect, useState } from 'react';
 
 const { Header } = Layout;
 

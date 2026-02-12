@@ -1,16 +1,16 @@
-import React from 'react';
-import { Card, Tag, Button, Popconfirm, Skeleton, Tooltip } from 'antd';
 import {
+    ArrowRightOutlined,
     DeleteOutlined,
+    DesktopOutlined,
     EyeOutlined,
-    ThunderboltOutlined,
     GatewayOutlined,
     HddOutlined,
-    DesktopOutlined,
-    ArrowRightOutlined,
+    ThunderboltOutlined,
 } from '@ant-design/icons';
-import { Package } from '../types';
+import { Button, Card, Popconfirm, Skeleton, Tag, Tooltip } from 'antd';
 import dayjs from 'dayjs';
+import React from 'react';
+import { Package } from '../types';
 
 interface PackageCardProps {
     pkg: Package;

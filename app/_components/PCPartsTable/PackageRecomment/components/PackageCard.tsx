@@ -1,10 +1,10 @@
-import { Button } from 'antd';
-import { CopyOutlined, ThunderboltFilled, DesktopOutlined, RocketFilled } from '@ant-design/icons';
-import { Package } from '../types';
-import { getCoreSpecs } from '../utils';
 import { PricingConfig, Product } from '@/const/types';
 import { PricingCalculator } from '@/utils/pricing';
+import { CopyOutlined, DesktopOutlined, RocketFilled, ThunderboltFilled } from '@ant-design/icons';
+import { Button } from 'antd';
 import { useMemo } from 'react';
+import { Package } from '../types';
+import { getCoreSpecs } from '../utils';
 
 interface PackageCardProps {
     pkg: Package;

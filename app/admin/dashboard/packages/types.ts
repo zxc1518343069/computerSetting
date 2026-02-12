@@ -1,4 +1,4 @@
-import { Product, PricingConfig } from '@/const';
+import { PricingConfig, Product } from '@/const';
 
 export type { Product, PricingConfig };
 

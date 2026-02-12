@@ -1,8 +1,8 @@
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
 import { categoryDisplayMap, exampleData, PartCategory } from '@/const';
-import { ImportProductData } from './services';
+import { saveAs } from 'file-saver';
+import * as XLSX from 'xlsx';
 import { Product } from '../config/types';
+import { ImportProductData } from './services';
 
 // PartCategory 到数据库 category 的映射
 const categoryMapping: Record<PartCategory, string> = {

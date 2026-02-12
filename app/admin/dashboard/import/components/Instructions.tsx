@@ -1,10 +1,10 @@
-import React from 'react';
 import {
-    CloudDownloadOutlined,
-    FileExcelOutlined,
-    CloudUploadOutlined,
     CheckCircleOutlined,
+    CloudDownloadOutlined,
+    CloudUploadOutlined,
+    FileExcelOutlined,
 } from '@ant-design/icons';
+import React from 'react';
 
 export const Instructions: React.FC = () => {
     const steps = [

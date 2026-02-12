@@ -1,16 +1,17 @@
 'use client';
-import EditablePackageTable from '@/app/admin/dashboard/packages/components/EditablePackageTable';
-import { PACKAGE_CATEGORIES } from '@/const';
-import React, { useImperativeHandle, useState, useMemo } from 'react';
 import { Package, PackageItem } from '@/app/_components/PCPartsTable/PackageRecomment';
-import { useTableControl } from './hooks/useTableControl';
-import { InfoSection } from './components/InfoSection';
-import { Button } from 'antd';
-import { BuildOutlined, ExperimentOutlined } from '@ant-design/icons';
-import { TestConfigModal } from './components/TestConfigModal';
-import { ExportButton } from './components/ExportButton';
-import { usePackageTableData } from '@/app/admin/dashboard/packages/components/EditablePackageTable/hooks/usePackageTableData';
+import EditablePackageTable from '@/app/admin/dashboard/packages/components/EditablePackageTable';
 import { usePackageCalculator } from '@/app/admin/dashboard/packages/components/EditablePackageTable/hooks/usePackageCalculator';
+import { usePackageTableData } from '@/app/admin/dashboard/packages/components/EditablePackageTable/hooks/usePackageTableData';
+import { PACKAGE_CATEGORIES } from '@/const';
+import { message } from '@/lib/AntdGlobal';
+import { BuildOutlined, ExperimentOutlined, SaveOutlined } from '@ant-design/icons';
+import { Button } from 'antd';
+import React, { useImperativeHandle, useMemo, useState } from 'react';
+import { ExportButton } from './components/ExportButton';
+import { InfoSection } from './components/InfoSection';
+import { TestConfigModal } from './components/TestConfigModal';
+import { useTableControl } from './hooks/useTableControl';
 
 export interface CustomRef {
     processPkgToTableData: (pkg: Package) => void;
@@ -18,9 +19,12 @@ export interface CustomRef {
 
 export interface ContentProps {
     customRef: React.MutableRefObject<CustomRef | null>;
+    tempPackages?: Package[];
+    onSaveTempPackage?: (pkg: Package) => void;
 }
 
 export function Content(props: ContentProps) {
+    const { customRef, tempPackages = [], onSaveTempPackage } = props;
     const {
         handleReset,
         handleTableDataChange,
@@ -39,7 +43,7 @@ export function Content(props: ContentProps) {
     const { getItemMetrics, totalPrice } = usePackageCalculator(products, pricingConfig, tableData);
 
     useImperativeHandle(
-        props.customRef,
+        customRef,
         () => ({
             processPkgToTableData: (pkg: Package) => {
                 const itemsByCategory: Record<string, PackageItem[]> = {};
@@ -91,6 +95,36 @@ export function Content(props: ContentProps) {
         return tableData.some((item) => item.product_id && item.product_id > 0);
     }, [tableData]);
 
+    const handleSaveTemp = () => {
+        if (!hasValidItems) {
+            message.warning('当前配置为空，无法保存');
+            return;
+        }
+
+        const validItems = tableData.filter((item) => item.product_id && item.product_id > 0);
+        const packageItems: PackageItem[] = validItems.map((item) => {
+            const product = products.find((p) => p.id === item.product_id);
+            return {
+                id: Math.random(), // 临时 ID
+                product_id: item.product_id,
+                quantity: item.quantity,
+                product_name: product?.name || '未知产品',
+                product_price: product?.price || 0,
+                product_category: item.category,
+            };
+        });
+
+        const newPkg: Package = {
+            id: Date.now(),
+            name: `临时方案 ${tempPackages.length + 1}`,
+            description: `保存于 ${new Date().toLocaleTimeString()}`,
+            total_price: totalPrice,
+            items: packageItems,
+        };
+
+        onSaveTempPackage?.(newPkg);
+    };
+
     return (
         <div className="flex flex-col gap-6 h-full">
             {/* Header Area: 科技感标题与操作 */}
@@ -120,6 +154,14 @@ export function Content(props: ContentProps) {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
+                    <Button
+                        icon={<SaveOutlined />}
+                        size="large"
+                        onClick={handleSaveTemp}
+                        className="h-12 px-6 rounded-2xl border-gray-200 hover:border-blue-400 hover:text-blue-600 transition-all duration-300 font-bold text-sm"
+                    >
+                        临时保存
+                    </Button>
                     <ExportButton data={exportData} disabled={!hasValidItems || loading} />
                     <Button
                         type="primary"
@@ -164,6 +206,7 @@ export function Content(props: ContentProps) {
                 visible={testModalVisible}
                 onClose={() => setTestModalVisible(false)}
                 items={tableData}
+                tempPackages={tempPackages}
             />
         </div>
     );

@@ -1,9 +1,9 @@
 import { EditablePartRow, Product } from '@/app/admin/dashboard/packages/types';
-import React from 'react';
-import { Button, InputNumber, Tooltip } from 'antd';
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
-import { ProductSelect } from './ProductSelect';
 import { CATEGORY_CONFIG } from '@/const';
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { Button, InputNumber, Tooltip } from 'antd';
+import React from 'react';
+import { ProductSelect } from './ProductSelect';
 
 interface ProductRowProps {
     item: EditablePartRow;

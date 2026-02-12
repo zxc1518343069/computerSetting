@@ -1,6 +1,6 @@
-import { NextRequest } from 'next/server';
+import { error, success } from '@/lib/request/apiResponse';
 import { supabase } from '@/lib/supabase';
-import { success, error } from '@/lib/request/apiResponse';
+import { NextRequest } from 'next/server';
 
 interface ImportProduct {
     name: string;
@@ -49,7 +49,10 @@ export async function POST(request: NextRequest) {
         }
         await supabase.from('products').delete().neq('id', 0); // 清空表数据
         // 批量插入产品
-        const { data, error: insertError } = await supabase.from('products').insert(validProducts).select();
+        const { data, error: insertError } = await supabase
+            .from('products')
+            .insert(validProducts)
+            .select();
 
         if (insertError) {
             throw insertError;

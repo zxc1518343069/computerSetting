@@ -1,7 +1,7 @@
 'use client';
 
+import { PhoneFilled, TikTokFilled, WechatFilled } from '@ant-design/icons';
 import React from 'react';
-import { PhoneFilled, WechatFilled, TikTokFilled } from '@ant-design/icons';
 
 interface ContactInfoProps {
     phone?: string;

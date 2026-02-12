@@ -1,6 +1,6 @@
-import React from 'react';
-import { Select, Input, Button, Divider, Space, InputRef } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
+import { Button, Divider, Input, InputRef, Select, Space } from 'antd';
+import React from 'react';
 
 interface ProductSelectProps {
     value?: number;

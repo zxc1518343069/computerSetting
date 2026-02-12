@@ -1,8 +1,8 @@
-import { useState } from 'react';
 import { useRequest } from 'ahooks';
 import { message } from 'antd';
-import { ProductQueryParams } from '../types';
+import { useState } from 'react';
 import { deleteProductService, fetchProductsService } from '../services';
+import { ProductQueryParams } from '../types';
 
 export const useProductList = () => {
     // 合并搜索状态

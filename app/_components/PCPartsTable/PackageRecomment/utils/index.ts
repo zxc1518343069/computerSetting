@@ -1,5 +1,5 @@
-import { Package } from '../types';
 import { CATEGORY_CONFIG } from '@/const';
+import { Package } from '../types';
 
 export function getCoreSpecs(pkg: Package) {
     const coreCategories = ['cpu', 'gpu', 'motherboard'];

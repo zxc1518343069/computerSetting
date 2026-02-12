@@ -1,15 +1,34 @@
 'use client';
 import { Content, CustomRef } from '@/app/_components/PCPartsTable/Content';
-import PackageRecomment from '@/app/_components/PCPartsTable/PackageRecomment';
-import ContactInfo from './ContactInfo';
+import PackageRecomment, { Package } from '@/app/_components/PCPartsTable/PackageRecomment';
 import SiteHeader from '@/app/_components/SiteHeader';
-
-import React, { useRef, useState } from 'react';
+import { message } from '@/lib/AntdGlobal';
 import { Layout } from 'antd';
+
+import React, { useCallback, useRef, useState } from 'react';
+import ContactInfo from './ContactInfo';
 
 export function PCPartsTable() {
     const tableRef = useRef<CustomRef | null>(null);
     const [collapsed, setCollapsed] = useState(false);
+    const [tempPackages, setTempPackages] = useState<Package[]>([]);
+
+    const handleSaveTempPackage = useCallback(
+        (pkg: Package) => {
+            if (tempPackages.length >= 3) {
+                message.warning('临时方案最多保存3个，请先删除旧方案');
+                return;
+            }
+            setTempPackages((prev) => [...prev, pkg]);
+            message.success('方案已临时保存');
+        },
+        [tempPackages.length]
+    );
+
+    const handleDeleteTempPackage = useCallback((id: string | number) => {
+        setTempPackages((prev) => prev.filter((p) => p.id !== id));
+        message.info('临时方案已删除');
+    }, []);
 
     return (
         <Layout className="h-screen overflow-hidden bg-[#F8FAFC] relative">
@@ -52,6 +71,8 @@ export function PCPartsTable() {
                         <PackageRecomment
                             collapsed={collapsed}
                             onToggle={() => setCollapsed(!collapsed)}
+                            tempPackages={tempPackages}
+                            onDeleteTempPackage={handleDeleteTempPackage}
                             onApplyPackage={(pkg) => {
                                 tableRef.current?.processPkgToTableData(pkg);
                             }}
@@ -94,7 +115,11 @@ export function PCPartsTable() {
 
                                 {/* 内部增加充足的呼吸空间 */}
                                 <div className="p-8 md:p-12 lg:p-14">
-                                    <Content customRef={tableRef} />
+                                    <Content
+                                        customRef={tableRef}
+                                        tempPackages={tempPackages}
+                                        onSaveTempPackage={handleSaveTempPackage}
+                                    />
                                 </div>
                             </div>
                         </div>

@@ -1,8 +1,8 @@
-import { useRequest } from 'ahooks';
-import { Product } from '../types';
-import { fetchPricingConfigService } from '../services';
 import { PricingCalculator } from '@/utils/pricing';
+import { useRequest } from 'ahooks';
 import { useMemo } from 'react';
+import { fetchPricingConfigService } from '../services';
+import { Product } from '../types';
 
 export const usePricing = () => {
     // 获取定价配置

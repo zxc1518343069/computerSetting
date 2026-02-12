@@ -1,6 +1,6 @@
-import { useMemo, useCallback } from 'react';
-import { Product, PricingConfig, EditablePartRow } from '../../../types';
 import { PricingCalculator } from '@/utils/pricing';
+import { useCallback, useMemo } from 'react';
+import { EditablePartRow, PricingConfig, Product } from '../../../types';
 
 export const usePackageCalculator = (
     products: Product[],
@@ -10,10 +10,7 @@ export const usePackageCalculator = (
     const calculator = useMemo(() => new PricingCalculator(pricingConfig), [pricingConfig]);
 
     // Helper to find product safely
-    const getProduct = useCallback(
-        (id: number) => products.find((p) => p.id === id),
-        [products]
-    );
+    const getProduct = useCallback((id: number) => products.find((p) => p.id === id), [products]);
 
     // 1. Get Cost (Base Price)
     const getCostPrice = useCallback(
@@ -42,7 +39,7 @@ export const usePackageCalculator = (
     const getItemMetrics = useCallback(
         (item: EditablePartRow) => {
             const quantity = item.quantity || 1;
-            
+
             // Unit Cost
             const unitCost = getCostPrice(item);
             // Unit Sell Price (calculated from total item price / quantity to handle custom logic if any)
@@ -81,8 +78,7 @@ export const usePackageCalculator = (
         );
     }, [items, getItemMetrics]);
 
-    const profitRate =
-        totals.totalPrice > 0 ? totals.totalProfit / totals.totalPrice : 0;
+    const profitRate = totals.totalPrice > 0 ? totals.totalProfit / totals.totalPrice : 0;
 
     return {
         getProductPrice,

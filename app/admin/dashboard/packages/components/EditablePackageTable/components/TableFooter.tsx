@@ -1,10 +1,10 @@
-import React from 'react';
-import { InputNumber, Typography, Tooltip } from 'antd';
 import {
     ArrowRightOutlined,
     InfoCircleOutlined,
     SafetyCertificateOutlined,
 } from '@ant-design/icons';
+import { InputNumber, Tooltip, Typography } from 'antd';
+import React from 'react';
 
 const { Text } = Typography;
 

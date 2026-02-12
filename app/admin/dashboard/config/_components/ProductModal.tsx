@@ -1,17 +1,17 @@
-import React, { useState, useImperativeHandle, forwardRef, useMemo } from 'react';
-import { Modal, Form, Select, Input, message, InputNumber, Switch, Button, Divider } from 'antd';
+import { CATEGORY_CONFIG, categoryOptions } from '@/const/categories';
+import { formatPrice } from '@/utils';
 import {
-    EditOutlined,
-    PlusOutlined,
     CalculatorOutlined,
     CheckCircleFilled,
+    EditOutlined,
+    PlusOutlined,
 } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
-import { CATEGORY_CONFIG, categoryOptions } from '@/const/categories';
-import { Product, ProductModalRef } from '../types';
-import { saveProductService } from '../services';
+import { Button, Divider, Form, Input, InputNumber, message, Modal, Select, Switch } from 'antd';
+import React, { forwardRef, useImperativeHandle, useMemo, useState } from 'react';
 import { usePricing } from '../hooks/usePricing';
-import { formatPrice } from '@/utils';
+import { saveProductService } from '../services';
+import { Product, ProductModalRef } from '../types';
 
 const { Option } = Select;
 
@@ -122,7 +122,7 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
             onOk={handleSubmit}
             onCancel={handleCancel}
             confirmLoading={loading}
-            destroyOnClose
+            destroyOnHidden
             width={800}
             footer={null}
             className="custom-modal"

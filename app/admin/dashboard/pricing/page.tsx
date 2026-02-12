@@ -1,8 +1,8 @@
 'use client';
-import React, { useState } from 'react';
+import { PACKAGE_CATEGORIES_LIST, PricingConfig } from '@/const';
 import { useRequest } from 'ahooks';
 import { message } from 'antd';
-import { PACKAGE_CATEGORIES_LIST, PricingConfig } from '@/const';
+import React, { useState } from 'react';
 import { fetchPricingConfigService, savePricingConfigService } from '../config/services';
 
 export default function PricingPage() {
