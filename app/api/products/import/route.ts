@@ -6,6 +6,8 @@ interface ImportProduct {
     name: string;
     price: number;
     category: string;
+    selling_price?: number | null;
+    is_use_premium?: boolean;
 }
 
 // POST - 批量导入产品
@@ -29,6 +31,8 @@ export async function POST(request: NextRequest) {
                     category: product.category,
                     name: product.name,
                     price: product.price,
+                    selling_price: product.selling_price,
+                    is_use_premium: product.is_use_premium,
                 });
             }
         });
