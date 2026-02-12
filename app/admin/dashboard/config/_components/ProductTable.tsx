@@ -78,13 +78,17 @@ export const ProductTable: React.FC<ProductTableProps> = ({
             width: 140,
             sorter: (a, b) => a.price - b.price,
             render: (price) => (
-                <div className="font-mono text-gray-500 dark:text-gray-400 font-medium">{formatPrice(price)}</div>
+                <div className="font-mono text-gray-500 dark:text-gray-400 font-medium">
+                    {formatPrice(price)}
+                </div>
             ),
         },
         {
             title: (
                 <div className="flex items-center justify-end gap-1 cursor-help group">
-                    <span className="group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">最终售价</span>
+                    <span className="group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                        最终售价
+                    </span>
                     <Tooltip title="优先级: 手动定价 > 溢价配置 > 基础价格">
                         <InfoCircleOutlined className="text-xs text-gray-400 dark:text-gray-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
                     </Tooltip>
@@ -119,7 +123,9 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                             <span className="text-gray-700 dark:text-gray-200 font-bold font-mono text-lg">
                                 {formatPrice(record.price)}
                             </span>
-                            <span className="text-[10px] text-gray-400 dark:text-gray-500">无溢价</span>
+                            <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                                无溢价
+                            </span>
                         </div>
                     );
                 }
@@ -189,7 +195,9 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                 loading={loading}
                 pagination={{
                     pageSize: 10,
-                    showTotal: (total) => <span className="text-gray-400 dark:text-gray-500">共 {total} 条记录</span>,
+                    showTotal: (total) => (
+                        <span className="text-gray-400 dark:text-gray-500">共 {total} 条记录</span>
+                    ),
                     showSizeChanger: true,
                     position: ['bottomRight'],
                     className: '!mb-0 !mt-4',

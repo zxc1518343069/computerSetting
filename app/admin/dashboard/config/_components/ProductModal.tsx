@@ -148,7 +148,9 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
                             </div>
                             {isEditMode ? '编辑产品' : '新增产品'}
                         </h2>
-                        <p className="text-gray-500 dark:text-gray-400 mt-1 ml-[52px]">填写产品基础信息与定价策略</p>
+                        <p className="text-gray-500 dark:text-gray-400 mt-1 ml-[52px]">
+                            填写产品基础信息与定价策略
+                        </p>
                     </div>
 
                     <Form
@@ -180,7 +182,10 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
                             label={<span className="dark:text-gray-300">产品名称</span>}
                             rules={[{ required: true, message: '请输入产品名称' }]}
                         >
-                            <Input placeholder="例如: Intel Core i9-13900K" className="dark:bg-[#2a2a2a] dark:border-gray-700 dark:text-gray-200" />
+                            <Input
+                                placeholder="例如: Intel Core i9-13900K"
+                                className="dark:bg-[#2a2a2a] dark:border-gray-700 dark:text-gray-200"
+                            />
                         </Form.Item>
 
                         <div className="grid grid-cols-2 gap-4">
@@ -218,7 +223,9 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
 
                         <div className="bg-gray-50 dark:bg-[#2a2a2a] p-4 rounded-xl border border-gray-100 dark:border-gray-700 mb-0 flex items-center justify-between">
                             <div>
-                                <div className="font-medium text-gray-800 dark:text-gray-200">自动溢价计算</div>
+                                <div className="font-medium text-gray-800 dark:text-gray-200">
+                                    自动溢价计算
+                                </div>
                                 <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                     根据全局配置自动计算最终售价
                                 </div>
@@ -230,7 +237,11 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
                     </Form>
 
                     <div className="flex justify-end gap-3 mt-8">
-                        <Button size="large" onClick={handleCancel} className="dark:bg-[#2a2a2a] dark:text-gray-300 dark:border-gray-700 dark:hover:text-white">
+                        <Button
+                            size="large"
+                            onClick={handleCancel}
+                            className="dark:bg-[#2a2a2a] dark:text-gray-300 dark:border-gray-700 dark:hover:text-white"
+                        >
                             取消
                         </Button>
                         <Button
@@ -256,8 +267,12 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
                             <div className="w-16 h-16 mx-auto bg-white dark:bg-[#2a2a2a] rounded-2xl shadow-sm flex items-center justify-center text-3xl mb-3">
                                 {currentCategoryConfig?.icon || '📦'}
                             </div>
-                            <h3 className="font-bold text-gray-800 dark:text-gray-100 text-lg">价格预览</h3>
-                            <p className="text-gray-500 dark:text-gray-400 text-sm">实时计算最终售价</p>
+                            <h3 className="font-bold text-gray-800 dark:text-gray-100 text-lg">
+                                价格预览
+                            </h3>
+                            <p className="text-gray-500 dark:text-gray-400 text-sm">
+                                实时计算最终售价
+                            </p>
                         </div>
 
                         <div className="bg-white dark:bg-[#2a2a2a] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 space-y-4">
@@ -271,14 +286,18 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
                             {watchedIsUsePremium ? (
                                 <>
                                     <div className="flex justify-between items-center text-sm">
-                                        <span className="text-gray-500 dark:text-gray-400">溢价率</span>
+                                        <span className="text-gray-500 dark:text-gray-400">
+                                            溢价率
+                                        </span>
                                         <span className="text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full text-xs">
                                             +{previewPriceInfo.rate.toFixed(1)}%
                                         </span>
                                     </div>
                                     <Divider style={{ margin: '8px 0' }} />
                                     <div className="flex justify-between items-end">
-                                        <span className="text-gray-600 dark:text-gray-300 font-medium">最终售价</span>
+                                        <span className="text-gray-600 dark:text-gray-300 font-medium">
+                                            最终售价
+                                        </span>
                                         <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">
                                             {formatPrice(previewPriceInfo.price)}
                                         </span>
@@ -291,14 +310,18 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
                             ) : (
                                 <>
                                     <div className="flex justify-between items-center text-sm">
-                                        <span className="text-gray-500 dark:text-gray-400">定价模式</span>
+                                        <span className="text-gray-500 dark:text-gray-400">
+                                            定价模式
+                                        </span>
                                         <span className="text-orange-600 dark:text-orange-400 font-medium bg-orange-50 dark:bg-orange-900/20 px-2 py-0.5 rounded-full text-xs">
                                             手动定价
                                         </span>
                                     </div>
                                     <Divider style={{ margin: '8px 0' }} />
                                     <div className="flex justify-between items-end">
-                                        <span className="text-gray-600 dark:text-gray-300 font-medium">最终售价</span>
+                                        <span className="text-gray-600 dark:text-gray-300 font-medium">
+                                            最终售价
+                                        </span>
                                         <span className="text-2xl font-bold text-orange-600 dark:text-orange-400 font-mono">
                                             {formatPrice(
                                                 Number(watchedSellingPrice) ||
