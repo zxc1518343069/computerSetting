@@ -75,17 +75,20 @@ export function Content(props: ContentProps) {
     );
 
     // 导出数据
-    const exportData = useMemo(() => ({
-        items: tableData,
-        products,
-        totalPrice,
-        discountedPrice: discountedPrice > 0 ? discountedPrice : undefined,
-        getItemMetrics,
-    }), [tableData, products, totalPrice, discountedPrice, getItemMetrics]);
+    const exportData = useMemo(
+        () => ({
+            items: tableData,
+            products,
+            totalPrice,
+            discountedPrice: discountedPrice > 0 ? discountedPrice : undefined,
+            getItemMetrics,
+        }),
+        [tableData, products, totalPrice, discountedPrice, getItemMetrics]
+    );
 
     // 是否有有效配置
     const hasValidItems = useMemo(() => {
-        return tableData.some(item => item.product_id && item.product_id > 0);
+        return tableData.some((item) => item.product_id && item.product_id > 0);
     }, [tableData]);
 
     return (
@@ -117,10 +120,7 @@ export function Content(props: ContentProps) {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <ExportButton 
-                        data={exportData} 
-                        disabled={!hasValidItems || loading}
-                    />
+                    <ExportButton data={exportData} disabled={!hasValidItems || loading} />
                     <Button
                         type="primary"
                         size="large"

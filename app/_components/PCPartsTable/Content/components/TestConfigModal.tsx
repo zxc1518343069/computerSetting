@@ -47,7 +47,7 @@ const estimateFPS = (
     const typeMultiplier = gameType === 'online' ? 1.5 : 0.8;
 
     const baseFPS = baseScore * multiplier * typeMultiplier;
-    
+
     // Create a range (e.g., +/- 10%)
     const min = Math.max(10, Math.round(baseFPS * 0.9));
     const max = Math.max(10, Math.round(baseFPS * 1.1));
@@ -58,10 +58,10 @@ const estimateFPS = (
 
 const getFPSColor = (fpsRange: string) => {
     if (!fpsRange || fpsRange === '0') return '#e2e8f0'; // Slate 200
-    
+
     // Extract the minimum value from the range string "min-max" or "val"
     const minVal = parseInt(fpsRange.split('-')[0]);
-    
+
     if (minVal >= 144) return '#10b981'; // Emerald 500
     if (minVal >= 60) return '#3b82f6'; // Blue 500
     if (minVal >= 30) return '#f59e0b'; // Amber 500
@@ -117,7 +117,8 @@ const FpsDisplay = ({ fpsRange, label }: { fpsRange: string; label: string }) =>
             {label}
         </div>
         <div className="font-mono text-sm font-bold" style={{ color: getFPSColor(fpsRange) }}>
-            {fpsRange && fpsRange !== '0' ? fpsRange : '-'} <span className="text-[10px] opacity-60 font-sans ml-1">FPS</span>
+            {fpsRange && fpsRange !== '0' ? fpsRange : '-'}{' '}
+            <span className="text-[10px] opacity-60 font-sans ml-1">FPS</span>
         </div>
     </div>
 );
