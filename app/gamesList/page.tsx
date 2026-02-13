@@ -1,11 +1,13 @@
 'use client';
 
 import SiteHeader from '@/app/_components/SiteHeader';
-import { INITIAL_ONLINE_GAMES, INITIAL_SINGLE_GAMES } from '@/const/games';
+import { Game } from '@/const/types';
 import { DesktopOutlined, FireFilled, GlobalOutlined, SearchOutlined } from '@ant-design/icons';
 import { Input, Layout, Tabs } from 'antd';
 import React, { useState } from 'react';
 import GameCard from './_components/GameCard';
+import GameCardSkeleton from './_components/GameCardSkeleton';
+import { useGames } from './hooks/useGames';
 
 const { Content } = Layout;
 
@@ -13,17 +15,31 @@ export default function GamesListPage() {
     const [searchText, setSearchText] = useState('');
     const [activeTab, setActiveTab] = useState('online');
 
-    const filterGames = (games: typeof INITIAL_ONLINE_GAMES) => {
+    const { onlineGames, singleGames, loading } = useGames();
+
+    const filterGames = (games: Game[]) => {
         return games.filter((g) => g.name.toLowerCase().includes(searchText.toLowerCase()));
     };
 
-    const renderGameList = (games: typeof INITIAL_ONLINE_GAMES) => (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 pb-20">
-            {games.map((game, index) => (
-                <GameCard key={game.id} game={game} index={index} activeTab={activeTab} />
-            ))}
-        </div>
-    );
+    const renderGameList = (games: Game[]) => {
+        if (loading && games.length === 0) {
+            return (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 pb-20">
+                    {Array.from({ length: 10 }).map((_, i) => (
+                        <GameCardSkeleton key={i} />
+                    ))}
+                </div>
+            );
+        }
+
+        return (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 pb-20">
+                {games.map((game, index) => (
+                    <GameCard key={game.id} game={game} index={index} activeTab={activeTab} />
+                ))}
+            </div>
+        );
+    };
 
     return (
         <Layout className="h-screen overflow-hidden bg-[#f8fafc] dark:bg-slate-950 transition-colors duration-500">
@@ -85,7 +101,7 @@ export default function GamesListPage() {
                                         热门网游 TOP 20
                                     </span>
                                 ),
-                                children: renderGameList(filterGames(INITIAL_ONLINE_GAMES)),
+                                children: renderGameList(filterGames(onlineGames)),
                             },
                             {
                                 key: 'single',
@@ -95,7 +111,7 @@ export default function GamesListPage() {
                                         热门单机 TOP 20
                                     </span>
                                 ),
-                                children: renderGameList(filterGames(INITIAL_SINGLE_GAMES)),
+                                children: renderGameList(filterGames(singleGames)),
                             },
                         ]}
                     />

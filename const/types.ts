@@ -55,6 +55,13 @@ export interface AdminUser {
     updated_at?: string;
 }
 
+export interface Game {
+    id: string | number;
+    name: string;
+    icon: string;
+    type: 'online' | 'single';
+}
+
 // 带category字段的Product接口 (兼容旧代码)
 export interface ProductWithCategory extends Product {
     category: string;
