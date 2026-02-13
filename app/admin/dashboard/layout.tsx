@@ -1,4 +1,5 @@
 'use client';
+import { authService } from '@/app/services';
 import {
     AppstoreOutlined,
     CloudUploadOutlined,
@@ -11,7 +12,7 @@ import {
 } from '@ant-design/icons';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import ThemeToggle from '@/app/_components/ThemeToggle';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -19,19 +20,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const pathname = usePathname();
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
-    useEffect(() => {
-        // 检查登录状态 (同时检查 localStorage 和 sessionStorage)
-        const isLocalLoggedIn = localStorage.getItem('adminLoggedIn');
-        const isSessionLoggedIn = sessionStorage.getItem('adminLoggedIn');
-        if (isLocalLoggedIn !== 'true' && isSessionLoggedIn !== 'true') {
+    const handleLogout = async () => {
+        try {
+            await authService.logout();
+            router.push('/admin');
+        } catch (error) {
+            console.error('Logout failed:', error);
+            // 即使 API 失败，前端也尝试跳转
             router.push('/admin');
         }
-    }, [router]);
-
-    const handleLogout = () => {
-        sessionStorage.removeItem('adminLoggedIn');
-        localStorage.removeItem('adminLoggedIn');
-        router.push('/admin');
     };
 
     const menuItems = [

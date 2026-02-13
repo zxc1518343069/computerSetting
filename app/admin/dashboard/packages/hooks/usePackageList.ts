@@ -3,17 +3,21 @@ import { App } from 'antd'; // Import App to use its context hook
 import { useState } from 'react';
 import { deletePackageService, fetchPackagesService } from '../services';
 import { PackageQueryParams } from '../types';
+import { useAuth } from '@/app/_components/AuthProvider';
+import { MOCK_PACKAGES } from '@/const/mockData';
 
 export const usePackageList = () => {
+    const { isLoggedIn } = useAuth();
     const [queryParams, setQueryParams] = useState<PackageQueryParams>({});
     const [deletingId, setDeletingId] = useState<number | null>(null);
     const { message } = App.useApp(); // Get message instance from App context
 
     const {
-        data: packages = [],
+        data: packages = isLoggedIn ? [] : MOCK_PACKAGES,
         loading,
         refresh,
     } = useRequest(() => fetchPackagesService(queryParams), {
+        ready: isLoggedIn, // 仅在登录时发起请求
         refreshDeps: [queryParams],
         debounceWait: 300,
         onError: (error) => {
@@ -48,7 +52,7 @@ export const usePackageList = () => {
 
     return {
         packages,
-        loading,
+        loading: isLoggedIn ? loading : false,
         queryParams,
         deletingId,
         handleSearch,

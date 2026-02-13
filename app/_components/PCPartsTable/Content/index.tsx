@@ -120,6 +120,8 @@ export function Content(props: ContentProps) {
             description: `保存于 ${new Date().toLocaleTimeString()}`,
             total_price: totalPrice,
             items: packageItems,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
         };
 
         onSaveTempPackage?.(newPkg);

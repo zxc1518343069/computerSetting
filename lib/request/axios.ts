@@ -41,14 +41,25 @@ api.interceptors.response.use(
             return res.data as any; // suppress any for axios interceptor unwrapping
         } else {
             // 业务错误
-            message.error(res.message || '请求失败');
+            // 如果是 401 且是获取定价配置，不弹出错误，由 Hook 处理
+            const isPricingGet =
+                response.config.url === '/pricing' && response.config.method === 'get';
+            if (res.code !== 401 || !isPricingGet) {
+                message.error(res.message || '请求失败');
+            }
             return Promise.reject(res);
         }
     },
     (error) => {
         // 网络错误或超时
         if (error.response) {
-            message.error(`服务器错误：${error.response.status}`);
+            const res = error.response.data as ApiResponse;
+            const isPricingGet = error.config.url === '/pricing' && error.config.method === 'get';
+
+            // 同样逻辑：401 获取定价配置时不弹窗
+            if (error.response.status !== 401 || !isPricingGet) {
+                message.error(res?.message || `服务器错误：${error.response.status}`);
+            }
         } else if (error.request) {
             message.error('网络错误，请检查连接');
         } else {

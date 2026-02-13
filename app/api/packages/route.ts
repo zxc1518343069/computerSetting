@@ -1,5 +1,6 @@
 import { error, success } from '@/lib/request/apiResponse';
 import { supabase } from '@/lib/supabase';
+import { cookies } from 'next/headers';
 import { NextRequest } from 'next/server';
 
 interface PackageItem {
@@ -25,235 +26,16 @@ interface PackageItemWithProduct {
         | null;
 }
 
-// Mock套餐数据 (用于数据库连接失败时的fallback)
-const MOCK_PACKAGES = [
-    {
-        id: 1,
-        name: '高性能游戏主机套餐',
-        description: '适合3A大作和高帧率游戏的旗舰级配置,包含最新一代顶级CPU、显卡和主板,性能强劲',
-        total_price: 4569.91,
-        created_at: '2024-01-15T08:00:00Z',
-        updated_at: '2024-01-15T08:00:00Z',
-        items: [
-            {
-                id: 1,
-                product_id: 1,
-                quantity: 1,
-                product_name: 'Intel Core i9-13900K',
-                product_price: 589.99,
-                product_category: 'cpu',
-            },
-            {
-                id: 2,
-                product_id: 4,
-                quantity: 1,
-                product_name: 'ASUS ROG Maximus Z790 Hero',
-                product_price: 599.99,
-                product_category: 'motherboard',
-            },
-            {
-                id: 3,
-                product_id: 7,
-                quantity: 2,
-                product_name: 'Corsair Dominator Platinum RGB 32GB DDR5 6000MHz',
-                product_price: 249.99,
-                product_category: 'ram',
-            },
-            {
-                id: 4,
-                product_id: 10,
-                quantity: 1,
-                product_name: 'NVIDIA GeForce RTX 4090 Founders Edition',
-                product_price: 1599.99,
-                product_category: 'gpu',
-            },
-            {
-                id: 5,
-                product_id: 13,
-                quantity: 2,
-                product_name: 'Samsung 990 Pro 2TB NVMe SSD',
-                product_price: 249.99,
-                product_category: 'storage',
-            },
-            {
-                id: 6,
-                product_id: 16,
-                quantity: 1,
-                product_name: 'Corsair HX1200 Platinum 1200W',
-                product_price: 299.99,
-                product_category: 'psu',
-            },
-            {
-                id: 7,
-                product_id: 20,
-                quantity: 1,
-                product_name: 'Fractal Design Torrent',
-                product_price: 199.99,
-                product_category: 'case',
-            },
-            {
-                id: 8,
-                product_id: 22,
-                quantity: 1,
-                product_name: 'NZXT Kraken Z73 RGB 360mm',
-                product_price: 279.99,
-                product_category: 'cooling',
-            },
-        ],
-    },
-    {
-        id: 2,
-        name: '性价比办公套餐',
-        description: '满足日常办公和轻度娱乐需求的经济型配置',
-        total_price: 1659.93,
-        created_at: '2024-01-16T10:30:00Z',
-        updated_at: '2024-01-16T10:30:00Z',
-        items: [
-            {
-                id: 9,
-                product_id: 3,
-                quantity: 1,
-                product_name: 'Intel Core i7-13700K',
-                product_price: 419.99,
-                product_category: 'cpu',
-            },
-            {
-                id: 10,
-                product_id: 6,
-                quantity: 1,
-                product_name: 'Gigabyte B650 AORUS Elite AX',
-                product_price: 229.99,
-                product_category: 'motherboard',
-            },
-            {
-                id: 11,
-                product_id: 9,
-                quantity: 1,
-                product_name: 'Kingston Fury Beast 32GB DDR5 5200MHz',
-                product_price: 149.99,
-                product_category: 'ram',
-            },
-            {
-                id: 12,
-                product_id: 11,
-                quantity: 1,
-                product_name: 'AMD Radeon RX 7900 XTX',
-                product_price: 999.99,
-                product_category: 'gpu',
-            },
-            {
-                id: 13,
-                product_id: 15,
-                quantity: 1,
-                product_name: 'Crucial P5 Plus 2TB NVMe SSD',
-                product_price: 199.99,
-                product_category: 'storage',
-            },
-            {
-                id: 14,
-                product_id: 18,
-                quantity: 1,
-                product_name: 'EVGA SuperNOVA 850 G6 850W',
-                product_price: 159.99,
-                product_category: 'psu',
-            },
-            {
-                id: 15,
-                product_id: 21,
-                quantity: 1,
-                product_name: 'NZXT H7 Flow',
-                product_price: 129.99,
-                product_category: 'case',
-            },
-            {
-                id: 16,
-                product_id: 24,
-                quantity: 1,
-                product_name: 'Noctua NH-D15 chromax.black',
-                product_price: 109.99,
-                product_category: 'cooling',
-            },
-        ],
-    },
-    {
-        id: 3,
-        name: 'AMD平台高端套餐',
-        description: 'AMD顶级处理器配合高端显卡,适合内容创作和游戏',
-        total_price: 3929.92,
-        created_at: '2024-01-17T14:20:00Z',
-        updated_at: '2024-01-17T14:20:00Z',
-        items: [
-            {
-                id: 17,
-                product_id: 2,
-                quantity: 1,
-                product_name: 'AMD Ryzen 9 7950X',
-                product_price: 549.99,
-                product_category: 'cpu',
-            },
-            {
-                id: 18,
-                product_id: 5,
-                quantity: 1,
-                product_name: 'MSI MEG X670E ACE',
-                product_price: 499.99,
-                product_category: 'motherboard',
-            },
-            {
-                id: 19,
-                product_id: 8,
-                quantity: 2,
-                product_name: 'G.Skill Trident Z5 RGB 32GB DDR5 6000MHz',
-                product_price: 219.99,
-                product_category: 'ram',
-            },
-            {
-                id: 20,
-                product_id: 12,
-                quantity: 1,
-                product_name: 'NVIDIA GeForce RTX 4080',
-                product_price: 1199.99,
-                product_category: 'gpu',
-            },
-            {
-                id: 21,
-                product_id: 14,
-                quantity: 2,
-                product_name: 'WD Black SN850X 2TB NVMe SSD',
-                product_price: 229.99,
-                product_category: 'storage',
-            },
-            {
-                id: 22,
-                product_id: 17,
-                quantity: 1,
-                product_name: 'Seasonic PRIME TX-1000 1000W',
-                product_price: 279.99,
-                product_category: 'psu',
-            },
-            {
-                id: 23,
-                product_id: 19,
-                quantity: 1,
-                product_name: 'Lian Li PC-O11 Dynamic',
-                product_price: 149.99,
-                product_category: 'case',
-            },
-            {
-                id: 24,
-                product_id: 23,
-                quantity: 1,
-                product_name: 'Corsair iCUE H150i ELITE LCD',
-                product_price: 249.99,
-                product_category: 'cooling',
-            },
-        ],
-    },
-];
-
 // GET - 获取所有套餐
 export async function GET(request: NextRequest) {
     try {
+        const session = (await cookies()).get('admin_session');
+
+        // 未登录用户禁止访问真实 API
+        if (!session) {
+            return error(401, '未授权访问');
+        }
+
         const { searchParams } = new URL(request.url);
         const search = searchParams.get('search');
 
@@ -324,22 +106,7 @@ export async function GET(request: NextRequest) {
         return success(packagesWithItems, '获取套餐列表成功');
     } catch (e) {
         console.error('Get packages error:', e);
-
-        // 数据库连接失败时返回测试数据
-        let filteredData = MOCK_PACKAGES;
-
-        const { searchParams } = new URL(request.url);
-        const search = searchParams.get('search');
-
-        if (search) {
-            filteredData = filteredData.filter(
-                (pkg) =>
-                    pkg.name.toLowerCase().includes(search.toLowerCase()) ||
-                    pkg.description.toLowerCase().includes(search.toLowerCase())
-            );
-        }
-
-        return success(filteredData, '获取模拟套餐数据成功');
+        return error(500, '获取套餐列表失败');
     }
 }
 

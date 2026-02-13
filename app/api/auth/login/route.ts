@@ -1,16 +1,36 @@
 import { error, success } from '@/lib/request/apiResponse';
+import { cookies } from 'next/headers';
 import { NextRequest } from 'next/server';
 
 export async function POST(request: NextRequest) {
     try {
-        const { username, password } = await request.json();
+        const { username, password, remember } = await request.json();
 
         // 初始阶段：硬编码校验逻辑
         if (username === 'yangshuhao' && password === 'wangman') {
+            const cookieStore = await cookies();
+
+            // 设置会话 Cookie
+            cookieStore.set('admin_session', 'true', {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                path: '/',
+                maxAge: remember ? 60 * 60 * 24 * 7 : undefined, // 7天或会话级
+            });
+
+            // 设置 JS 可读的暗示 Cookie (非敏感)
+            cookieStore.set('is_admin', 'true', {
+                httpOnly: false, // JS 可读
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                path: '/',
+                maxAge: remember ? 60 * 60 * 24 * 7 : undefined,
+            });
+
             return success(
                 {
                     username,
-                    // 未来可以在这里返回 token 或用户信息
                 },
                 '登录成功'
             );

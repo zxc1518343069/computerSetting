@@ -6,6 +6,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import NextTopLoader from 'nextjs-toploader';
 import { ThemeProvider } from '@/app/_components/ThemeProvider';
+import { AuthProvider } from '@/app/_components/AuthProvider';
 import { cookies } from 'next/headers';
 
 const geistSans = Geist({
@@ -77,10 +78,12 @@ export default async function RootLayout({
                 />
                 <AntdRegistry>
                     <ThemeProvider initialTheme={theme}>
-                        <App>
-                            <AntdGlobalRegistry />
-                            {children}
-                        </App>
+                        <AuthProvider>
+                            <App>
+                                <AntdGlobalRegistry />
+                                {children}
+                            </App>
+                        </AuthProvider>
                     </ThemeProvider>
                 </AntdRegistry>
             </body>

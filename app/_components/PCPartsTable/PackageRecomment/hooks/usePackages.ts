@@ -1,16 +1,22 @@
 import axios from '@/lib/request/axios';
 import { useRequest } from 'ahooks';
-// import { useState } from 'react'; // Remove useState import
 import { Package } from '../types';
+import { useAuth } from '@/app/_components/AuthProvider';
+import { MOCK_PACKAGES } from '@/const/mockData';
 
 export function usePackages() {
-    // const [packages, setPackages] = useState<Package[]>([]); // Remove this line
-    const { data: packages = [], loading } = useRequest<Package[], []>(getPackages, {
-        // Corrected generics for Result and Params
-    });
+    const { isLoggedIn } = useAuth();
+
+    const { data: packages = isLoggedIn ? [] : MOCK_PACKAGES, loading } = useRequest<Package[], []>(
+        getPackages,
+        {
+            ready: isLoggedIn, // 仅在登录时发起请求
+        }
+    );
+
     return {
         packages,
-        loading,
+        loading: isLoggedIn ? loading : false,
     };
 }
 

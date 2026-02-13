@@ -3,7 +3,7 @@ import { authService } from '@/app/services';
 import { sleep } from '@/utils';
 import { App } from 'antd'; // Import App to use the hook
 import { useRouter } from 'next/navigation';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 
 export default function AdminLoginPage() {
     const router = useRouter();
@@ -14,16 +14,6 @@ export default function AdminLoginPage() {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
-    useEffect(() => {
-        // 检查是否已登录 (优先检查 localStorage，实现 7 天免登录)
-        const isLocalLoggedIn = localStorage.getItem('adminLoggedIn');
-        const isSessionLoggedIn = sessionStorage.getItem('adminLoggedIn');
-
-        if (isLocalLoggedIn === 'true' || isSessionLoggedIn === 'true') {
-            router.push('/admin/dashboard');
-        }
-    }, [router]);
-
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
@@ -33,15 +23,8 @@ export default function AdminLoginPage() {
             // 模拟网络延迟，增加交互质感
             await sleep(300);
 
-            await authService.login({ username, password });
+            await authService.login({ username, password, remember });
 
-            if (remember) {
-                localStorage.setItem('adminLoggedIn', 'true');
-                sessionStorage.removeItem('adminLoggedIn'); // 清除会话级标记，避免冲突
-            } else {
-                sessionStorage.setItem('adminLoggedIn', 'true');
-                localStorage.removeItem('adminLoggedIn'); // 清除持久化标记
-            }
             message.success('登录成功，欢迎回来！'); // Use message.success
             router.push('/admin/dashboard');
         } catch (err: unknown) {

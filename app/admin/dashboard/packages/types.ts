@@ -4,6 +4,21 @@ export type { Product, PricingConfig };
 
 export interface PackageItem {
     id?: number;
+    package_id?: number;
+    product_id: number;
+    quantity: number;
+    product_name: string;
+    product_price: number;
+    product_category: string;
+    custom_name?: string;
+    custom_price?: number;
+    // Frontend specific for EditableTable
+    category?: string; // Used in EditablePartRow, but PackageItem from API might not have it directly on root or it's product_category
+}
+
+export interface EditablePartRow {
+    id: string;
+    category: string;
     product_id: number;
     quantity: number;
     product_name?: string;
@@ -11,19 +26,12 @@ export interface PackageItem {
     product_category?: string;
     custom_name?: string;
     custom_price?: number;
-    // Frontend specific for EditableTable
-    category?: string; // Used in EditablePartRow, but PackageItem from API might not have it directly on root or it's product_category
-}
-
-export interface EditablePartRow extends Omit<PackageItem, 'id'> {
-    id: string;
-    category: string;
 }
 
 export interface Package {
     id: number;
     name: string;
-    description: string;
+    description?: string;
     total_price: number;
     items: PackageItem[];
     created_at: string;
@@ -42,6 +50,6 @@ export interface PackageModalRef {
 
 export interface PackageFormValues {
     name: string;
-    description: string;
+    description?: string;
     items: PackageItem[];
 }

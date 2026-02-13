@@ -3,17 +3,21 @@ import { message } from 'antd';
 import { useState } from 'react';
 import { deleteProductService, fetchProductsService } from '../services';
 import { ProductQueryParams } from '../types';
+import { useAuth } from '@/app/_components/AuthProvider';
+import { MOCK_PRODUCTS } from '@/const/mockData';
 
 export const useProductList = () => {
+    const { isLoggedIn } = useAuth();
     // 合并搜索状态
     const [queryParams, setQueryParams] = useState<ProductQueryParams>({});
 
     // 获取列表数据
     const {
-        data: products = [],
+        data: products = isLoggedIn ? [] : MOCK_PRODUCTS,
         loading,
         refresh,
     } = useRequest(() => fetchProductsService(queryParams), {
+        ready: isLoggedIn, // 仅在登录时发起请求
         refreshDeps: [queryParams], // 依赖变化自动请求
         debounceWait: 300,
         onError: (error) => {
@@ -49,7 +53,7 @@ export const useProductList = () => {
 
     return {
         products,
-        loading,
+        loading: isLoggedIn ? loading : false,
         queryParams,
         handleSearch, // 统一的搜索处理函数
         handleReset,

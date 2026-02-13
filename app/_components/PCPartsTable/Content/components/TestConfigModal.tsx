@@ -155,10 +155,13 @@ export const TestConfigModal: React.FC<TestConfigModalProps> = ({
                 id: pkg.id.toString(),
                 name: pkg.name,
                 items: pkg.items.map((item) => ({
-                    id: item.id.toString(),
+                    id: (item.id || Math.random()).toString(),
                     category: item.product_category,
                     product_id: item.product_id,
                     quantity: item.quantity,
+                    product_name: item.product_name,
+                    product_price: item.product_price,
+                    product_category: item.product_category,
                 })),
             });
         });

@@ -35,15 +35,21 @@ export interface Package {
     name: string;
     description?: string;
     total_price: number;
-    created_at?: string;
-    updated_at?: string;
+    items: PackageItem[];
+    created_at: string;
+    updated_at: string;
 }
 
 export interface PackageItem {
-    id: number;
-    package_id: number;
+    id?: number;
+    package_id?: number;
     product_id: number;
     quantity: number;
+    product_name: string;
+    product_price: number;
+    product_category: string;
+    custom_name?: string;
+    custom_price?: number;
     created_at?: string;
 }
 
