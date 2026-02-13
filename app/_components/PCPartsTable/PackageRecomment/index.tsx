@@ -57,12 +57,15 @@ function PackageRecomment(props: PackageRecommentProps) {
     return (
         <div className="flex flex-col h-full w-full relative">
             {/* Toggle Button - Adjusted position to prevent clipping */}
-            <div className="absolute -right-3 top-8 z-50 cursor-pointer group" onClick={onToggle}>
+            <div
+                className="absolute right-0 translate-x-1/2 top-8 z-50 cursor-pointer group"
+                onClick={onToggle}
+            >
                 <div className="w-6 h-6 bg-white dark:bg-[#1f1f1f] border border-gray-200 dark:border-gray-700 rounded-full flex items-center justify-center shadow-md text-gray-400 dark:text-gray-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:border-blue-200 dark:group-hover:border-blue-800 transition-all transform hover:scale-110">
                     {collapsed ? (
-                        <RightOutlined className="text-[10px]" />
+                        <RightOutlined className="text-[10px] translate-x-[0.5px]" />
                     ) : (
-                        <LeftOutlined className="text-[10px]" />
+                        <LeftOutlined className="text-[10px] -translate-x-[0.5px]" />
                     )}
                 </div>
             </div>
@@ -101,10 +104,6 @@ function PackageRecomment(props: PackageRecommentProps) {
 
                         <div className="flex-1 w-full flex justify-center min-h-[20px]">
                             <div className="w-px h-full bg-gradient-to-b from-gray-100 via-gray-200 to-transparent" />
-                        </div>
-
-                        <div className="writing-vertical-rl text-gray-400 text-xs font-medium tracking-widest opacity-50 select-none pb-4 flex-none">
-                            RECOMMEND
                         </div>
                     </div>
                 ) : (

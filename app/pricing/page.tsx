@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import SiteHeader from '@/app/_components/SiteHeader';
 import { ThunderboltFilled, CheckOutlined, LockOutlined } from '@ant-design/icons';
-import { Button, Tag } from 'antd';
+import { Button } from 'antd';
 
 interface PricingPlan {
     id: string;
@@ -117,10 +117,7 @@ const PricingCard = ({ plan }: { plan: PricingPlan }) => {
         <div
             className="relative group perspective-1000 h-full w-full max-w-[360px] mx-auto"
             onMouseMove={handleMouseMove}
-            onMouseLeave={() => {
-                setRotate({ x: 0, y: 0 });
-                setIsHovered(false);
-            }}
+            onMouseLeave={() => { setRotate({ x: 0, y: 0 }); setIsHovered(false); }}
             onMouseEnter={() => setIsHovered(true)}
             style={{
                 transform: `rotateX(${rotate.x}deg) rotateY(${rotate.y}deg)`,
@@ -134,30 +131,23 @@ const PricingCard = ({ plan }: { plan: PricingPlan }) => {
             />
 
             {/* Card Body */}
-            <div
-                className={`
+            <div className={`
                 relative h-full w-full rounded-[2rem] p-8 flex flex-col
                 bg-white/10 dark:bg-slate-900/40 backdrop-blur-2xl
                 border border-white/20 dark:border-white/10
                 shadow-xl group-hover:shadow-2xl transition-all duration-500 overflow-hidden
-            `}
-            >
+            `}>
                 {/* Animated Border */}
                 {!plan.isComingSoon && plan.id !== 'free' && (
                     <div className="absolute inset-0 p-[1.5px] rounded-[2rem] overflow-hidden pointer-events-none">
-                        <div
-                            className={`
+                        <div className={`
                             absolute inset-[-100%] bg-[conic-gradient(from_0deg,transparent_0deg,transparent_150deg,var(--tw-gradient-from)_180deg,var(--tw-gradient-to)_210deg,transparent_240deg)]
                             animate-[spin_6s_linear_infinite] opacity-0 group-hover:opacity-100 transition-opacity duration-700
                         `}
-                            style={
-                                {
-                                    '--tw-gradient-from':
-                                        plan.id === 'monthly' ? '#3b82f6' : '#a855f7',
-                                    '--tw-gradient-to':
-                                        plan.id === 'monthly' ? '#06b6d4' : '#ec4899',
-                                } as React.CSSProperties
-                            }
+                        style={{
+                            '--tw-gradient-from': plan.id === 'monthly' ? '#3b82f6' : '#a855f7',
+                            '--tw-gradient-to': plan.id === 'monthly' ? '#06b6d4' : '#ec4899',
+                        } as React.CSSProperties}
                         />
                     </div>
                 )}
@@ -166,25 +156,19 @@ const PricingCard = ({ plan }: { plan: PricingPlan }) => {
                 {plan.isPopular && (
                     <div className="absolute top-6 right-6">
                         <div className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg">
-                            Popular
+                            最受欢迎
                         </div>
                     </div>
                 )}
 
                 {/* Content */}
                 <div className="relative z-10">
-                    <h3 className="text-xl font-black text-slate-800 dark:text-white mb-2 tracking-tight">
-                        {plan.name}
-                    </h3>
+                    <h3 className="text-xl font-black text-slate-800 dark:text-white mb-2 tracking-tight">{plan.name}</h3>
                     <div className="flex items-baseline gap-1 mb-4">
-                        <span
-                            className={`text-4xl font-black bg-clip-text text-transparent bg-gradient-to-br ${plan.themeColor}`}
-                        >
+                        <span className={`text-4xl font-black bg-clip-text text-transparent bg-gradient-to-br ${plan.themeColor}`}>
                             {plan.price}
                         </span>
-                        <span className="text-slate-400 dark:text-slate-500 text-xs font-bold">
-                            {plan.period}
-                        </span>
+                        <span className="text-slate-400 dark:text-slate-500 text-xs font-bold">{plan.period}</span>
                     </div>
                     <p className="text-slate-500 dark:text-slate-400 text-xs font-medium leading-relaxed mb-6">
                         {plan.description}
@@ -195,21 +179,13 @@ const PricingCard = ({ plan }: { plan: PricingPlan }) => {
                 <div className="relative z-10 flex-grow space-y-4">
                     {plan.features.map((feature, index) => (
                         <div key={index} className="flex items-center gap-3">
-                            <div
-                                className={`
+                            <div className={`
                                 w-5 h-5 rounded-full flex items-center justify-center
                                 ${feature.included ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-200/50 dark:bg-slate-800/50 text-slate-400'}
-                            `}
-                            >
-                                {feature.included ? (
-                                    <CheckOutlined style={{ fontSize: 10 }} />
-                                ) : (
-                                    <LockOutlined style={{ fontSize: 10 }} />
-                                )}
+                            `}>
+                                {feature.included ? <CheckOutlined style={{ fontSize: 10 }} /> : <LockOutlined style={{ fontSize: 10 }} />}
                             </div>
-                            <span
-                                className={`text-xs font-bold ${feature.included ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600'}`}
-                            >
+                            <span className={`text-xs font-bold ${feature.included ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600'}`}>
                                 {feature.text}
                             </span>
                         </div>
@@ -224,11 +200,9 @@ const PricingCard = ({ plan }: { plan: PricingPlan }) => {
                         disabled={plan.isComingSoon}
                         className={`
                             w-full h-12 rounded-xl font-black text-sm border-none shadow-lg
-                            ${
-                                plan.isComingSoon
-                                    ? 'bg-slate-200 dark:bg-slate-800 text-slate-400'
-                                    : `bg-gradient-to-r ${plan.themeColor} hover:scale-[1.02] active:scale-[0.98] transition-all duration-300`
-                            }
+                            ${plan.isComingSoon 
+                                ? 'bg-slate-200 dark:bg-slate-800 text-slate-400' 
+                                : `bg-gradient-to-r ${plan.themeColor} hover:scale-[1.02] active:scale-[0.98] transition-all duration-300`}
                         `}
                     >
                         {plan.buttonText}
@@ -253,18 +227,14 @@ export default function PricingPage() {
         <div className="h-screen bg-[#f8fafc] dark:bg-[#020617] transition-colors duration-1000 relative overflow-hidden flex flex-col">
             {/* Fluid Gradient Mesh Background */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                <div
-                    className={`
+                <div className={`
                     absolute top-[-20%] left-[-10%] w-[70%] h-[70%] rounded-full blur-[120px] opacity-40 transition-all duration-1000
                     ${pricingType === 'subscription' ? 'bg-blue-400 animate-blob' : 'bg-emerald-400 animate-blob'}
-                `}
-                />
-                <div
-                    className={`
+                `} />
+                <div className={`
                     absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full blur-[120px] opacity-30 transition-all duration-1000
                     ${pricingType === 'subscription' ? 'bg-purple-400 animate-blob animation-delay-2000' : 'bg-teal-400 animate-blob animation-delay-2000'}
-                `}
-                />
+                `} />
                 <div className="absolute inset-0 opacity-[0.4] mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
             </div>
 
@@ -276,33 +246,28 @@ export default function PricingPage() {
                     <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/40 dark:bg-white/5 backdrop-blur-md border border-white/20 dark:border-white/10 mb-4 animate-in fade-in zoom-in duration-1000">
                         <ThunderboltFilled className="text-blue-500" />
                         <span className="text-[9px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-[0.3em]">
-                            Next-Gen PC Builder Platform
+                            下一代装机报价平台
                         </span>
                     </div>
 
                     <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white mb-4 tracking-tighter leading-tight animate-in fade-in slide-in-from-top-10 duration-1000">
-                        释放您的{' '}
-                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600">
-                            无限创造力
-                        </span>
+                        释放您的 <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600">无限创造力</span>
                     </h1>
-
+                    
                     <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xl mx-auto font-medium leading-relaxed mb-8 animate-in fade-in duration-1000 delay-300">
                         从个人爱好者到专业装机商，我们提供最先进的工具集，助您打造完美的硬件配置方案。
                     </p>
-
+                    
                     {/* Pricing Type Toggle */}
                     <div className="flex justify-center animate-in fade-in zoom-in duration-1000 delay-500">
                         <div className="p-1.5 bg-white/30 dark:bg-white/5 backdrop-blur-xl rounded-2xl flex items-center gap-1.5 border border-white/40 dark:border-white/10 shadow-xl shadow-black/5">
                             <button
                                 onClick={() => setPricingType('subscription')}
                                 className={`
-                                    px-8 py-2.5 rounded-xl text-xs font-black transition-all duration-500 cursor-pointer
-                                    ${
-                                        pricingType === 'subscription'
-                                            ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-white shadow-lg scale-105'
-                                            : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-                                    }
+                                    px-8 py-2.5 rounded-xl text-xs font-black transition-all duration-500
+                                    ${pricingType === 'subscription' 
+                                        ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-white shadow-lg scale-105' 
+                                        : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}
                                 `}
                             >
                                 订阅制
@@ -310,12 +275,10 @@ export default function PricingPage() {
                             <button
                                 onClick={() => setPricingType('lifetime')}
                                 className={`
-                                    px-8 py-2.5 rounded-xl text-xs font-black transition-all duration-500 cursor-pointer
-                                    ${
-                                        pricingType === 'lifetime'
-                                            ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-white shadow-lg scale-105'
-                                            : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-                                    }
+                                    px-8 py-2.5 rounded-xl text-xs font-black transition-all duration-500
+                                    ${pricingType === 'lifetime' 
+                                        ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-white shadow-lg scale-105' 
+                                        : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}
                                 `}
                             >
                                 买断制
@@ -326,17 +289,15 @@ export default function PricingPage() {
 
                 {/* Pricing Grid */}
                 <div className="flex justify-center gap-8 w-full max-w-6xl h-[520px]">
-                    {(pricingType === 'subscription' ? SUBSCRIPTION_PLANS : LIFETIME_PLANS).map(
-                        (plan, index) => (
-                            <div
-                                key={plan.id}
-                                className="flex-1 max-w-[360px] animate-in fade-in slide-in-from-bottom-12 duration-1000 fill-mode-both"
-                                style={{ animationDelay: `${index * 200}ms` }}
-                            >
-                                <PricingCard plan={plan} />
-                            </div>
-                        )
-                    )}
+                    {(pricingType === 'subscription' ? SUBSCRIPTION_PLANS : LIFETIME_PLANS).map((plan, index) => (
+                        <div
+                            key={plan.id}
+                            className="flex-1 max-w-[360px] animate-in fade-in slide-in-from-bottom-12 duration-1000 fill-mode-both"
+                            style={{ animationDelay: `${index * 200}ms` }}
+                        >
+                            <PricingCard plan={plan} />
+                        </div>
+                    ))}
                 </div>
             </main>
 
@@ -346,18 +307,10 @@ export default function PricingPage() {
                 }
 
                 @keyframes blob {
-                    0% {
-                        transform: translate(0px, 0px) scale(1);
-                    }
-                    33% {
-                        transform: translate(20px, -30px) scale(1.05);
-                    }
-                    66% {
-                        transform: translate(-15px, 15px) scale(0.95);
-                    }
-                    100% {
-                        transform: translate(0px, 0px) scale(1);
-                    }
+                    0% { transform: translate(0px, 0px) scale(1); }
+                    33% { transform: translate(20px, -30px) scale(1.05); }
+                    66% { transform: translate(-15px, 15px) scale(0.95); }
+                    100% { transform: translate(0px, 0px) scale(1); }
                 }
 
                 .animate-blob {
@@ -369,12 +322,8 @@ export default function PricingPage() {
                 }
 
                 @keyframes spin {
-                    from {
-                        transform: rotate(0deg);
-                    }
-                    to {
-                        transform: rotate(360deg);
-                    }
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
                 }
 
                 .animate-in {
@@ -382,57 +331,15 @@ export default function PricingPage() {
                     animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
                 }
 
-                .fade-in {
-                    animation-name: fadeIn;
-                }
-                .zoom-in {
-                    animation-name: zoomIn;
-                }
-                .slide-in-from-top-10 {
-                    animation-name: slideInFromTop;
-                }
-                .slide-in-from-bottom-12 {
-                    animation-name: slideInFromBottom;
-                }
+                .fade-in { animation-name: fadeIn; }
+                .zoom-in { animation-name: zoomIn; }
+                .slide-in-from-top-10 { animation-name: slideInFromTop; }
+                .slide-in-from-bottom-12 { animation-name: slideInFromBottom; }
 
-                @keyframes fadeIn {
-                    from {
-                        opacity: 0;
-                    }
-                    to {
-                        opacity: 1;
-                    }
-                }
-                @keyframes zoomIn {
-                    from {
-                        opacity: 0;
-                        transform: scale(0.95);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: scale(1);
-                    }
-                }
-                @keyframes slideInFromTop {
-                    from {
-                        transform: translateY(-2rem);
-                        opacity: 0;
-                    }
-                    to {
-                        transform: translateY(0);
-                        opacity: 1;
-                    }
-                }
-                @keyframes slideInFromBottom {
-                    from {
-                        transform: translateY(2.5rem);
-                        opacity: 0;
-                    }
-                    to {
-                        transform: translateY(0);
-                        opacity: 1;
-                    }
-                }
+                @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+                @keyframes zoomIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+                @keyframes slideInFromTop { from { transform: translateY(-2rem); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+                @keyframes slideInFromBottom { from { transform: translateY(2.5rem); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
             `}</style>
         </div>
     );

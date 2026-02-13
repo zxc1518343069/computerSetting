@@ -69,7 +69,7 @@ export function PCPartsTable() {
                         collapsed ? 'w-[88px]' : 'w-[400px]'
                     }`}
                 >
-                    <div className="flex-1 min-h-0 overflow-hidden">
+                    <div className="flex-1 min-h-0">
                         <PackageRecomment
                             collapsed={collapsed}
                             onToggle={() => setCollapsed(!collapsed)}
