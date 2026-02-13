@@ -53,7 +53,7 @@ export default function SiteHeader() {
             message.success('已退出登录');
             checkAuth();
             router.push('/');
-        } catch (error) {
+        } catch {
             message.error('退出失败');
         }
     };
