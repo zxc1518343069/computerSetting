@@ -1,4 +1,5 @@
 'use client';
+import { authService } from '@/app/services';
 import { sleep } from '@/utils';
 import { App } from 'antd'; // Import App to use the hook
 import { useRouter } from 'next/navigation';
@@ -28,10 +29,12 @@ export default function AdminLoginPage() {
         setError('');
         setLoading(true);
 
-        // 模拟网络延迟，增加交互质感
-        await sleep(600);
+        try {
+            // 模拟网络延迟，增加交互质感
+            await sleep(300);
 
-        if (username === 'yangshuhao' && password === 'wangman') {
+            await authService.login({ username, password });
+
             if (remember) {
                 localStorage.setItem('adminLoggedIn', 'true');
                 sessionStorage.removeItem('adminLoggedIn'); // 清除会话级标记，避免冲突
@@ -41,8 +44,13 @@ export default function AdminLoginPage() {
             }
             message.success('登录成功，欢迎回来！'); // Use message.success
             router.push('/admin/dashboard');
-        } else {
-            setError('账号或密码错误');
+        } catch (err: unknown) {
+            // 错误已在 axios 拦截器中通过 message.error 提示，这里只需处理 loading 状态
+            const errorMessage =
+                err instanceof Error
+                    ? err.message
+                    : (err as { message?: string })?.message || '账号或密码错误';
+            setError(errorMessage);
             setLoading(false);
         }
     };
