@@ -71,13 +71,13 @@ function PackageRecomment(props: PackageRecommentProps) {
             <div className="flex-1 flex flex-col overflow-hidden">
                 {collapsed ? (
                     // Mini Mode
-                    <div className="flex flex-col items-center py-6 space-y-6 h-full overflow-hidden">
+                    <div className="flex flex-col items-center py-6 space-y-6 h-full overflow-y-auto overflow-x-hidden scrollbar-hide">
                         <Tooltip
                             title={mode === 'popular' ? '热门方案' : '临时方案'}
                             placement="right"
                         >
                             <div
-                                className={`w-10 h-10 rounded-xl bg-gradient-to-br ${mode === 'popular' ? 'from-orange-400 to-red-500 shadow-orange-500/20' : 'from-blue-400 to-indigo-500 shadow-blue-500/20'} text-white shadow-lg flex items-center justify-center cursor-pointer hover:scale-105 transition-transform`}
+                                className={`w-10 h-10 rounded-xl bg-gradient-to-br ${mode === 'popular' ? 'from-orange-400 to-red-500 shadow-orange-500/20' : 'from-blue-400 to-indigo-500 shadow-blue-500/20'} text-white shadow-lg flex items-center justify-center cursor-pointer hover:scale-105 transition-transform flex-none`}
                                 onClick={() =>
                                     setMode(mode === 'popular' ? 'temporary' : 'popular')
                                 }
@@ -92,18 +92,18 @@ function PackageRecomment(props: PackageRecommentProps) {
 
                         <Tooltip title="点击展开搜索" placement="right">
                             <div
-                                className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-[#1f1f1f] text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center justify-center cursor-pointer transition-colors"
+                                className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-[#1f1f1f] text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center justify-center cursor-pointer transition-colors flex-none"
                                 onClick={onToggle}
                             >
                                 <SearchOutlined className="text-lg" />
                             </div>
                         </Tooltip>
 
-                        <div className="flex-1 w-full flex justify-center">
+                        <div className="flex-1 w-full flex justify-center min-h-[20px]">
                             <div className="w-px h-full bg-gradient-to-b from-gray-100 via-gray-200 to-transparent" />
                         </div>
 
-                        <div className="writing-vertical-rl text-gray-400 text-xs font-medium tracking-widest opacity-50 select-none pb-4">
+                        <div className="writing-vertical-rl text-gray-400 text-xs font-medium tracking-widest opacity-50 select-none pb-4 flex-none">
                             RECOMMEND
                         </div>
                     </div>
@@ -111,7 +111,7 @@ function PackageRecomment(props: PackageRecommentProps) {
                     // Full Mode
                     <>
                         {/* Header */}
-                        <div className="px-5 py-5 border-b border-gray-100 dark:border-gray-800 bg-white/50 dark:bg-[#1f1f1f]/50 sticky top-0 z-10 backdrop-blur-xl">
+                        <div className="flex-none px-5 py-5 border-b border-gray-100 dark:border-gray-800 bg-white/50 dark:bg-[#1f1f1f]/50 z-10 backdrop-blur-xl">
                             <div className="flex items-center justify-between mb-4">
                                 <div className="flex items-center gap-3">
                                     <div
