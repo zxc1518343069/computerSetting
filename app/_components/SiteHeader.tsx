@@ -1,19 +1,39 @@
 'use client';
+import { useAuth } from '@/app/_components/AuthProvider';
 import ThemeToggle from '@/app/_components/ThemeToggle';
 import Time from '@/app/_components/Time';
-import { AppstoreOutlined, ThunderboltFilled, TrophyOutlined } from '@ant-design/icons';
-import { Layout } from 'antd';
+import { authService } from '@/app/services/auth';
+import {
+    AppstoreOutlined,
+    DashboardOutlined,
+    DollarOutlined,
+    LogoutOutlined,
+    ThunderboltFilled,
+    TrophyOutlined,
+    UserOutlined,
+} from '@ant-design/icons';
+import { App, Avatar, Dropdown, Layout } from 'antd';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 
 const { Header } = Layout;
 
+const BRAND_CONFIG = {
+    name: '明远装机',
+    subName: 'Workshop Pro',
+};
+
 export default function SiteHeader() {
     const pathname = usePathname();
+    const router = useRouter();
+    const { message } = App.useApp();
+    const { isLoggedIn, checkAuth } = useAuth();
     const [scrolled, setScrolled] = useState(false);
+    const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
+        setMounted(true);
         const handleScroll = () => {
             setScrolled(window.scrollY > 10);
         };
@@ -26,6 +46,49 @@ export default function SiteHeader() {
         if (path !== '/' && pathname.startsWith(path)) return true;
         return false;
     };
+
+    const handleLogout = async () => {
+        try {
+            await authService.logout();
+            message.success('已退出登录');
+            checkAuth();
+            router.push('/');
+        } catch (error) {
+            message.error('退出失败');
+        }
+    };
+
+    const navItems = [
+        { label: '装机配置', path: '/', icon: <AppstoreOutlined /> },
+        { label: '游戏榜单', path: '/gamesList', icon: <TrophyOutlined /> },
+        { label: '价格方案', path: '/pricing', icon: <DollarOutlined /> },
+        // ...(isLoggedIn
+        //     ? [
+        //           {
+        //               label: '管理后台',
+        //               path: '/admin/dashboard',
+        //               icon: <DashboardOutlined />,
+        //               isAdmin: true,
+        //           },
+        //       ]
+        //     : []),
+    ];
+
+    const userMenuItems = [
+        {
+            key: 'dashboard',
+            label: <Link href="/admin/dashboard">进入后台</Link>,
+            icon: <DashboardOutlined />,
+        },
+        { type: 'divider' as const },
+        {
+            key: 'logout',
+            label: '退出登录',
+            icon: <LogoutOutlined />,
+            danger: true,
+            onClick: handleLogout,
+        },
+    ];
 
     return (
         <Header
@@ -46,67 +109,74 @@ export default function SiteHeader() {
                     </div>
                     <div className="flex flex-col justify-center h-full">
                         <span className="font-black text-lg leading-none tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-purple-700">
-                            明远装机
+                            {BRAND_CONFIG.name}
                         </span>
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-tight mt-0.5 group-hover:text-blue-500 transition-colors">
-                            Workshop Pro
+                            {BRAND_CONFIG.subName}
                         </span>
                     </div>
                 </Link>
 
-                {/* Navigation - 底部横线风格 */}
+                {/* Navigation */}
                 <nav className="hidden md:flex items-center gap-8 h-full">
-                    <Link
-                        href="/"
-                        className={`
-                        relative h-full flex items-center gap-2 text-sm font-bold transition-colors duration-300
-                        ${
-                            isActive('/')
-                                ? 'text-blue-600'
-                                : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-                        }
-                    `}
-                    >
-                        <AppstoreOutlined className="text-lg" />
-                        <span>装机配置</span>
-                        {/* Active Indicator Line */}
-                        <span
-                            className={`
-                            absolute bottom-0 left-0 w-full h-[3px] bg-blue-600 rounded-t-full transition-all duration-300
-                            ${isActive('/') ? 'opacity-100 scale-x-100' : 'opacity-0 scale-x-0'}
-                        `}
-                        />
-                    </Link>
-
-                    <Link
-                        href="/gamesList"
-                        className={`
-                        relative h-full flex items-center gap-2 text-sm font-bold transition-colors duration-300
-                        ${
-                            isActive('/gamesList')
-                                ? 'text-blue-600'
-                                : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-                        }
-                    `}
-                    >
-                        <TrophyOutlined
-                            className={`text-lg ${isActive('/gamesList') ? 'text-blue-600' : ''}`}
-                        />
-                        <span>游戏榜单</span>
-                        {/* Active Indicator Line */}
-                        <span
-                            className={`
-                            absolute bottom-0 left-0 w-full h-[3px] bg-blue-600 rounded-t-full transition-all duration-300
-                            ${isActive('/gamesList') ? 'opacity-100 scale-x-100' : 'opacity-0 scale-x-0'}
-                        `}
-                        />
-                    </Link>
+                    {mounted &&
+                        navItems.map((item) => (
+                            <Link
+                                key={item.path}
+                                href={item.path}
+                                className={`
+                                relative h-full flex items-center gap-2 text-sm font-bold transition-colors duration-300
+                                ${
+                                    isActive(item.path)
+                                        ? 'text-blue-600'
+                                        : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+                                }
+                            `}
+                            >
+                                <span className="text-lg">{item.icon}</span>
+                                <span>{item.label}</span>
+                                {/* Active Indicator Line */}
+                                <span
+                                    className={`
+                                absolute bottom-0 left-0 w-full h-[3px] bg-blue-600 rounded-t-full transition-all duration-300
+                                ${isActive(item.path) ? 'opacity-100 scale-x-100' : 'opacity-0 scale-x-0'}
+                            `}
+                                />
+                            </Link>
+                        ))}
                 </nav>
             </div>
 
             <div className="flex items-center gap-4">
                 <ThemeToggle />
                 <Time />
+
+                {mounted && (
+                    <div className="ml-2 flex items-center border-l border-slate-200 dark:border-slate-800 pl-4">
+                        {isLoggedIn ? (
+                            <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" arrow>
+                                <div className="flex items-center gap-2 cursor-pointer group">
+                                    <Avatar
+                                        size="small"
+                                        icon={<UserOutlined />}
+                                        className="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 group-hover:scale-110 transition-transform"
+                                    />
+                                    <span className="hidden md:inline text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-blue-600 transition-colors">
+                                        管理员
+                                    </span>
+                                </div>
+                            </Dropdown>
+                        ) : (
+                            <Link
+                                href="/admin"
+                                className="text-sm font-bold text-slate-500 hover:text-blue-600 transition-colors flex items-center gap-1.5"
+                            >
+                                <UserOutlined />
+                                <span>登录</span>
+                            </Link>
+                        )}
+                    </div>
+                )}
             </div>
         </Header>
     );

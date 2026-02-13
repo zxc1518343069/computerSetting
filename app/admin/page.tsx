@@ -1,4 +1,5 @@
 'use client';
+import { useAuth } from '@/app/_components/AuthProvider';
 import { authService } from '@/app/services';
 import { sleep } from '@/utils';
 import { App } from 'antd'; // Import App to use the hook
@@ -8,6 +9,7 @@ import React, { useState } from 'react';
 export default function AdminLoginPage() {
     const router = useRouter();
     const { message } = App.useApp(); // Use the Context-aware message hook
+    const { checkAuth } = useAuth();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [remember, setRemember] = useState(false);
@@ -26,6 +28,7 @@ export default function AdminLoginPage() {
             await authService.login({ username, password, remember });
 
             message.success('登录成功，欢迎回来！'); // Use message.success
+            checkAuth(); // 更新全局登录状态
             router.push('/admin/dashboard');
         } catch (err: unknown) {
             // 错误已在 axios 拦截器中通过 message.error 提示，这里只需处理 loading 状态
