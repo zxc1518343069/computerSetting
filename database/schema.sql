@@ -98,6 +98,7 @@ CREATE TABLE IF NOT EXISTS products
     10,
     2
 ) NOT NULL, -- 配件价格
+    stock_quantity INTEGER NOT NULL DEFAULT 0, -- 当前可用库存数量，真实库存由 inventory_items 汇总
     selling_price DECIMAL
 (
     10,
@@ -164,6 +165,322 @@ CREATE TABLE IF NOT EXISTS package_items
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 CREATE INDEX IF NOT EXISTS idx_package_items_package_id ON package_items(package_id);
 CREATE INDEX IF NOT EXISTS idx_package_items_product_id ON package_items(product_id);
+
+-- ====================================
+-- 经营管理扩展表结构
+-- ====================================
+
+-- 进货商家
+CREATE TABLE IF NOT EXISTS suppliers
+(
+    id
+    SERIAL
+    PRIMARY
+    KEY,
+    name
+    VARCHAR
+(
+    255
+) NOT NULL,
+    contact_name VARCHAR
+(
+    100
+),
+    phone VARCHAR
+(
+    50
+),
+    address TEXT,
+    note TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                             );
+
+-- 入库单主表
+CREATE TABLE IF NOT EXISTS inbound_orders
+(
+    id
+    SERIAL
+    PRIMARY
+    KEY,
+    supplier_id
+    INTEGER
+    NOT
+    NULL
+    REFERENCES
+    suppliers
+(
+    id
+),
+    shipping_fee DECIMAL
+(
+    10,
+    2
+) NOT NULL DEFAULT 0,
+    misc_fee DECIMAL
+(
+    10,
+    2
+) NOT NULL DEFAULT 0,
+    is_paid BOOLEAN NOT NULL DEFAULT false,
+    inbound_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    note TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                             );
+
+-- 入库单明细
+CREATE TABLE IF NOT EXISTS inbound_order_items
+(
+    id
+    SERIAL
+    PRIMARY
+    KEY,
+    inbound_order_id
+    INTEGER
+    NOT
+    NULL
+    REFERENCES
+    inbound_orders
+(
+    id
+) ON DELETE CASCADE,
+    product_id INTEGER NOT NULL REFERENCES products
+(
+    id
+),
+    quantity INTEGER NOT NULL DEFAULT 1,
+    purchase_price DECIMAL
+(
+    10,
+    2
+) NOT NULL,
+    warranty_enabled BOOLEAN NOT NULL DEFAULT false,
+    warranty_until TIMESTAMP WITH TIME ZONE,
+    note TEXT,
+    created_at TIMESTAMP
+  WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+
+-- 独立库存物品，每条记录代表一件真实库存
+CREATE TABLE IF NOT EXISTS inventory_items
+(
+    id
+    SERIAL
+    PRIMARY
+    KEY,
+    product_id
+    INTEGER
+    NOT
+    NULL
+    REFERENCES
+    products
+(
+    id
+),
+    supplier_id INTEGER REFERENCES suppliers
+(
+    id
+),
+    inbound_order_id INTEGER REFERENCES inbound_orders
+(
+    id
+),
+    inbound_order_item_id INTEGER REFERENCES inbound_order_items
+(
+    id
+),
+    cost_price DECIMAL
+(
+    10,
+    2
+) NOT NULL,
+    serial_number VARCHAR
+(
+    255
+),
+    warranty_enabled BOOLEAN NOT NULL DEFAULT false,
+    warranty_until TIMESTAMP WITH TIME ZONE,
+    inbound_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                             status VARCHAR (20) NOT NULL DEFAULT 'in_stock',
+    note TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP
+                         WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                             );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_inventory_items_serial_number
+    ON inventory_items (serial_number)
+    WHERE serial_number IS NOT NULL AND serial_number <> '';
+
+-- 销售订单主表
+CREATE TABLE IF NOT EXISTS sales_orders
+(
+    id
+    SERIAL
+    PRIMARY
+    KEY,
+    order_no
+    VARCHAR
+(
+    50
+) NOT NULL UNIQUE,
+    customer_name VARCHAR
+(
+    100
+) NOT NULL,
+    customer_phone VARCHAR
+(
+    50
+),
+    original_amount DECIMAL
+(
+    10,
+    2
+) NOT NULL DEFAULT 0,
+    final_amount DECIMAL
+(
+    10,
+    2
+) NOT NULL DEFAULT 0,
+    discount_amount DECIMAL
+(
+    10,
+    2
+) NOT NULL DEFAULT 0,
+    cost_amount DECIMAL
+(
+    10,
+    2
+) NOT NULL DEFAULT 0,
+    profit_amount DECIMAL
+(
+    10,
+    2
+) NOT NULL DEFAULT 0,
+    status VARCHAR
+(
+    20
+) NOT NULL DEFAULT 'pending',
+    source VARCHAR
+(
+    50
+),
+    note TEXT,
+    sold_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                             );
+
+-- 销售订单明细
+CREATE TABLE IF NOT EXISTS sales_order_items
+(
+    id
+    SERIAL
+    PRIMARY
+    KEY,
+    order_id
+    INTEGER
+    NOT
+    NULL
+    REFERENCES
+    sales_orders
+(
+    id
+) ON DELETE CASCADE,
+    product_id INTEGER NOT NULL REFERENCES products
+(
+    id
+),
+    product_name VARCHAR
+(
+    255
+) NOT NULL,
+    product_category VARCHAR
+(
+    50
+) NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 1,
+    cost_price DECIMAL
+(
+    10,
+    2
+),
+    sale_price DECIMAL
+(
+    10,
+    2
+) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP
+  WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+
+-- 订单与具体库存物品绑定记录
+CREATE TABLE IF NOT EXISTS order_inventory_items
+(
+    id
+    SERIAL
+    PRIMARY
+    KEY,
+    order_id
+    INTEGER
+    NOT
+    NULL
+    REFERENCES
+    sales_orders
+(
+    id
+) ON DELETE CASCADE,
+    order_item_id INTEGER NOT NULL REFERENCES sales_order_items
+(
+    id
+)
+  ON DELETE CASCADE,
+    inventory_item_id INTEGER NOT NULL REFERENCES inventory_items
+(
+    id
+),
+    cost_price DECIMAL
+(
+    10,
+    2
+) NOT NULL,
+    created_at TIMESTAMP
+  WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+
+-- 经营成本
+CREATE TABLE IF NOT EXISTS operating_costs
+(
+    id
+    SERIAL
+    PRIMARY
+    KEY,
+    type
+    VARCHAR
+(
+    30
+) NOT NULL,
+    name VARCHAR
+(
+    255
+) NOT NULL,
+    amount DECIMAL
+(
+    10,
+    2
+) NOT NULL,
+    cost_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    note TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                             );
+
+CREATE INDEX IF NOT EXISTS idx_inventory_items_product_status ON inventory_items(product_id, status);
+CREATE INDEX IF NOT EXISTS idx_inbound_orders_supplier_id ON inbound_orders(supplier_id);
+CREATE INDEX IF NOT EXISTS idx_sales_orders_status ON sales_orders(status);
+CREATE INDEX IF NOT EXISTS idx_sales_order_items_order_id ON sales_order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_operating_costs_type_date ON operating_costs(type, cost_date);
 
 -- ====================================
 -- 插入默认数据

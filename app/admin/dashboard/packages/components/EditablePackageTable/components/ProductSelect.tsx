@@ -1,11 +1,11 @@
-import { PlusOutlined } from '@ant-design/icons';
+import { CheckCircleFilled, CloseCircleFilled, PlusOutlined } from '@ant-design/icons';
 import { Button, Divider, Input, InputRef, Select, Space } from 'antd';
 import React from 'react';
 
 interface ProductSelectProps {
     value?: number;
     onChange: (value: number) => void;
-    options: { value: number; label: string; price?: number }[];
+    options: { value: number; label: string; price?: number; stock_quantity?: number }[];
     placeholder?: string;
     disabled?: boolean;
     allowCustomInput?: boolean;
@@ -28,6 +28,20 @@ export const ProductSelect: React.FC<ProductSelectProps> = ({
 
     const displayValue =
         value && value > 0 ? value : customInputValue ? customInputValue : undefined;
+
+    const optionMap = React.useMemo(
+        () => new Map(options.map((option) => [option.value, option])),
+        [options]
+    );
+
+    const renderInventoryIcon = (stock?: number) => {
+        const hasStock = Number(stock || 0) > 0;
+        return hasStock ? (
+            <CheckCircleFilled className="text-emerald-500 text-xs" />
+        ) : (
+            <CloseCircleFilled className="text-rose-500 text-xs" />
+        );
+    };
 
     // Handle selection change
     const handleChange = (val: number | string) => {
@@ -54,14 +68,34 @@ export const ProductSelect: React.FC<ProductSelectProps> = ({
         <Select
             value={displayValue}
             onChange={handleChange}
-            options={options}
+            options={options.map((option) => ({
+                ...option,
+                label: (
+                    <div className="flex items-center gap-2">
+                        {renderInventoryIcon(option.stock_quantity)}
+                        <span>{option.label}</span>
+                    </div>
+                ),
+            }))}
             placeholder={placeholder}
             disabled={disabled}
             showSearch
             variant="outlined"
             filterOption={(input, option) =>
-                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                String(optionMap.get(option?.value as number)?.label || '')
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
             }
+            labelRender={(props) => {
+                const option = optionMap.get(props.value as number);
+                if (!option) return props.label;
+                return (
+                    <div className="flex items-center gap-2">
+                        {renderInventoryIcon(option.stock_quantity)}
+                        <span>{option.label}</span>
+                    </div>
+                );
+            }}
             className="w-full"
             popupRender={(menu) => (
                 <>

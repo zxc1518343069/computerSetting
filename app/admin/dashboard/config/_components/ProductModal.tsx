@@ -149,7 +149,7 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
                             {isEditMode ? '编辑产品' : '新增产品'}
                         </h2>
                         <p className="text-gray-500 dark:text-gray-400 mt-1 ml-[52px]">
-                            填写产品基础信息与定价策略
+                            填写产品基础信息与报价参考
                         </p>
                     </div>
 
@@ -191,7 +191,7 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
                         <div className="grid grid-cols-2 gap-4">
                             <Form.Item
                                 name="price"
-                                label={<span className="dark:text-gray-300">基础成本 (¥)</span>}
+                                label={<span className="dark:text-gray-300">参考价格 (¥)</span>}
                                 rules={[{ required: true, message: '请输入价格' }]}
                             >
                                 <InputNumber
@@ -277,7 +277,7 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
 
                         <div className="bg-white dark:bg-[#2a2a2a] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 space-y-4">
                             <div className="flex justify-between items-center text-sm">
-                                <span className="text-gray-500 dark:text-gray-400">基础成本</span>
+                                <span className="text-gray-500 dark:text-gray-400">参考价格</span>
                                 <span className="font-mono font-medium dark:text-gray-200">
                                     {formatPrice(Number(watchedPrice) || 0)}
                                 </span>

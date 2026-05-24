@@ -60,6 +60,7 @@ export const ProductRow: React.FC<ProductRowProps> = ({
         value: p.id,
         label: p.name,
         price: p.price,
+        stock_quantity: p.stock_quantity,
     }));
 
     const categoryColor = CATEGORY_CONFIG[item.category]?.solidColor || 'bg-slate-400';

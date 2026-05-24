@@ -71,7 +71,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
             ),
         },
         {
-            title: '基础成本',
+            title: '参考价格',
             dataIndex: 'price',
             key: 'price',
             align: 'right',
@@ -84,12 +84,31 @@ export const ProductTable: React.FC<ProductTableProps> = ({
             ),
         },
         {
+            title: '库存',
+            dataIndex: 'stock_quantity',
+            key: 'stock_quantity',
+            align: 'center',
+            width: 100,
+            sorter: (a, b) => (a.stock_quantity || 0) - (b.stock_quantity || 0),
+            render: (stock) => (
+                <span
+                    className={`font-mono font-bold ${
+                        Number(stock || 0) > 0
+                            ? 'text-emerald-600 dark:text-emerald-400'
+                            : 'text-rose-500 dark:text-rose-400'
+                    }`}
+                >
+                    {stock || 0}
+                </span>
+            ),
+        },
+        {
             title: (
                 <div className="flex items-center justify-end gap-1 cursor-help group">
                     <span className="group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                         最终售价
                     </span>
-                    <Tooltip title="优先级: 手动定价 > 溢价配置 > 基础价格">
+                    <Tooltip title="优先级: 手动定价 > 溢价配置 > 参考价格">
                         <InfoCircleOutlined className="text-xs text-gray-400 dark:text-gray-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
                     </Tooltip>
                 </div>
@@ -202,7 +221,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                     position: ['bottomRight'],
                     className: '!mb-0 !mt-4',
                 }}
-                scroll={{ x: 1000 }}
+                scroll={{ x: 1100 }}
                 size="middle"
                 rowClassName="group hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors cursor-default"
                 className="custom-table"

@@ -1,5 +1,6 @@
+import { getDb } from '@/lib/db';
+import { ProductRow, serializeProduct, toCents } from '@/lib/db/serializers';
 import { error, success } from '@/lib/request/apiResponse';
-import { supabase } from '@/lib/supabase';
 import { NextRequest } from 'next/server';
 
 interface ImportProduct {
@@ -10,16 +11,15 @@ interface ImportProduct {
     is_use_premium?: boolean;
 }
 
-// POST - 批量导入产品
 export async function POST(request: NextRequest) {
     try {
+        const db = getDb();
         const { products } = await request.json();
 
         if (!products || !Array.isArray(products) || products.length === 0) {
             return error(400, '产品数据不能为空');
         }
 
-        // 验证产品数据格式
         const validProducts: ImportProduct[] = [];
         const errors: string[] = [];
 
@@ -27,13 +27,7 @@ export async function POST(request: NextRequest) {
             if (!product.category || !product.name || product.price === undefined) {
                 errors.push(`第 ${index + 1} 条数据格式不正确`);
             } else {
-                validProducts.push({
-                    category: product.category,
-                    name: product.name,
-                    price: product.price,
-                    selling_price: product.selling_price,
-                    is_use_premium: product.is_use_premium,
-                });
+                validProducts.push(product);
             }
         });
 
@@ -47,18 +41,43 @@ export async function POST(request: NextRequest) {
                 { status: 400 }
             );
         }
-        await supabase.from('products').delete().neq('id', 0); // 清空表数据
-        // 批量插入产品
-        const { data, error: insertError } = await supabase
-            .from('products')
-            .insert(validProducts)
-            .select();
 
-        if (insertError) {
-            throw insertError;
-        }
+        const importProducts = db.transaction(() => {
+            db.prepare('DELETE FROM package_items').run();
+            db.prepare('DELETE FROM products').run();
 
-        return success(data, `成功导入 ${data?.length || 0} 条产品数据`);
+            const insert = db.prepare(
+                `
+                INSERT INTO products (
+                    category, name, price_cents, stock_quantity, selling_price_cents,
+                    is_use_premium, updated_at
+                )
+                VALUES (
+                    @category, @name, @price_cents, 0, @selling_price_cents,
+                    @is_use_premium, CURRENT_TIMESTAMP
+                )
+            `
+            );
+
+            for (const product of validProducts) {
+                insert.run({
+                    category: product.category,
+                    name: product.name,
+                    price_cents: toCents(product.price),
+                    selling_price_cents: product.selling_price
+                        ? toCents(product.selling_price)
+                        : null,
+                    is_use_premium: product.is_use_premium === false ? 0 : 1,
+                });
+            }
+        });
+
+        importProducts();
+
+        const rows = db
+            .prepare('SELECT * FROM products ORDER BY created_at DESC')
+            .all() as ProductRow[];
+        return success(rows.map(serializeProduct), `成功导入 ${rows.length} 条产品数据`);
     } catch (e) {
         console.error('Import products error:', e);
         return error(500, '批量导入失败');

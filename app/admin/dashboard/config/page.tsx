@@ -96,7 +96,7 @@ export default function ConfigPage() {
                         </div>
                         <div>
                             <div className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">
-                                平均成本
+                                平均参考价
                             </div>
                             <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
                                 {formatPrice(stats.avgPrice)}

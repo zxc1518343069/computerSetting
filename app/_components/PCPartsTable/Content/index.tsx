@@ -5,13 +5,21 @@ import { usePackageCalculator } from '@/app/admin/dashboard/packages/components/
 import { usePackageTableData } from '@/app/admin/dashboard/packages/components/EditablePackageTable/hooks/usePackageTableData';
 import { PACKAGE_CATEGORIES } from '@/const';
 import { message } from '@/lib/AntdGlobal';
-import { BuildOutlined, ExperimentOutlined, SaveOutlined } from '@ant-design/icons';
-import { Button } from 'antd';
+import {
+    BuildOutlined,
+    ExperimentOutlined,
+    SaveOutlined,
+    ShoppingCartOutlined,
+} from '@ant-design/icons';
+import { Button, Form, Input, InputNumber, Modal } from 'antd';
 import React, { useImperativeHandle, useMemo, useState } from 'react';
 import { ExportButton } from './components/ExportButton';
 import { InfoSection } from './components/InfoSection';
 import { TestConfigModal } from './components/TestConfigModal';
 import { useTableControl } from './hooks/useTableControl';
+import { saveOrder } from '@/app/admin/dashboard/services';
+import { useRequest } from 'ahooks';
+import { useAuth } from '@/app/_components/AuthProvider';
 
 export interface CustomRef {
     processPkgToTableData: (pkg: Package) => void;
@@ -37,6 +45,9 @@ export function Content(props: ContentProps) {
     } = useTableControl();
 
     const [testModalVisible, setTestModalVisible] = useState(false);
+    const [orderModalVisible, setOrderModalVisible] = useState(false);
+    const [orderForm] = Form.useForm();
+    const { isLoggedIn } = useAuth();
 
     // 获取产品和定价数据
     const { products, pricingConfig, loading } = usePackageTableData();
@@ -127,6 +138,58 @@ export function Content(props: ContentProps) {
         onSaveTempPackage?.(newPkg);
     };
 
+    const { runAsync: handleSaveOrder, loading: savingOrder } = useRequest(
+        async () => {
+            const values = await orderForm.validateFields();
+            const validItems = tableData.filter((item) => item.product_id && item.product_id > 0);
+
+            const orderItems = validItems.map((item) => {
+                const product = products.find((p) => p.id === item.product_id);
+                const metrics = getItemMetrics(item);
+                return {
+                    product_id: item.product_id,
+                    product_name: product?.name || '未知产品',
+                    product_category: item.category,
+                    quantity: item.quantity,
+                    sale_price: metrics.unitSellPrice,
+                };
+            });
+
+            await saveOrder({
+                customer_name: values.customer_name,
+                customer_phone: values.customer_phone,
+                original_amount: totalPrice,
+                final_amount: values.final_amount || totalPrice,
+                source: 'frontend_quote',
+                note: values.note,
+                items: orderItems,
+            });
+        },
+        {
+            manual: true,
+            onSuccess: () => {
+                message.success('订单已保存，待后台结算');
+                setOrderModalVisible(false);
+                orderForm.resetFields();
+            },
+            onError: (e) => message.error(e.message || '订单保存失败'),
+        }
+    );
+
+    const openOrderModal = () => {
+        if (!isLoggedIn) {
+            message.warning('请先登录后台后再保存订单');
+            return;
+        }
+        if (!hasValidItems) {
+            message.warning('当前配置为空，无法保存订单');
+            return;
+        }
+        const finalAmount = discountedPrice > 0 ? discountedPrice : totalPrice;
+        orderForm.setFieldsValue({ final_amount: finalAmount });
+        setOrderModalVisible(true);
+    };
+
     return (
         <div className="flex flex-col gap-4 h-full">
             {/* Header Area: 科技感标题与操作 */}
@@ -166,6 +229,15 @@ export function Content(props: ContentProps) {
                     </Button>
                     <div className="w-px h-8 bg-gray-200 dark:bg-gray-700 mx-1" />
                     <ExportButton data={exportData} disabled={!hasValidItems || loading} />
+                    <Button
+                        icon={<ShoppingCartOutlined />}
+                        size="large"
+                        onClick={openOrderModal}
+                        disabled={!hasValidItems || loading || !isLoggedIn}
+                        className="h-12 min-w-[130px] px-6 rounded-2xl border-blue-100 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:border-blue-400 transition-all duration-300 font-bold text-sm shadow-sm dark:shadow-none"
+                    >
+                        保存订单
+                    </Button>
                     <div className="w-px h-8 bg-gray-200 dark:bg-gray-700 mx-1" />
                     <Button
                         type="primary"
@@ -213,6 +285,41 @@ export function Content(props: ContentProps) {
                 items={tableData}
                 tempPackages={tempPackages}
             />
+
+            <Modal
+                title="保存为订单"
+                open={orderModalVisible}
+                onCancel={() => setOrderModalVisible(false)}
+                onOk={handleSaveOrder}
+                confirmLoading={savingOrder}
+                destroyOnHidden
+            >
+                <Form form={orderForm} layout="vertical" className="pt-4">
+                    <Form.Item
+                        name="customer_name"
+                        label="客户名称"
+                        rules={[{ required: true, message: '请输入客户名称' }]}
+                    >
+                        <Input placeholder="请输入客户名称" />
+                    </Form.Item>
+                    <Form.Item name="customer_phone" label="手机号">
+                        <Input placeholder="可选，但建议填写" />
+                    </Form.Item>
+                    <Form.Item
+                        name="final_amount"
+                        label="最终成交金额"
+                        rules={[{ required: true, message: '请输入最终成交金额' }]}
+                    >
+                        <InputNumber min={0} precision={2} prefix="¥" className="w-full" />
+                    </Form.Item>
+                    <Form.Item name="note" label="备注">
+                        <Input.TextArea rows={3} placeholder="订单备注" />
+                    </Form.Item>
+                    <div className="text-xs text-gray-400">
+                        保存后不会扣减库存，需在后台订单列表中结算并绑定具体库存物品。
+                    </div>
+                </Form>
+            </Modal>
         </div>
     );
 }

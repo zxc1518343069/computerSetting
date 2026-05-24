@@ -1,28 +1,21 @@
+import { getDb } from '@/lib/db';
+import { serializePricingConfig } from '@/lib/db/serializers';
 import { error, success } from '@/lib/request/apiResponse';
-import { supabase } from '@/lib/supabase';
 import { NextRequest } from 'next/server';
 
-// GET - 获取溢价配置
 export async function GET() {
     try {
-        const { data, error: fetchError } = await supabase
-            .from('pricing_config')
-            .select('*')
-            .order('id', { ascending: false })
-            .limit(1)
-            .single();
+        const db = getDb();
+        const row = db.prepare('SELECT * FROM pricing_config ORDER BY id DESC LIMIT 1').get() as
+            | Parameters<typeof serializePricingConfig>[0]
+            | undefined;
 
-        if (fetchError && fetchError.code !== 'PGRST116') {
-            // PGRST116 是 "no rows returned" 错误
-            throw fetchError;
-        }
-
-        if (!data) {
-            // 如果没有配置,返回默认值
+        if (!row) {
             return success(
                 {
                     unifiedPricing: true,
                     unifiedRate: 0,
+                    roundingType: 'none',
                     cpu: 0,
                     motherboard: 0,
                     ram: 0,
@@ -37,32 +30,16 @@ export async function GET() {
             );
         }
 
-        return success(
-            {
-                unifiedPricing: data.unified_pricing,
-                unifiedRate: parseFloat(data.unified_rate),
-                cpu: parseFloat(data.cpu_rate),
-                motherboard: parseFloat(data.motherboard_rate),
-                ram: parseFloat(data.ram_rate),
-                gpu: parseFloat(data.gpu_rate),
-                storage: parseFloat(data.storage_rate),
-                psu: parseFloat(data.psu_rate),
-                case: parseFloat(data.case_rate),
-                cooling: parseFloat(data.cooling_rate),
-                monitor: parseFloat(data.monitor_rate),
-                roundingType: data.rounding_type,
-            },
-            '获取溢价配置成功'
-        );
+        return success(serializePricingConfig(row), '获取溢价配置成功');
     } catch (e) {
         console.error('Get pricing config error:', e);
         return error(500, '获取溢价配置失败');
     }
 }
 
-// POST/PUT - 更新溢价配置
 export async function POST(request: NextRequest) {
     try {
+        const db = getDb();
         const config = await request.json();
 
         const {
@@ -76,69 +53,55 @@ export async function POST(request: NextRequest) {
             psu,
             case: caseRate,
             cooling,
+            monitor,
             roundingType,
         } = config;
 
-        // 检查是否已存在配置
-        const { data: existingConfig } = await supabase
-            .from('pricing_config')
-            .select('id')
-            .order('id', { ascending: false })
-            .limit(1)
-            .single();
+        const existing = db
+            .prepare('SELECT id FROM pricing_config ORDER BY id DESC LIMIT 1')
+            .get() as { id: number } | undefined;
 
-        let result;
-        if (existingConfig) {
-            // 更新现有配置
-            const { data, error: updateError } = await supabase
-                .from('pricing_config')
-                .update({
-                    unified_pricing: unifiedPricing,
-                    unified_rate: unifiedRate,
-                    cpu_rate: cpu,
-                    motherboard_rate: motherboard,
-                    ram_rate: ram,
-                    gpu_rate: gpu,
-                    storage_rate: storage,
-                    psu_rate: psu,
-                    case_rate: caseRate,
-                    cooling_rate: cooling,
-                    rounding_type: roundingType,
-                    updated_at: new Date().toISOString(),
-                })
-                .eq('id', existingConfig.id)
-                .select()
-                .single();
-
-            if (updateError) throw updateError;
-            result = data;
-        } else {
-            // 创建新配置
-            const { data, error: insertError } = await supabase
-                .from('pricing_config')
-                .insert([
-                    {
-                        unified_pricing: unifiedPricing,
-                        unified_rate: unifiedRate,
-                        cpu_rate: cpu,
-                        motherboard_rate: motherboard,
-                        ram_rate: ram,
-                        gpu_rate: gpu,
-                        storage_rate: storage,
-                        psu_rate: psu,
-                        case_rate: caseRate,
-                        cooling_rate: cooling,
-                        rounding_type: roundingType,
-                    },
-                ])
-                .select()
-                .single();
-
-            if (insertError) throw insertError;
-            result = data;
+        if (existing) {
+            db.prepare(
+                `
+                UPDATE pricing_config
+                SET unified_pricing = @unified_pricing,
+                    unified_rate = @unified_rate,
+                    rounding_type = @rounding_type,
+                    cpu_rate = @cpu_rate,
+                    motherboard_rate = @motherboard_rate,
+                    ram_rate = @ram_rate,
+                    gpu_rate = @gpu_rate,
+                    storage_rate = @storage_rate,
+                    psu_rate = @psu_rate,
+                    case_rate = @case_rate,
+                    cooling_rate = @cooling_rate,
+                    monitor_rate = @monitor_rate,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = @id
+            `
+            ).run({
+                id: existing.id,
+                unified_pricing: unifiedPricing ? 1 : 0,
+                unified_rate: unifiedRate || 0,
+                rounding_type: roundingType || 'none',
+                cpu_rate: cpu || 0,
+                motherboard_rate: motherboard || 0,
+                ram_rate: ram || 0,
+                gpu_rate: gpu || 0,
+                storage_rate: storage || 0,
+                psu_rate: psu || 0,
+                case_rate: caseRate || 0,
+                cooling_rate: cooling || 0,
+                monitor_rate: monitor || 0,
+            });
         }
 
-        return success(result, '溢价配置已保存');
+        const row = db
+            .prepare('SELECT * FROM pricing_config ORDER BY id DESC LIMIT 1')
+            .get() as Parameters<typeof serializePricingConfig>[0];
+
+        return success(serializePricingConfig(row), '溢价配置已保存');
     } catch (e) {
         console.error('Update pricing config error:', e);
         return error(500, '保存溢价配置失败');

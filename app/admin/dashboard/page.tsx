@@ -6,8 +6,8 @@ export default function DashboardPage() {
     const router = useRouter();
 
     useEffect(() => {
-        // 默认重定向到溢价控制页面
-        router.push('/admin/dashboard/pricing');
+        // 默认重定向到销售列表页面
+        router.push('/admin/dashboard/sales/products');
     }, [router]);
 
     return (

@@ -123,7 +123,7 @@ export const exportData = (products: Product[]) => {
         const sheetName = categoryDisplayMap[categoryKey];
 
         const worksheetData = [
-            ['ID', '产品名称', '基础价格', '最终售价(手动)', '是否使用溢价', '创建时间'],
+            ['ID', '产品名称', '参考价格', '最终售价(手动)', '是否使用溢价', '创建时间'],
             ...categoryProducts.map((product) => [
                 product.id,
                 product.name,

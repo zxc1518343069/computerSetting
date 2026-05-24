@@ -188,10 +188,7 @@ export default function PricingPage() {
                                         onClick={() =>
                                             setConfig({
                                                 ...config,
-                                                roundingType: item.id as
-                                                    | 'none'
-                                                    | 'integer'
-                                                    | 'ten',
+                                                roundingType: item.id as 'none' | 'integer' | 'ten',
                                             })
                                         }
                                         className={`
