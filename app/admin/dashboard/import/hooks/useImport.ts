@@ -1,45 +1,53 @@
 import { useRequest } from 'ahooks';
-import { message, UploadFile } from 'antd';
+import { message, Modal, UploadFile } from 'antd';
 import { useState } from 'react';
-import { fetchAllProductsService, importProductsService } from '../services';
-import { exportData, generateTemplate, parseExcelFile } from '../utils';
+import { fetchDataExchangeWorkbook, importDataExchangeWorkbook } from '../services';
+import { downloadDataExchangeWorkbook, parseDataExchangeFile } from '../utils';
+
+const confirmRestore = () =>
+    new Promise<boolean>((resolve) => {
+        Modal.confirm({
+            title: '确认恢复数据？',
+            content: '上传备份会覆盖当前产品、库存、订单和财务数据，建议先导出现有数据。',
+            okText: '确认覆盖',
+            okType: 'danger',
+            cancelText: '取消',
+            onOk: () => resolve(true),
+            onCancel: () => resolve(false),
+        });
+    });
 
 export const useImport = () => {
     const [fileList, setFileList] = useState<UploadFile[]>([]);
 
-    // 导入逻辑
     const { runAsync: importData, loading: uploading } = useRequest(
         async (file: File) => {
-            const products = await parseExcelFile(file);
-            if (products.length === 0) {
-                throw new Error('未找到有效数据，请检查Excel格式');
+            const payload = await parseDataExchangeFile(file);
+            const sheetNames = Object.keys(payload.sheets);
+
+            if (sheetNames.length === 0) {
+                throw new Error('未找到有效工作表，请检查 Excel 文件格式');
             }
-            const result = await importProductsService(products);
-            if (!result.success) {
-                throw new Error(result.error || '导入失败');
-            }
-            return result.count;
+
+            await importDataExchangeWorkbook(payload);
+            return sheetNames.length;
         },
         {
             manual: true,
             onSuccess: (count) => {
-                message.success(`成功导入 ${count} 条数据`);
-                setFileList([]); // 清空上传列表
+                message.success(`数据恢复成功，共处理 ${count} 个工作表`);
+                setFileList([]);
             },
             onError: (error) => {
-                message.error(error.message || '导入失败，请重试');
+                message.error(error.message || '数据恢复失败，请重试');
             },
         }
     );
 
-    // 导出逻辑
-    const { runAsync: handleExport, loading: exporting } = useRequest(
+    const { run: handleExport, loading: exporting } = useRequest(
         async () => {
-            const products = await fetchAllProductsService();
-            if (!products || products.length === 0) {
-                throw new Error('暂无数据可导出');
-            }
-            exportData(products);
+            const workbook = await fetchDataExchangeWorkbook('export');
+            downloadDataExchangeWorkbook(workbook);
         },
         {
             manual: true,
@@ -52,26 +60,34 @@ export const useImport = () => {
         }
     );
 
-    // 处理文件上传
     const handleUpload = async (file: File) => {
+        const confirmed = await confirmRestore();
+        if (!confirmed) return false;
+
         await importData(file);
-        return false; // 阻止默认上传行为
+        return false;
     };
 
-    // 处理模板下载
-    const handleDownloadTemplate = () => {
-        try {
-            generateTemplate();
-            message.success('模板下载成功');
-        } catch (error) {
-            console.error(error);
-            message.error('模板生成失败');
+    const { run: handleDownloadTemplate, loading: downloadingTemplate } = useRequest(
+        async () => {
+            const workbook = await fetchDataExchangeWorkbook('template');
+            downloadDataExchangeWorkbook(workbook);
+        },
+        {
+            manual: true,
+            onSuccess: () => {
+                message.success('模板下载成功');
+            },
+            onError: (error) => {
+                message.error(error.message || '模板生成失败');
+            },
         }
-    };
+    );
 
     return {
         uploading,
         exporting,
+        downloadingTemplate,
         fileList,
         setFileList,
         handleUpload,

@@ -11,22 +11,22 @@ export const Instructions: React.FC = () => {
         {
             icon: <CloudDownloadOutlined />,
             title: '下载模板',
-            desc: '获取标准 Excel 模板，包含所有硬件分类工作表。',
+            desc: '获取当前系统支持的完整工作表和字段结构。',
         },
         {
             icon: <FileExcelOutlined />,
-            title: '填充数据',
-            desc: '在对应工作表中填写产品名称、价格及可选的溢价配置。',
+            title: '导出备份',
+            desc: '建议先导出现有数据，保留一份可恢复的完整备份。',
         },
         {
             icon: <CloudUploadOutlined />,
-            title: '上传文件',
-            desc: '将填写好的文件上传，系统自动解析并验证数据格式。',
+            title: '上传备份',
+            desc: '上传完整 Excel 备份，系统会按表关系恢复数据。',
         },
         {
             icon: <CheckCircleOutlined />,
             title: '完成导入',
-            desc: '确认导入结果，数据将即时同步至产品数据库。',
+            desc: '恢复会覆盖当前库，并重新计算产品库存数量。',
         },
     ];
 
@@ -61,6 +61,11 @@ export const Instructions: React.FC = () => {
                         </div>
                     </div>
                 ))}
+            </div>
+
+            <div className="mt-8 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-200">
+                上传数据用于整库恢复，会替换当前产品、库存、入库单、订单和财务数据。Excel 中的 id
+                字段用于维持表之间的关联，手工修改时请保持关联一致。
             </div>
 
             {/* Background Decoration */}

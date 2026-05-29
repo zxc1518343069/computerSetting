@@ -42,6 +42,15 @@ export class PricingCalculator {
      */
     getProductPrice(product: Product | undefined): number {
         if (!product) return 0;
+
+        if (product.selling_price !== undefined && product.selling_price !== null) {
+            return product.selling_price;
+        }
+
+        if (product.is_use_premium === false) {
+            return product.price;
+        }
+
         const rawPrice = product.price * this.getPricingRate(product.category);
 
         if (!this.config?.roundingType || this.config.roundingType === 'none') {

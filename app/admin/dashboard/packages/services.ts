@@ -41,8 +41,19 @@ export const savePackageService = (values: PackageFormValues, id?: number) => {
 
 // --- New Services for EditablePackageTable ---
 
-export const fetchProductsService = () => {
-    return api.get<any, Product[]>('/products');
+interface SalesProductResponse extends Product {
+    quote_base_price?: number;
+    suggested_price?: number;
+    has_stock?: boolean;
+}
+
+export const fetchProductsService = async () => {
+    const data = await api.get<any, SalesProductResponse[]>('/sales-products');
+
+    return data.map((product) => ({
+        ...product,
+        price: product.quote_base_price ?? product.price,
+    }));
 };
 
 export const fetchPricingConfigService = () => {

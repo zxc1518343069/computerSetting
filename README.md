@@ -6,7 +6,8 @@
 
 - **可视化报价表格**：清晰展示各类电脑配件及价格
 - **动态计算**：实时计算配件组合总价
-- **Excel 集成**：支持模板下载和数据导入
+- **Excel 数据交换**：支持全量模板下载、备份导出和备份恢复
+- **本地数据库**：支持 SQLite 本地部署，适合 NAS/Docker 私有化运行
 - **响应式设计**：适配各种设备屏幕
 
 ## 🖥️ 在线演示
@@ -25,8 +26,9 @@
 
 ### 📁 数据管理
 
-- **Excel 模板下载**：一键获取标准格式模板
-- **数据导入**：通过 Excel 批量更新产品数据
+- **Excel 模板下载**：一键获取完整业务表结构
+- **数据导出**：导出产品、库存、入库单、订单、财务等全量备份
+- **数据恢复**：通过 Excel 备份恢复整库数据
 - **表单重置**：快速清空当前选择
 
 ### 🎨 UI 特点
@@ -42,34 +44,35 @@
 - **样式**: [Tailwind CSS](https://tailwindcss.com/)
 - **表格处理**: [SheetJS (xlsx)](https://sheetjs.com/)
 - **文件下载**: [FileSaver.js](https://github.com/eligrey/FileSaver.js/)
+- **本地数据库**: SQLite + better-sqlite3
 - **部署**: [Vercel](https://vercel.com/)
 
 ## 📦 安装与运行
 
 ### 前置要求
 
-- Node.js (推荐 v16+)
+- Node.js (推荐 v20+)
 - npm 或 yarn
 
 ### 本地开发
 
 1. 克隆仓库
-   ```bash
-   git clone https://github.com/your-username/your-repo.git
-   ```
+    ```bash
+    git clone https://github.com/your-username/your-repo.git
+    ```
 2. 安装依赖
-   ```bash
-   cd your-repo
-   npm install
-   # 或
-   yarn install
-   ```
+    ```bash
+    cd your-repo
+    npm install
+    # 或
+    yarn install
+    ```
 3. 启动开发服务器
-   ```bash
-   npm run dev
-   # 或
-   yarn dev
-   ```
+    ```bash
+    npm run dev
+    # 或
+    yarn dev
+    ```
 4. 访问 `http://localhost:3000`
 
 ### 生产构建
@@ -79,20 +82,38 @@ npm run build
 npm start
 ```
 
+### Docker / NAS 部署
+
+项目已提供 `Dockerfile` 和 `docker-compose.yml`。默认会把 SQLite 数据库持久化到 Docker volume 的
+`/app/data/computer.db`。
+
+```bash
+docker compose up -d --build
+```
+
+启动后访问 `http://localhost:3000`。如果部署在 NAS 上，把 `3000:3000` 改成你希望暴露的端口即可。
+
+如需把数据库文件挂载到 NAS 指定目录，可把 compose 的 volume 改成类似：
+
+```yaml
+volumes:
+    - /your/nas/path/computer-data:/app/data
+```
+
 ## 📝 使用说明
 
 1. **基本使用**：
-   - 从下拉菜单中选择各类配件
-   - 调整数量查看价格变化
-   - 系统自动计算总价
+    - 从下拉菜单中选择各类配件
+    - 调整数量查看价格变化
+    - 系统自动计算总价
 
-2. **Excel 功能**：
-   - 点击"下载Excel模板"获取标准格式
-   - 修改模板后点击"上传Excel"导入数据
-   - 导入后将完全覆盖现有产品数据
+2. **数据交换**：
+    - 点击"下载模板"获取完整业务表结构
+    - 点击"导出数据"生成整库备份
+    - 点击"上传数据"恢复备份，恢复会覆盖当前数据库
 
 3. **重置功能**：
-   - 点击"重置表单"清空当前选择
+    - 点击"重置表单"清空当前选择
 
 ## 🧩 项目结构
 

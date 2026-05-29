@@ -1,31 +1,27 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import api from '@/lib/request/axios';
-import { Product } from '../config/types';
 
-export interface ImportProductData {
-    name: string;
-    price: number;
-    category: string;
-    selling_price?: number;
-    is_use_premium?: boolean;
+export interface DataExchangeSheet {
+    table: string;
+    sheet: string;
+    columns: string[];
+    rows: Array<Record<string, unknown>>;
 }
 
-export interface ImportResult {
-    success: boolean;
-    count?: number;
-    error?: string;
+export interface DataExchangeWorkbook {
+    mode: 'template' | 'export';
+    generated_at: string;
+    sheets: DataExchangeSheet[];
 }
 
-/**
- * 批量导入产品数据
- */
-export const importProductsService = (products: ImportProductData[]) => {
-    return api.post<any, ImportResult>('/products/import', { products });
+export interface ParsedWorkbookPayload {
+    sheets: Record<string, Array<Record<string, unknown>>>;
+}
+
+export const fetchDataExchangeWorkbook = (mode: 'template' | 'export') => {
+    return api.get<any, DataExchangeWorkbook>('/data-exchange', { params: { mode } });
 };
 
-/**
- * 获取所有产品数据用于导出
- */
-export const fetchAllProductsService = () => {
-    return api.get<any, Product[]>('/products');
+export const importDataExchangeWorkbook = (payload: ParsedWorkbookPayload) => {
+    return api.post<any, void>('/data-exchange', payload);
 };

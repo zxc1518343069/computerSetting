@@ -1,7 +1,5 @@
 'use client';
 
-'use client';
-
 import {
     CloudUploadOutlined,
     DownloadOutlined,
@@ -24,6 +22,7 @@ export default function ImportPage() {
         handleUpload,
         handleDownloadTemplate,
         handleExport,
+        downloadingTemplate,
     } = useImport();
 
     return (
@@ -53,8 +52,8 @@ export default function ImportPage() {
                             数据交换中心
                         </h1>
                         <p className="text-gray-500 dark:text-gray-400 max-w-lg mx-auto text-base">
-                            高效管理您的产品数据库。支持批量导入、导出及模板生成，
-                            确保数据流转的准确性与时效性。
+                            管理本机 SQLite 业务数据。支持模板下载、全量导出与备份恢复，
+                            方便本地部署、迁移和临时演示。
                         </p>
                     </div>
                 </div>
@@ -64,7 +63,7 @@ export default function ImportPage() {
                     <div className="h-full">
                         <ImportActionCard
                             title="下载模板"
-                            description="获取标准 Excel 结构文件，包含预设的硬件分类工作表。"
+                            description="获取完整业务表结构，用于确认每个工作表和字段。"
                             icon={<FileExcelOutlined />}
                             color="blue"
                         >
@@ -73,9 +72,10 @@ export default function ImportPage() {
                                 icon={<DownloadOutlined />}
                                 size="large"
                                 onClick={handleDownloadTemplate}
+                                loading={downloadingTemplate}
                                 className="w-full h-11 bg-blue-600 hover:bg-blue-500 border-none shadow-lg shadow-blue-600/20 rounded-lg font-medium"
                             >
-                                下载模板
+                                {downloadingTemplate ? '生成中...' : '下载模板'}
                             </Button>
                         </ImportActionCard>
                     </div>
@@ -83,7 +83,7 @@ export default function ImportPage() {
                     <div className="h-full">
                         <ImportActionCard
                             title="导出数据"
-                            description="生成包含完整产品信息与溢价配置的备份文件。"
+                            description="导出产品、库存、入库、订单、财务等全量备份文件。"
                             icon={<ExportOutlined />}
                             color="green"
                         >
@@ -103,7 +103,7 @@ export default function ImportPage() {
                     <div className="h-full">
                         <ImportActionCard
                             title="上传数据"
-                            description="解析 Excel 文件并批量更新数据库，支持自动去重。"
+                            description="恢复 Excel 备份并覆盖当前数据库，请先确认已保存旧数据。"
                             icon={<CloudUploadOutlined />}
                             color="purple"
                         >

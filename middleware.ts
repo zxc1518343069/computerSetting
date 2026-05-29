@@ -31,7 +31,9 @@ export function middleware(request: NextRequest) {
         }
 
         const isWriteOperation = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(request.method);
-        const isSensitiveRead = pathname === '/api/pricing' && request.method === 'GET';
+        const isSensitiveRead =
+            request.method === 'GET' &&
+            (pathname === '/api/pricing' || pathname === '/api/data-exchange');
 
         if ((isWriteOperation || isSensitiveRead) && !session) {
             return new NextResponse(
