@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
         }
 
         if (search) {
-            conditions.push('name LIKE @search');
+            conditions.push('(name LIKE @search OR barcode LIKE @search)');
             params.search = `%${search}%`;
         }
 

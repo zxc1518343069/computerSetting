@@ -62,6 +62,7 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
                 form.setFieldsValue({
                     category: product.category,
                     name: product.name,
+                    barcode: product.barcode,
                     price: product.price,
                     selling_price: product.selling_price,
                     is_use_premium: product.is_use_premium ?? true,
@@ -94,6 +95,7 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
                 id: currentProduct?.id, // 编辑时需要 ID
                 category: values.category,
                 name: values.name,
+                barcode: values.barcode?.trim() || null,
                 price: parseFloat(values.price),
                 // 如果使用溢价配置，强制将 selling_price 设为 null
                 selling_price: values.is_use_premium ? null : values.selling_price,
@@ -184,6 +186,17 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
                         >
                             <Input
                                 placeholder="例如: Intel Core i9-13900K"
+                                className="dark:bg-[#2a2a2a] dark:border-gray-700 dark:text-gray-200"
+                            />
+                        </Form.Item>
+
+                        <Form.Item
+                            name="barcode"
+                            label={<span className="dark:text-gray-300">条形码</span>}
+                            tooltip="可选，盒装商品可填写；散片商品可留空"
+                        >
+                            <Input
+                                placeholder="扫码或输入商品条形码"
                                 className="dark:bg-[#2a2a2a] dark:border-gray-700 dark:text-gray-200"
                             />
                         </Form.Item>

@@ -40,7 +40,7 @@ const getInboundOrders = () => {
 
     const itemStmt = db.prepare(
         `
-        SELECT ioi.*, p.id AS p_id, p.category, p.name, p.price_cents, p.stock_quantity,
+        SELECT ioi.*, p.id AS p_id, p.category, p.name, p.barcode, p.price_cents, p.stock_quantity,
                p.selling_price_cents, p.is_use_premium, p.created_at AS product_created_at,
                p.updated_at AS product_updated_at
         FROM inbound_order_items ioi
@@ -90,6 +90,7 @@ const getInboundOrders = () => {
                     id: item.p_id,
                     category: item.category,
                     name: item.name,
+                    barcode: item.barcode,
                     price_cents: item.price_cents,
                     stock_quantity: item.stock_quantity,
                     selling_price_cents: item.selling_price_cents,

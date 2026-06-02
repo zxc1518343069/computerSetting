@@ -3,6 +3,16 @@ import { getDb } from '@/lib/db';
 import { ProductRow, serializeProduct, toCents } from '@/lib/db/serializers';
 import { NextRequest } from 'next/server';
 
+const normalizeBarcode = (value: unknown) => {
+    if (value === null || value === undefined) return null;
+
+    const barcode = String(value).trim();
+    return barcode || null;
+};
+
+const isBarcodeConflict = (e: unknown) =>
+    e instanceof Error && e.message.includes('UNIQUE constraint failed: products.barcode');
+
 export async function GET(request: NextRequest) {
     try {
         const db = getDb();
@@ -19,7 +29,7 @@ export async function GET(request: NextRequest) {
         }
 
         if (search) {
-            conditions.push('name LIKE @search');
+            conditions.push('(name LIKE @search OR barcode LIKE @search)');
             params.search = `%${search}%`;
         }
 
@@ -38,7 +48,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const db = getDb();
-        const { category, name, price, selling_price, is_use_premium } = await request.json();
+        const { category, name, barcode, price, selling_price, is_use_premium } =
+            await request.json();
 
         if (!category || !name || price === undefined) {
             return error(400, '产品类别、名称和价格不能为空');
@@ -50,18 +61,20 @@ export async function POST(request: NextRequest) {
                 INSERT INTO products (
                     category,
                     name,
+                    barcode,
                     price_cents,
                     stock_quantity,
                     selling_price_cents,
                     is_use_premium,
                     updated_at
                 )
-                VALUES (@category, @name, @price_cents, 0, @selling_price_cents, @is_use_premium, CURRENT_TIMESTAMP)
+                VALUES (@category, @name, @barcode, @price_cents, 0, @selling_price_cents, @is_use_premium, CURRENT_TIMESTAMP)
             `
             )
             .run({
                 category,
                 name,
+                barcode: normalizeBarcode(barcode),
                 price_cents: toCents(price),
                 selling_price_cents: is_use_premium ? null : toCents(selling_price),
                 is_use_premium: is_use_premium === false ? 0 : 1,
@@ -73,6 +86,9 @@ export async function POST(request: NextRequest) {
 
         return success(serializeProduct(row), '产品创建成功');
     } catch (e) {
+        if (isBarcodeConflict(e)) {
+            return error(400, '条形码已存在');
+        }
         console.error('Create product error:', e);
         return error(500, '创建产品失败');
     }

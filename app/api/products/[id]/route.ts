@@ -3,6 +3,16 @@ import { getDb } from '@/lib/db';
 import { ProductRow, serializeProduct, toCents } from '@/lib/db/serializers';
 import { NextRequest } from 'next/server';
 
+const normalizeBarcode = (value: unknown) => {
+    if (value === null || value === undefined) return null;
+
+    const barcode = String(value).trim();
+    return barcode || null;
+};
+
+const isBarcodeConflict = (e: unknown) =>
+    e instanceof Error && e.message.includes('UNIQUE constraint failed: products.barcode');
+
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         const { id: idParam } = await params;
@@ -27,7 +37,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         const { id: idParam } = await params;
         const id = parseInt(idParam);
         const db = getDb();
-        const { category, name, price, selling_price, is_use_premium } = await request.json();
+        const { category, name, barcode, price, selling_price, is_use_premium } =
+            await request.json();
 
         if (!category || !name || price === undefined) {
             return error(400, '产品类别、名称和价格不能为空');
@@ -39,6 +50,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
                 UPDATE products
                 SET category = @category,
                     name = @name,
+                    barcode = @barcode,
                     price_cents = @price_cents,
                     selling_price_cents = @selling_price_cents,
                     is_use_premium = @is_use_premium,
@@ -50,6 +62,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
                 id,
                 category,
                 name,
+                barcode: normalizeBarcode(barcode),
                 price_cents: toCents(price),
                 selling_price_cents: is_use_premium ? null : toCents(selling_price),
                 is_use_premium: is_use_premium === false ? 0 : 1,
@@ -62,6 +75,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         const row = db.prepare('SELECT * FROM products WHERE id = ?').get(id) as ProductRow;
         return success(serializeProduct(row), '产品更新成功');
     } catch (e) {
+        if (isBarcodeConflict(e)) {
+            return error(400, '条形码已存在');
+        }
         console.error('Update product error:', e);
         return error(500, '更新产品失败');
     }

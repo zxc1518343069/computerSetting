@@ -7,9 +7,20 @@ interface ImportProduct {
     name: string;
     price: number;
     category: string;
+    barcode?: string | null;
     selling_price?: number | null;
     is_use_premium?: boolean;
 }
+
+const normalizeBarcode = (value: unknown) => {
+    if (value === null || value === undefined) return null;
+
+    const barcode = String(value).trim();
+    return barcode || null;
+};
+
+const isBarcodeConflict = (e: unknown) =>
+    e instanceof Error && e.message.includes('UNIQUE constraint failed: products.barcode');
 
 export async function POST(request: NextRequest) {
     try {
@@ -22,12 +33,26 @@ export async function POST(request: NextRequest) {
 
         const validProducts: ImportProduct[] = [];
         const errors: string[] = [];
+        const seenBarcodes = new Set<string>();
 
         products.forEach((product: ImportProduct, index: number) => {
             if (!product.category || !product.name || product.price === undefined) {
                 errors.push(`第 ${index + 1} 条数据格式不正确`);
             } else {
-                validProducts.push(product);
+                const barcode = normalizeBarcode(product.barcode);
+                if (barcode && seenBarcodes.has(barcode)) {
+                    errors.push(`第 ${index + 1} 条条形码重复`);
+                    return;
+                }
+
+                if (barcode) {
+                    seenBarcodes.add(barcode);
+                }
+
+                validProducts.push({
+                    ...product,
+                    barcode,
+                });
             }
         });
 
@@ -49,11 +74,11 @@ export async function POST(request: NextRequest) {
             const insert = db.prepare(
                 `
                 INSERT INTO products (
-                    category, name, price_cents, stock_quantity, selling_price_cents,
+                    category, name, barcode, price_cents, stock_quantity, selling_price_cents,
                     is_use_premium, updated_at
                 )
                 VALUES (
-                    @category, @name, @price_cents, 0, @selling_price_cents,
+                    @category, @name, @barcode, @price_cents, 0, @selling_price_cents,
                     @is_use_premium, CURRENT_TIMESTAMP
                 )
             `
@@ -63,6 +88,7 @@ export async function POST(request: NextRequest) {
                 insert.run({
                     category: product.category,
                     name: product.name,
+                    barcode: product.barcode,
                     price_cents: toCents(product.price),
                     selling_price_cents: product.selling_price
                         ? toCents(product.selling_price)
@@ -79,6 +105,9 @@ export async function POST(request: NextRequest) {
             .all() as ProductRow[];
         return success(rows.map(serializeProduct), `成功导入 ${rows.length} 条产品数据`);
     } catch (e) {
+        if (isBarcodeConflict(e)) {
+            return error(400, '条形码已存在');
+        }
         console.error('Import products error:', e);
         return error(500, '批量导入失败');
     }

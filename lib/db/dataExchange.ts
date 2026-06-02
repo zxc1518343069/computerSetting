@@ -47,6 +47,7 @@ export const dataExchangeTables: DataExchangeTable[] = [
             'id',
             'category',
             'name',
+            'barcode',
             'price_cents',
             'stock_quantity',
             'selling_price_cents',

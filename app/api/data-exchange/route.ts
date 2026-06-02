@@ -8,6 +8,9 @@ const normalizeCellValue = (value: unknown) => {
     return value;
 };
 
+const isBarcodeConflict = (e: unknown) =>
+    e instanceof Error && e.message.includes('UNIQUE constraint failed: products.barcode');
+
 const ensureDefaultPricingConfig = (db: ReturnType<typeof getDb>) => {
     const existing = db.prepare('SELECT id FROM pricing_config ORDER BY id DESC LIMIT 1').get();
     if (existing) return;
@@ -175,6 +178,9 @@ export async function POST(request: NextRequest) {
 
         return success(null, '数据恢复成功');
     } catch (e) {
+        if (isBarcodeConflict(e)) {
+            return error(400, '产品条形码重复，请检查产品型号工作表');
+        }
         console.error('Import data exchange workbook error:', e);
         return error(500, '数据恢复失败，请检查 Excel 文件格式');
     }

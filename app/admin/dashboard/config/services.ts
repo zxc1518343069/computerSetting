@@ -36,6 +36,7 @@ export const saveProductService = (product: Partial<Product>, isEdit: boolean) =
         data: {
             category: product.category,
             name: product.name,
+            barcode: product.barcode,
             price: product.price,
             selling_price: product.selling_price,
             is_use_premium: product.is_use_premium,

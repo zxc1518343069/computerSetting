@@ -109,6 +109,8 @@ CREATE TABLE IF NOT EXISTS products
     TEXT
     NOT
     NULL,
+    barcode
+    TEXT,
     price_cents
     INTEGER
     NOT
@@ -144,6 +146,8 @@ CREATE TABLE IF NOT EXISTS products
 );
 
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode)
+    WHERE barcode IS NOT NULL AND barcode <> '';
 
 CREATE TABLE IF NOT EXISTS packages
 (

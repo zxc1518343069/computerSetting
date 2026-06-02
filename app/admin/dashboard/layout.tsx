@@ -4,6 +4,7 @@ import {
     AppstoreOutlined,
     AuditOutlined,
     CloudUploadOutlined,
+    DatabaseOutlined,
     DollarOutlined,
     DownOutlined,
     InboxOutlined,
@@ -45,6 +46,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {
             title: '仓库管理',
             items: [
+                {
+                    title: '产品型号',
+                    path: '/admin/dashboard/config',
+                    icon: <DatabaseOutlined />,
+                },
                 {
                     title: '物品列表',
                     path: '/admin/dashboard/warehouse/products',

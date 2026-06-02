@@ -82,8 +82,13 @@ export default function WarehouseProductsPage() {
         {
             title: '物品名称',
             dataIndex: ['product', 'name'],
-            render: (text) => (
-                <span className="font-bold text-gray-900 dark:text-gray-100">{text || '-'}</span>
+            render: (text, record) => (
+                <div>
+                    <div className="font-bold text-gray-900 dark:text-gray-100">{text || '-'}</div>
+                    <div className="mt-1 font-mono text-xs text-gray-400">
+                        条形码 {record.product?.barcode || '-'}
+                    </div>
+                </div>
             ),
         },
         {
@@ -179,7 +184,7 @@ export default function WarehouseProductsPage() {
                     <Input
                         allowClear
                         prefix={<SearchOutlined className="text-gray-400" />}
-                        placeholder="搜索物品、商家、序列号..."
+                        placeholder="搜索物品、条形码、商家、序列号..."
                         value={query.search}
                         onChange={(e) => setQuery((prev) => ({ ...prev, search: e.target.value }))}
                         className="max-w-md h-10 rounded-xl border-none bg-gray-100/60 dark:bg-[#141414]"

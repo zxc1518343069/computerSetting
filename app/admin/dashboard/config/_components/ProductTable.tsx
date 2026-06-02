@@ -71,6 +71,20 @@ export const ProductTable: React.FC<ProductTableProps> = ({
             ),
         },
         {
+            title: '条形码',
+            dataIndex: 'barcode',
+            key: 'barcode',
+            width: 180,
+            render: (barcode) =>
+                barcode ? (
+                    <span className="font-mono text-xs text-gray-500 dark:text-gray-400">
+                        {barcode}
+                    </span>
+                ) : (
+                    <span className="text-gray-300 dark:text-gray-600">-</span>
+                ),
+        },
+        {
             title: '参考价格',
             dataIndex: 'price',
             key: 'price',
@@ -221,7 +235,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                     position: ['bottomRight'],
                     className: '!mb-0 !mt-4',
                 }}
-                scroll={{ x: 1100 }}
+                scroll={{ x: 1280 }}
                 size="middle"
                 rowClassName="group hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors cursor-default"
                 className="custom-table"

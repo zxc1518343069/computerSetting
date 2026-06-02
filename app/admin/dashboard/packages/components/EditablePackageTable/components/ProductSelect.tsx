@@ -5,7 +5,13 @@ import React from 'react';
 interface ProductSelectProps {
     value?: number;
     onChange: (value: number) => void;
-    options: { value: number; label: string; price?: number; stock_quantity?: number }[];
+    options: {
+        value: number;
+        label: string;
+        barcode?: string | null;
+        price?: number;
+        stock_quantity?: number;
+    }[];
     placeholder?: string;
     disabled?: boolean;
     allowCustomInput?: boolean;
@@ -73,7 +79,14 @@ export const ProductSelect: React.FC<ProductSelectProps> = ({
                 label: (
                     <div className="flex items-center gap-2">
                         {renderInventoryIcon(option.stock_quantity)}
-                        <span>{option.label}</span>
+                        <div className="min-w-0">
+                            <div className="truncate">{option.label}</div>
+                            {option.barcode && (
+                                <div className="font-mono text-[11px] text-gray-400">
+                                    条形码 {option.barcode}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 ),
             }))}
@@ -82,9 +95,18 @@ export const ProductSelect: React.FC<ProductSelectProps> = ({
             showSearch
             variant="outlined"
             filterOption={(input, option) =>
-                String(optionMap.get(option?.value as number)?.label || '')
-                    .toLowerCase()
-                    .includes(input.toLowerCase())
+                (() => {
+                    const selectedOption = optionMap.get(option?.value as number);
+                    const keyword = input.toLowerCase();
+                    return (
+                        String(selectedOption?.label || '')
+                            .toLowerCase()
+                            .includes(keyword) ||
+                        String(selectedOption?.barcode || '')
+                            .toLowerCase()
+                            .includes(keyword)
+                    );
+                })()
             }
             labelRender={(props) => {
                 const option = optionMap.get(props.value as number);

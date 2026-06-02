@@ -56,8 +56,13 @@ export default function SalesProductsPage() {
         {
             title: '产品名称',
             dataIndex: 'name',
-            render: (text) => (
-                <span className="font-bold text-gray-900 dark:text-gray-100">{text}</span>
+            render: (text, record) => (
+                <div>
+                    <div className="font-bold text-gray-900 dark:text-gray-100">{text}</div>
+                    <div className="mt-1 font-mono text-xs text-gray-400">
+                        条形码 {record.barcode || '-'}
+                    </div>
+                </div>
             ),
         },
         {
@@ -178,7 +183,7 @@ export default function SalesProductsPage() {
                     <Input
                         allowClear
                         prefix={<SearchOutlined className="text-gray-400" />}
-                        placeholder="搜索产品名称..."
+                        placeholder="搜索产品名称 / 条形码..."
                         value={query.search}
                         onChange={(e) => setQuery((prev) => ({ ...prev, search: e.target.value }))}
                         className="max-w-md h-10 rounded-xl border-none bg-gray-100/60 dark:bg-[#141414]"
@@ -222,6 +227,7 @@ export default function SalesProductsPage() {
                         <Tag color="blue">
                             建议售价 {formatPrice(detailProduct?.suggested_price || 0)}
                         </Tag>
+                        <Tag>条形码 {detailProduct?.barcode || '-'}</Tag>
                     </div>
                     <Table
                         rowKey="id"

@@ -48,6 +48,7 @@ const getPackages = (search?: string | null) => {
                     id: item.product_id,
                     category: item.category,
                     name: item.name,
+                    barcode: item.barcode,
                     price_cents: item.price_cents,
                     stock_quantity: item.stock_quantity,
                     selling_price_cents: item.selling_price_cents,

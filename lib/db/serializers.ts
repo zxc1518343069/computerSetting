@@ -4,6 +4,7 @@ export interface ProductRow {
     id: number;
     category: string;
     name: string;
+    barcode?: string | null;
     price_cents: number;
     stock_quantity: number;
     selling_price_cents: number | null;
@@ -16,6 +17,7 @@ export const serializeProduct = (row: ProductRow) => ({
     id: row.id,
     category: row.category,
     name: row.name,
+    barcode: row.barcode || null,
     price: centsToYuan(row.price_cents),
     stock_quantity: row.stock_quantity,
     selling_price:

@@ -130,7 +130,7 @@ export default function ConfigPage() {
                             <div className="relative flex-1 max-w-md group">
                                 <SearchOutlined className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 group-focus-within:text-blue-500 transition-colors" />
                                 <Input
-                                    placeholder="搜索产品名称..."
+                                    placeholder="搜索产品名称 / 条形码..."
                                     allowClear
                                     value={queryParams.search}
                                     onChange={(e) => handleSearch('search', e.target.value)}

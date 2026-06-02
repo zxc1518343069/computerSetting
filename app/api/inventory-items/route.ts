@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
 
         if (search) {
             conditions.push(
-                '(p.name LIKE @search OR s.name LIKE @search OR ii.serial_number LIKE @search)'
+                '(p.name LIKE @search OR p.barcode LIKE @search OR s.name LIKE @search OR ii.serial_number LIKE @search)'
             );
             params.search = `%${search}%`;
         }

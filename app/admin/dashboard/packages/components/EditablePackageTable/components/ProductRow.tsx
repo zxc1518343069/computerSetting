@@ -59,6 +59,7 @@ export const ProductRow: React.FC<ProductRowProps> = ({
     const options = products.map((p) => ({
         value: p.id,
         label: p.name,
+        barcode: p.barcode,
         price: p.price,
         stock_quantity: p.stock_quantity,
     }));

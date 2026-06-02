@@ -98,7 +98,13 @@ export default function InboundPage() {
     const productOptions = useMemo(
         () =>
             (products as Product[]).map((product) => ({
-                label: `${categoryNameMap[product.category] || product.category} / ${product.name}`,
+                label: [
+                    categoryNameMap[product.category] || product.category,
+                    product.name,
+                    product.barcode,
+                ]
+                    .filter(Boolean)
+                    .join(' / '),
                 value: product.id,
             })),
         [products]
@@ -572,6 +578,9 @@ function InboundOrderReadonlyDetails({ order }: { order: InboundOrder }) {
                                         item.product?.category ||
                                         '-'}{' '}
                                     / 数量 {item.quantity}
+                                </div>
+                                <div className="mt-1 font-mono text-xs text-gray-400">
+                                    条形码 {item.product?.barcode || '-'}
                                 </div>
                             </div>
                             <div className="text-right text-sm">

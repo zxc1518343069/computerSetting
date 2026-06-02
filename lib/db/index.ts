@@ -22,7 +22,11 @@ const ensureColumn = (
 };
 
 const runCompatMigrations = (database: Database.Database) => {
+    ensureColumn(database, 'products', 'barcode', 'TEXT');
     ensureColumn(database, 'sales_orders', 'is_paid', 'INTEGER NOT NULL DEFAULT 0');
+    database.exec(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode) WHERE barcode IS NOT NULL AND barcode <> ''"
+    );
 };
 
 export const getDb = () => {

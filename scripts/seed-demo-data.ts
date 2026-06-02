@@ -4,6 +4,7 @@ import { toCents } from '../lib/db/serializers';
 type ProductSeed = {
     category: string;
     name: string;
+    barcode?: string | null;
     referencePrice: number;
     sellingPrice?: number;
     usePremium?: boolean;
@@ -198,23 +199,27 @@ const seedProducts = (db: ReturnType<typeof getDb>) => {
     const insert = db.prepare(
         `
         INSERT INTO products (
-            category, name, price_cents, stock_quantity, selling_price_cents, is_use_premium, updated_at
+            category, name, barcode, price_cents, stock_quantity, selling_price_cents, is_use_premium, updated_at
         )
-        VALUES (@category, @name, @price_cents, 0, @selling_price_cents, @is_use_premium, CURRENT_TIMESTAMP)
+        VALUES (@category, @name, @barcode, @price_cents, 0, @selling_price_cents, @is_use_premium, CURRENT_TIMESTAMP)
     `
     );
 
     return productSeeds.map((product, index) => {
         const manualSellingPrice = index % 9 === 0 ? product.referencePrice + 180 : null;
+        const barcode = product.name.includes('散片')
+            ? null
+            : product.barcode || `690${String(index + 1).padStart(10, '0')}`;
         const result = insert.run({
             category: product.category,
             name: product.name,
+            barcode,
             price_cents: toCents(product.referencePrice),
             selling_price_cents: manualSellingPrice === null ? null : toCents(manualSellingPrice),
             is_use_premium: index % 9 === 0 ? 0 : 1,
         });
 
-        return { ...product, id: Number(result.lastInsertRowid) };
+        return { ...product, barcode, id: Number(result.lastInsertRowid) };
     });
 };
 
