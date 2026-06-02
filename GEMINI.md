@@ -61,7 +61,7 @@ app/
 │       └── import/         # [重构完成] Excel 导入导出模块
 ├── api/                    # Next.js API Routes (后端逻辑)
 ├── const/                  # 全局常量 (如配件分类定义)
-└── lib/                    # 基础库 (Supabase 客户端, 工具函数)
+└── lib/                    # 基础库 (SQLite 数据访问, 工具函数)
 ```
 
 ## 4. 模块化重构记录
