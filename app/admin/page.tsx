@@ -1,7 +1,6 @@
 'use client';
 import { useAuth } from '@/app/_components/AuthProvider';
 import { authService } from '@/app/services';
-import { sleep } from '@/utils';
 import { App } from 'antd'; // Import App to use the hook
 import { useRouter } from 'next/navigation';
 import React, { useState } from 'react';
@@ -33,6 +32,7 @@ export default function AdminLoginPage() {
                     ? err.message
                     : (err as { message?: string })?.message || '账号或密码错误';
             setError(errorMessage);
+        } finally {
             setLoading(false);
         }
     };
