@@ -22,11 +22,7 @@ export default function AdminLoginPage() {
         setLoading(true);
 
         try {
-            // 模拟网络延迟，增加交互质感
-            await sleep(300);
-
             await authService.login({ username, password, remember });
-
             message.success('登录成功，欢迎回来！'); // Use message.success
             checkAuth(); // 更新全局登录状态
             router.push('/admin/dashboard');
