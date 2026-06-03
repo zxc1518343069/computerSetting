@@ -62,7 +62,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     icon: <ShopOutlined />,
                 },
                 {
-                    title: '物品入库',
+                    title: '进货单',
+                    path: '/admin/dashboard/warehouse/purchase-orders',
+                    icon: <AuditOutlined />,
+                },
+                {
+                    title: '入库单',
                     path: '/admin/dashboard/warehouse/inbound',
                     icon: <InboxOutlined />,
                 },

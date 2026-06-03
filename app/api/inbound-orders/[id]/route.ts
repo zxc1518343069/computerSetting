@@ -1,5 +1,4 @@
 import { getDb } from '@/lib/db';
-import { toCents } from '@/lib/db/serializers';
 import { error, success } from '@/lib/request/apiResponse';
 import { NextRequest } from 'next/server';
 
@@ -8,7 +7,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         const { id: idParam } = await params;
         const id = parseInt(idParam);
         const db = getDb();
-        const { is_paid, note, shipping_fee, misc_fee } = await request.json();
+        const { note } = await request.json();
 
         const order = db.prepare('SELECT * FROM inbound_orders WHERE id = ?').get(id) as
             | Record<string, unknown>
@@ -19,24 +18,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             .prepare(
                 `
                 UPDATE inbound_orders
-                SET is_paid = @is_paid,
-                    shipping_fee_cents = @shipping_fee_cents,
-                    misc_fee_cents = @misc_fee_cents,
-                    note = @note,
+                SET note = @note,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = @id
             `
             )
             .run({
                 id,
-                is_paid: is_paid === undefined ? order.is_paid : is_paid ? 1 : 0,
-                shipping_fee_cents:
-                    shipping_fee === undefined
-                        ? order.shipping_fee_cents
-                        : toCents(Number(shipping_fee || 0)),
-                misc_fee_cents:
-                    misc_fee === undefined ? order.misc_fee_cents : toCents(Number(misc_fee || 0)),
-                note,
+                note: note || null,
             });
 
         if (result.changes === 0) {

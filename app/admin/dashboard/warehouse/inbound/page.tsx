@@ -1,7 +1,7 @@
 'use client';
 
-import { InboundOrder, Product, Supplier } from '@/const/types';
 import { categoryNameMap } from '@/const/categories';
+import { InboundOrder, Product, PurchaseOrder, PurchaseOrderItem, Supplier } from '@/const/types';
 import { formatDate, formatPrice } from '@/utils';
 import {
     DeleteOutlined,
@@ -20,7 +20,7 @@ import {
     InputNumber,
     message,
     Modal,
-    Popconfirm,
+    Radio,
     Select,
     Switch,
     Table,
@@ -32,16 +32,22 @@ import React, { useMemo, useState } from 'react';
 import {
     fetchDashboardProducts,
     fetchInboundOrders,
+    fetchPurchaseOrders,
     fetchSuppliers,
+    receivePurchaseOrder,
     returnInboundOrder,
     saveInboundOrder,
     updateInboundOrder,
 } from '../../services';
 
+type InboundSourceType = 'purchase_order' | 'opening_stock';
+
 interface InboundFormItem {
-    product_id: number;
+    purchase_order_item_id?: number;
+    product_id?: number;
     quantity: number;
-    purchase_price: number;
+    purchase_price?: number;
+    serial_tracking_enabled?: boolean;
     serial_numbers?: string[];
     warranty_enabled?: boolean;
     warranty_until?: dayjs.Dayjs;
@@ -56,19 +62,50 @@ const inventoryStatusMap = {
     returned: { label: '已退货', color: 'red' },
 } as const;
 
+const normalizeSerialNumbers = (serialNumbers?: string[]) =>
+    (serialNumbers || []).map((serialNumber) => serialNumber?.trim()).filter(Boolean);
+
+const calculateOrderGoodsAmount = (order: InboundOrder) =>
+    (order.items || []).reduce(
+        (sum, item) => sum + Number(item.quantity || 0) * Number(item.purchase_price || 0),
+        0
+    );
+
 export default function InboundPage() {
     const [visible, setVisible] = useState(false);
     const [editVisible, setEditVisible] = useState(false);
+    const [returnVisible, setReturnVisible] = useState(false);
     const [editingOrder, setEditingOrder] = useState<InboundOrder | null>(null);
+    const [returningOrder, setReturningOrder] = useState<InboundOrder | null>(null);
     const [form] = Form.useForm();
     const [editForm] = Form.useForm();
+    const [returnForm] = Form.useForm();
 
     const { data: inboundOrders = [], loading, refresh } = useRequest(fetchInboundOrders);
     const { data: suppliers = [] } = useRequest(fetchSuppliers);
     const { data: products = [] } = useRequest(fetchDashboardProducts);
+    const { data: purchaseOrders = [] } = useRequest(() => fetchPurchaseOrders({ status: 'all' }));
+
+    const watchedSourceType = Form.useWatch('source_type', form) as InboundSourceType | undefined;
+    const watchedPurchaseOrderId = Form.useWatch('purchase_order_id', form) as number | undefined;
     const watchedItems = Form.useWatch('items', form) as InboundFormItem[] | undefined;
-    const watchedShippingFee = Form.useWatch('shipping_fee', form);
-    const watchedMiscFee = Form.useWatch('misc_fee', form);
+
+    const receivablePurchaseOrders = useMemo(
+        () =>
+            (purchaseOrders as PurchaseOrder[]).filter(
+                (order) =>
+                    order.status !== 'cancelled' && order.summary.total_remaining_quantity > 0
+            ),
+        [purchaseOrders]
+    );
+
+    const selectedPurchaseOrder = useMemo(
+        () =>
+            receivablePurchaseOrders.find(
+                (order) => Number(order.id) === Number(watchedPurchaseOrderId)
+            ),
+        [receivablePurchaseOrders, watchedPurchaseOrderId]
+    );
 
     const inboundSummary = useMemo(() => {
         const itemList = watchedItems || [];
@@ -77,18 +114,13 @@ export default function InboundPage() {
             0
         );
         const totalQuantity = itemList.reduce((sum, item) => sum + Number(item?.quantity || 0), 0);
-        const shippingFee = Number(watchedShippingFee || 0);
-        const miscFee = Number(watchedMiscFee || 0);
 
         return {
             lineCount: itemList.length,
             totalQuantity,
             goodsAmount,
-            shippingFee,
-            miscFee,
-            totalAmount: goodsAmount + shippingFee + miscFee,
         };
-    }, [watchedItems, watchedShippingFee, watchedMiscFee]);
+    }, [watchedItems]);
 
     const supplierOptions = useMemo(
         () => suppliers.map((supplier: Supplier) => ({ label: supplier.name, value: supplier.id })),
@@ -110,21 +142,66 @@ export default function InboundPage() {
         [products]
     );
 
+    const purchaseOrderOptions = useMemo(
+        () =>
+            receivablePurchaseOrders.map((order) => ({
+                label: [
+                    `JH-${order.id}`,
+                    order.supplier?.name,
+                    `未入库 ${order.summary.total_remaining_quantity} 件`,
+                    `待付 ${formatPrice(order.summary.pending_payment)}`,
+                ]
+                    .filter(Boolean)
+                    .join(' / '),
+                value: order.id,
+            })),
+        [receivablePurchaseOrders]
+    );
+
     const { runAsync: submitInboundOrder, loading: saving } = useRequest(
         async () => {
             const values = await form.validateFields();
-            const payload = {
-                ...values,
+            const sourceType = values.source_type as InboundSourceType;
+            const items = (values.items || []).map((item: InboundFormItem) => ({
+                ...item,
+                warranty_until: item.warranty_until?.toISOString() || null,
+                serial_numbers: normalizeSerialNumbers(item.serial_numbers),
+            }));
+
+            if (sourceType === 'purchase_order') {
+                if (!values.purchase_order_id) throw new Error('请选择进货单');
+                await receivePurchaseOrder(values.purchase_order_id, {
+                    inbound_at: values.inbound_at?.toISOString(),
+                    note: values.note || null,
+                    items: items.map((item: InboundFormItem) => ({
+                        purchase_order_item_id: item.purchase_order_item_id,
+                        quantity: item.quantity,
+                        serial_tracking_enabled: Boolean(item.serial_tracking_enabled),
+                        serial_numbers: item.serial_numbers,
+                        warranty_enabled: Boolean(item.warranty_enabled),
+                        warranty_until: item.warranty_until || null,
+                        note: item.note || null,
+                    })),
+                });
+                return;
+            }
+
+            await saveInboundOrder({
+                source_type: 'opening_stock',
+                supplier_id: values.supplier_id,
                 inbound_at: values.inbound_at?.toISOString(),
-                items: values.items.map((item: InboundFormItem) => ({
-                    ...item,
-                    warranty_until: item.warranty_until?.toISOString() || null,
-                    serial_numbers: (item.serial_numbers || [])
-                        .map((sn) => sn?.trim())
-                        .filter(Boolean),
+                note: values.note || null,
+                items: items.map((item: InboundFormItem) => ({
+                    product_id: item.product_id,
+                    quantity: item.quantity,
+                    purchase_price: item.purchase_price,
+                    serial_tracking_enabled: Boolean(item.serial_tracking_enabled),
+                    serial_numbers: item.serial_numbers,
+                    warranty_enabled: Boolean(item.warranty_enabled),
+                    warranty_until: item.warranty_until || null,
+                    note: item.note || null,
                 })),
-            };
-            await saveInboundOrder(payload);
+            });
         },
         {
             manual: true,
@@ -142,12 +219,12 @@ export default function InboundPage() {
         async () => {
             if (!editingOrder) return;
             const values = await editForm.validateFields();
-            await updateInboundOrder(editingOrder.id, values);
+            await updateInboundOrder(editingOrder.id, { note: values.note || null });
         },
         {
             manual: true,
             onSuccess: () => {
-                message.success('入库单已更新');
+                message.success('入库单备注已更新');
                 setEditVisible(false);
                 setEditingOrder(null);
                 refresh();
@@ -156,23 +233,33 @@ export default function InboundPage() {
         }
     );
 
-    const { runAsync: submitReturn, loading: returning } = useRequest(returnInboundOrder, {
-        manual: true,
-        onSuccess: () => {
-            message.success('采购退货已处理');
-            refresh();
+    const { runAsync: submitReturn, loading: returning } = useRequest(
+        async () => {
+            if (!returningOrder) return;
+            const values = await returnForm.validateFields();
+            await returnInboundOrder(returningOrder.id, {
+                reason: values.reason,
+            });
         },
-        onError: (e) => message.error(e.message),
-    });
+        {
+            manual: true,
+            onSuccess: () => {
+                message.success('采购退货已处理');
+                setReturnVisible(false);
+                setReturningOrder(null);
+                returnForm.resetFields();
+                refresh();
+            },
+            onError: (e) => message.error(e.message),
+        }
+    );
 
     const openCreate = () => {
         form.resetFields();
         form.setFieldsValue({
+            source_type: 'purchase_order',
             inbound_at: dayjs(),
-            shipping_fee: 0,
-            misc_fee: 0,
-            is_paid: false,
-            items: [{ quantity: 1, warranty_enabled: false }],
+            items: [],
         });
         setVisible(true);
     };
@@ -180,12 +267,45 @@ export default function InboundPage() {
     const openEdit = (order: InboundOrder) => {
         setEditingOrder(order);
         editForm.setFieldsValue({
-            is_paid: order.is_paid,
-            shipping_fee: order.shipping_fee,
-            misc_fee: order.misc_fee,
             note: order.note,
         });
         setEditVisible(true);
+    };
+
+    const openReturn = (order: InboundOrder) => {
+        setReturningOrder(order);
+        returnForm.resetFields();
+        setReturnVisible(true);
+    };
+
+    const handleSourceChange = (sourceType: InboundSourceType) => {
+        form.setFieldsValue({
+            source_type: sourceType,
+            purchase_order_id: undefined,
+            supplier_id: undefined,
+            items:
+                sourceType === 'opening_stock'
+                    ? [{ quantity: 1, serial_tracking_enabled: false, warranty_enabled: false }]
+                    : [],
+        });
+    };
+
+    const handlePurchaseOrderChange = (purchaseOrderId: number) => {
+        const order = receivablePurchaseOrders.find((item) => item.id === purchaseOrderId);
+        form.setFieldsValue({
+            supplier_id: order?.supplier_id,
+            items:
+                order?.items
+                    .filter((item) => item.remaining_quantity > 0)
+                    .map((item) => ({
+                        purchase_order_item_id: item.id,
+                        product_id: item.product_id,
+                        quantity: item.remaining_quantity,
+                        purchase_price: item.purchase_price,
+                        serial_tracking_enabled: false,
+                        warranty_enabled: false,
+                    })) || [],
+        });
     };
 
     const columns: ColumnsType<InboundOrder> = [
@@ -193,7 +313,17 @@ export default function InboundPage() {
             title: '入库单',
             dataIndex: 'id',
             width: 100,
-            render: (id) => <span className="font-mono text-gray-400">#{id}</span>,
+            render: (id) => <span className="font-mono text-gray-400">RK-{id}</span>,
+        },
+        {
+            title: '来源',
+            width: 130,
+            render: (_, record) =>
+                record.source_type === 'purchase_order' ? (
+                    <Tag color="blue">JH-{record.purchase_order_id}</Tag>
+                ) : (
+                    <Tag color="default">历史库存</Tag>
+                ),
         },
         {
             title: '商家',
@@ -220,21 +350,13 @@ export default function InboundPage() {
             ),
         },
         {
-            title: '费用',
-            width: 160,
+            title: '入库成本',
+            width: 140,
+            align: 'right',
             render: (_, record) => (
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                    <div>运费 {formatPrice(Number(record.shipping_fee || 0))}</div>
-                    <div>杂费 {formatPrice(Number(record.misc_fee || 0))}</div>
-                </div>
-            ),
-        },
-        {
-            title: '付款',
-            dataIndex: 'is_paid',
-            width: 100,
-            render: (paid) => (
-                <Tag color={paid ? 'green' : 'orange'}>{paid ? '已付款' : '未付款'}</Tag>
+                <span className="font-mono font-black text-gray-900 dark:text-gray-100">
+                    {formatPrice(calculateOrderGoodsAmount(record))}
+                </span>
             ),
         },
         {
@@ -250,20 +372,16 @@ export default function InboundPage() {
             render: (_, record) => (
                 <div className="flex items-center justify-center gap-2">
                     <Button type="link" onClick={() => openEdit(record)}>
-                        编辑
+                        详情
                     </Button>
-                    <Popconfirm
-                        title="确认采购退货？"
-                        description="仅退还该入库单中仍在库的库存件，已售出库存不会被处理。"
-                        okText="退货"
-                        cancelText="取消"
-                        okButtonProps={{ danger: true, loading: returning }}
-                        onConfirm={() => submitReturn(record.id)}
+                    <Button
+                        danger
+                        type="link"
+                        icon={<RollbackOutlined />}
+                        onClick={() => openReturn(record)}
                     >
-                        <Button danger type="link" icon={<RollbackOutlined />}>
-                            退货
-                        </Button>
-                    </Popconfirm>
+                        退货
+                    </Button>
                 </div>
             ),
         },
@@ -281,10 +399,10 @@ export default function InboundPage() {
                             </span>
                         </div>
                         <h1 className="text-3xl font-black text-gray-900 dark:text-gray-100">
-                            物品入库
+                            入库单
                         </h1>
                         <p className="text-gray-500 dark:text-gray-400 mt-2">
-                            提交入库单后生成独立库存，每件库存保留自己的成本价与序列号。
+                            确认实际到货并生成库存单件，付款与费用统一在进货单维护。
                         </p>
                     </div>
                     <div className="flex gap-3">
@@ -308,6 +426,7 @@ export default function InboundPage() {
                         columns={columns}
                         dataSource={inboundOrders}
                         pagination={{ pageSize: 10 }}
+                        scroll={{ x: 1100 }}
                     />
                 </div>
             </div>
@@ -318,16 +437,50 @@ export default function InboundPage() {
                 onCancel={() => setVisible(false)}
                 footer={null}
                 destroyOnHidden
-                width={1200}
+                width={1240}
             >
                 <Form form={form} layout="vertical" className="pt-4">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <Form.Item name="source_type" label="入库来源">
+                        <Radio.Group
+                            optionType="button"
+                            buttonStyle="solid"
+                            onChange={(event) =>
+                                handleSourceChange(event.target.value as InboundSourceType)
+                            }
+                            options={[
+                                { label: '从进货单导入', value: 'purchase_order' },
+                                { label: '历史库存', value: 'opening_stock' },
+                            ]}
+                        />
+                    </Form.Item>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {watchedSourceType === 'purchase_order' && (
+                            <Form.Item
+                                name="purchase_order_id"
+                                label="进货单"
+                                rules={[{ required: true, message: '请选择进货单' }]}
+                            >
+                                <Select
+                                    showSearch
+                                    options={purchaseOrderOptions}
+                                    optionFilterProp="label"
+                                    onChange={handlePurchaseOrderChange}
+                                    placeholder="选择有剩余未入库数量的进货单"
+                                />
+                            </Form.Item>
+                        )}
                         <Form.Item
                             name="supplier_id"
                             label="进货商家"
                             rules={[{ required: true, message: '请选择进货商家' }]}
                         >
-                            <Select showSearch options={supplierOptions} optionFilterProp="label" />
+                            <Select
+                                showSearch
+                                options={supplierOptions}
+                                optionFilterProp="label"
+                                disabled={watchedSourceType === 'purchase_order'}
+                            />
                         </Form.Item>
                         <Form.Item
                             name="inbound_at"
@@ -336,16 +489,38 @@ export default function InboundPage() {
                         >
                             <DatePicker showTime className="w-full" />
                         </Form.Item>
-                        <Form.Item name="shipping_fee" label="运费">
-                            <InputNumber min={0} precision={2} prefix="¥" className="w-full" />
-                        </Form.Item>
-                        <Form.Item name="misc_fee" label="杂费">
-                            <InputNumber min={0} precision={2} prefix="¥" className="w-full" />
-                        </Form.Item>
                     </div>
-                    <Form.Item name="is_paid" label="是否付款" valuePropName="checked">
-                        <Switch checkedChildren="已付款" unCheckedChildren="未付款" />
-                    </Form.Item>
+
+                    {selectedPurchaseOrder && (
+                        <div className="mb-4 rounded-2xl border border-blue-100 bg-blue-50/70 p-4 dark:border-blue-900/40 dark:bg-blue-900/10">
+                            <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+                                <ReadonlyCell
+                                    label="进货单"
+                                    value={`JH-${selectedPurchaseOrder.id}`}
+                                />
+                                <ReadonlyCell
+                                    label="商家"
+                                    value={selectedPurchaseOrder.supplier?.name || '-'}
+                                />
+                                <ReadonlyCell
+                                    label="剩余未入库"
+                                    value={`${selectedPurchaseOrder.summary.total_remaining_quantity} 件`}
+                                    strong
+                                />
+                                <ReadonlyCell
+                                    label="已入库"
+                                    value={`${selectedPurchaseOrder.summary.total_received_quantity} 件`}
+                                />
+                                <ReadonlyCell
+                                    label="应付款"
+                                    value={formatPrice(
+                                        selectedPurchaseOrder.summary.payable_amount
+                                    )}
+                                />
+                            </div>
+                        </div>
+                    )}
+
                     <Form.Item name="note" label="备注">
                         <Input.TextArea rows={2} />
                     </Form.Item>
@@ -357,27 +532,54 @@ export default function InboundPage() {
                                     <h3 className="font-bold text-gray-900 dark:text-gray-100">
                                         入库明细
                                     </h3>
-                                    <Button
-                                        onClick={() =>
-                                            add({ quantity: 1, warranty_enabled: false })
-                                        }
-                                        icon={<PlusOutlined />}
-                                    >
-                                        添加明细
-                                    </Button>
+                                    {watchedSourceType === 'opening_stock' && (
+                                        <Button
+                                            onClick={() =>
+                                                add({
+                                                    quantity: 1,
+                                                    serial_tracking_enabled: false,
+                                                    warranty_enabled: false,
+                                                })
+                                            }
+                                            icon={<PlusOutlined />}
+                                        >
+                                            添加明细
+                                        </Button>
+                                    )}
                                 </div>
-                                {fields.map((field, index) => (
-                                    <InboundItemForm
-                                        key={field.key}
-                                        fieldName={field.name}
-                                        displayIndex={index}
-                                        productOptions={productOptions}
-                                        products={products as Product[]}
-                                        form={form}
-                                        onRemove={() => remove(field.name)}
-                                        canRemove={fields.length > 1}
-                                    />
-                                ))}
+                                {fields.length === 0 && (
+                                    <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-8 text-center text-sm text-gray-400 dark:border-gray-800 dark:bg-black/20">
+                                        {watchedSourceType === 'purchase_order'
+                                            ? '请选择进货单后自动生成可入库明细'
+                                            : '请添加历史库存明细'}
+                                    </div>
+                                )}
+                                {fields.map((field, index) =>
+                                    watchedSourceType === 'purchase_order' ? (
+                                        <PurchaseInboundItemForm
+                                            key={field.key}
+                                            fieldName={field.name}
+                                            displayIndex={index}
+                                            form={form}
+                                            sourceItem={
+                                                selectedPurchaseOrder?.items.filter(
+                                                    (item) => item.remaining_quantity > 0
+                                                )[index]
+                                            }
+                                        />
+                                    ) : (
+                                        <OpeningStockItemForm
+                                            key={field.key}
+                                            fieldName={field.name}
+                                            displayIndex={index}
+                                            productOptions={productOptions}
+                                            products={products as Product[]}
+                                            form={form}
+                                            onRemove={() => remove(field.name)}
+                                            canRemove={fields.length > 1}
+                                        />
+                                    )
+                                )}
                             </div>
                         )}
                     </Form.List>
@@ -399,7 +601,7 @@ export default function InboundPage() {
             </Modal>
 
             <Modal
-                title="编辑入库单"
+                title="入库单详情"
                 open={editVisible}
                 onCancel={() => setEditVisible(false)}
                 onOk={submitEdit}
@@ -409,30 +611,101 @@ export default function InboundPage() {
             >
                 <Form form={editForm} layout="vertical" className="pt-4">
                     {editingOrder && <InboundOrderReadonlyDetails order={editingOrder} />}
-                    <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <Form.Item name="shipping_fee" label="运费">
-                            <InputNumber min={0} precision={2} prefix="¥" className="w-full" />
-                        </Form.Item>
-                        <Form.Item name="misc_fee" label="杂费">
-                            <InputNumber min={0} precision={2} prefix="¥" className="w-full" />
-                        </Form.Item>
-                        <Form.Item name="is_paid" label="是否付款" valuePropName="checked">
-                            <Switch checkedChildren="已付款" unCheckedChildren="未付款" />
-                        </Form.Item>
-                    </div>
-                    <Form.Item name="note" label="备注">
+                    <Form.Item name="note" label="备注" className="mt-6">
                         <Input.TextArea rows={3} />
                     </Form.Item>
                     <div className="text-xs text-gray-400">
-                        已提交入库单暂不允许修改物品明细、数量和成本价；费用、付款状态和备注可调整。
+                        已提交入库单不允许修改物品、数量、成本价和序列号；这里只能补充备注。
                     </div>
+                </Form>
+            </Modal>
+
+            <Modal
+                title={returningOrder ? `采购退货 RK-${returningOrder.id}` : '采购退货'}
+                open={returnVisible}
+                onCancel={() => setReturnVisible(false)}
+                onOk={submitReturn}
+                confirmLoading={returning}
+                okButtonProps={{ danger: true }}
+                okText="确认退货"
+                cancelText="取消"
+                destroyOnHidden
+                width={620}
+            >
+                <Form form={returnForm} layout="vertical" className="pt-4">
+                    <div className="mb-4 rounded-2xl border border-red-100 bg-red-50/70 p-4 text-sm text-red-600 dark:border-red-900/40 dark:bg-red-900/10">
+                        仅退还该入库单中仍在库的库存件，已售出或已退货库存不会被处理。
+                    </div>
+                    <Form.Item
+                        name="reason"
+                        label="退货原因"
+                        rules={[{ required: true, message: '请填写退货原因' }]}
+                    >
+                        <Input.TextArea rows={3} />
+                    </Form.Item>
                 </Form>
             </Modal>
         </div>
     );
 }
 
-function InboundItemForm({
+function PurchaseInboundItemForm({
+    fieldName,
+    displayIndex,
+    form,
+    sourceItem,
+}: {
+    fieldName: number;
+    displayIndex: number;
+    form: ReturnType<typeof Form.useForm>[0];
+    sourceItem?: PurchaseOrderItem;
+}) {
+    return (
+        <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-gray-50/70 dark:bg-black/20 p-4">
+            <InboundItemHeader
+                title={`入库明细 ${displayIndex + 1}`}
+                subtitle="商品、采购单价来自进货单，本次入库数量不能超过剩余未入库数量"
+            />
+            <Form.Item name={[fieldName, 'purchase_order_item_id']} hidden>
+                <Input />
+            </Form.Item>
+            <Form.Item name={[fieldName, 'product_id']} hidden>
+                <Input />
+            </Form.Item>
+            <Form.Item name={[fieldName, 'purchase_price']} hidden>
+                <Input />
+            </Form.Item>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <ReadonlyField
+                    label="物品"
+                    value={sourceItem?.product?.name || '未知物品'}
+                    subValue={`条形码 ${sourceItem?.product?.barcode || '-'}`}
+                />
+                <Form.Item
+                    name={[fieldName, 'quantity']}
+                    label="本次入库数量"
+                    rules={[{ required: true, message: '请输入本次入库数量' }]}
+                >
+                    <InputNumber
+                        min={1}
+                        max={sourceItem?.remaining_quantity}
+                        precision={0}
+                        className="w-full"
+                    />
+                </Form.Item>
+                <ReadonlyField
+                    label="采购单价"
+                    value={formatPrice(sourceItem?.purchase_price || 0)}
+                    subValue={`剩余 ${sourceItem?.remaining_quantity || 0} 件`}
+                />
+                <SerialTrackingSwitch fieldName={fieldName} form={form} />
+            </div>
+            <InboundItemExtraFields fieldName={fieldName} form={form} sourceType="purchase_order" />
+        </div>
+    );
+}
+
+function OpeningStockItemForm({
     fieldName,
     displayIndex,
     productOptions,
@@ -449,6 +722,10 @@ function InboundItemForm({
     onRemove: () => void;
     canRemove: boolean;
 }) {
+    const serialTrackingEnabled = Boolean(
+        Form.useWatch(['items', fieldName, 'serial_tracking_enabled'], form)
+    );
+
     const handleProductChange = (productId: number) => {
         const product = products.find((item) => item.id === productId);
         const items = form.getFieldValue('items') || [];
@@ -463,12 +740,10 @@ function InboundItemForm({
     return (
         <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-gray-50/70 dark:bg-black/20 p-4">
             <div className="mb-4 flex items-center justify-between gap-3">
-                <div>
-                    <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                        入库明细 {displayIndex + 1}
-                    </div>
-                    <div className="text-xs text-gray-400">成本价会写入每一件库存的独立成本</div>
-                </div>
+                <InboundItemHeader
+                    title={`入库明细 ${displayIndex + 1}`}
+                    subtitle="历史库存不会产生应付款，如需供应商账款请先创建进货单"
+                />
                 {canRemove && (
                     <Button
                         danger
@@ -502,7 +777,12 @@ function InboundItemForm({
                     label="数量"
                     rules={[{ required: true, message: '请输入数量' }]}
                 >
-                    <InputNumber min={1} precision={0} className="w-full" />
+                    <InputNumber
+                        min={serialTrackingEnabled ? 0 : 1}
+                        precision={0}
+                        className="w-full"
+                        disabled={serialTrackingEnabled}
+                    />
                 </Form.Item>
                 <Form.Item
                     name={[fieldName, 'purchase_price']}
@@ -511,38 +791,152 @@ function InboundItemForm({
                 >
                     <InputNumber min={0} precision={2} prefix="¥" className="w-full" />
                 </Form.Item>
-                <Form.Item
-                    name={[fieldName, 'warranty_enabled']}
-                    label="是否质保"
-                    valuePropName="checked"
-                >
-                    <Switch checkedChildren="质保" unCheckedChildren="无" />
-                </Form.Item>
+                <SerialTrackingSwitch
+                    fieldName={fieldName}
+                    form={form}
+                    sourceType="opening_stock"
+                />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Form.Item name={[fieldName, 'warranty_until']} label="质保到期">
-                    <DatePicker className="w-full" />
-                </Form.Item>
-                <Form.Item name={[fieldName, 'serial_numbers']} label="序列号">
-                    <Select
-                        mode="tags"
-                        tokenSeparators={[',', '，', '\n']}
-                        placeholder="按回车添加，可不填"
-                    />
-                </Form.Item>
-                <Form.Item name={[fieldName, 'note']} label="备注">
-                    <Input />
-                </Form.Item>
+            <InboundItemExtraFields fieldName={fieldName} form={form} sourceType="opening_stock" />
+        </div>
+    );
+}
+
+function SerialTrackingSwitch({
+    fieldName,
+    form,
+    sourceType,
+}: {
+    fieldName: number;
+    form: ReturnType<typeof Form.useForm>[0];
+    sourceType?: InboundSourceType;
+}) {
+    const handleChange = (checked: boolean) => {
+        if (sourceType !== 'opening_stock') return;
+
+        const items = form.getFieldValue('items') || [];
+        const serialNumbers = normalizeSerialNumbers(items[fieldName]?.serial_numbers);
+        items[fieldName] = {
+            ...items[fieldName],
+            serial_tracking_enabled: checked,
+            quantity: checked ? serialNumbers.length : items[fieldName]?.quantity || 1,
+        };
+        form.setFieldsValue({ items });
+    };
+
+    return (
+        <Form.Item
+            name={[fieldName, 'serial_tracking_enabled']}
+            label="序列号管理"
+            valuePropName="checked"
+        >
+            <Switch checkedChildren="启用" unCheckedChildren="关闭" onChange={handleChange} />
+        </Form.Item>
+    );
+}
+
+function InboundItemExtraFields({
+    fieldName,
+    form,
+    sourceType,
+}: {
+    fieldName: number;
+    form: ReturnType<typeof Form.useForm>[0];
+    sourceType: InboundSourceType;
+}) {
+    const handleSerialChange = (serialNumbers: string[]) => {
+        if (sourceType !== 'opening_stock') return;
+
+        const items = form.getFieldValue('items') || [];
+        if (!items[fieldName]?.serial_tracking_enabled) return;
+
+        items[fieldName] = {
+            ...items[fieldName],
+            serial_numbers: serialNumbers,
+            quantity: normalizeSerialNumbers(serialNumbers).length,
+        };
+        form.setFieldsValue({ items });
+    };
+
+    const validateSerialNumbers = () => {
+        const items = form.getFieldValue('items') || [];
+        const item = items[fieldName] || {};
+        const serialNumbers = normalizeSerialNumbers(item.serial_numbers);
+        const quantity = Number(item.quantity || 0);
+
+        if (item.serial_tracking_enabled && serialNumbers.length !== quantity) {
+            return Promise.reject(new Error('启用序列号管理时，序列号数量必须等于入库数量'));
+        }
+
+        if (!item.serial_tracking_enabled && serialNumbers.length > quantity) {
+            return Promise.reject(new Error('序列号数量不能超过入库数量'));
+        }
+
+        return Promise.resolve();
+    };
+
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Form.Item
+                name={[fieldName, 'warranty_enabled']}
+                label="是否质保"
+                valuePropName="checked"
+            >
+                <Switch checkedChildren="质保" unCheckedChildren="无" />
+            </Form.Item>
+            <Form.Item name={[fieldName, 'warranty_until']} label="质保到期">
+                <DatePicker className="w-full" />
+            </Form.Item>
+            <Form.Item
+                name={[fieldName, 'serial_numbers']}
+                label="序列号"
+                rules={[{ validator: validateSerialNumbers }]}
+            >
+                <Select
+                    mode="tags"
+                    tokenSeparators={[',', '，', '\n']}
+                    placeholder="按回车添加"
+                    onChange={handleSerialChange}
+                />
+            </Form.Item>
+            <Form.Item name={[fieldName, 'note']} label="备注">
+                <Input />
+            </Form.Item>
+        </div>
+    );
+}
+
+function InboundItemHeader({ title, subtitle }: { title: string; subtitle: string }) {
+    return (
+        <div>
+            <div className="text-sm font-bold text-gray-900 dark:text-gray-100">{title}</div>
+            <div className="text-xs text-gray-400">{subtitle}</div>
+        </div>
+    );
+}
+
+function ReadonlyField({
+    label,
+    value,
+    subValue,
+}: {
+    label: string;
+    value: string;
+    subValue?: string;
+}) {
+    return (
+        <div>
+            <div className="mb-2 text-sm text-gray-700 dark:text-gray-300">{label}</div>
+            <div className="min-h-8 rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-gray-900 dark:bg-black/20 dark:text-gray-100">
+                {value}
             </div>
+            {subValue && <div className="mt-1 text-xs text-gray-400">{subValue}</div>}
         </div>
     );
 }
 
 function InboundOrderReadonlyDetails({ order }: { order: InboundOrder }) {
-    const goodsAmount = (order.items || []).reduce(
-        (sum, item) => sum + Number(item.quantity || 0) * Number(item.purchase_price || 0),
-        0
-    );
+    const goodsAmount = calculateOrderGoodsAmount(order);
     const totalQuantity = (order.items || []).reduce(
         (sum, item) => sum + Number(item.quantity || 0),
         0
@@ -551,14 +945,20 @@ function InboundOrderReadonlyDetails({ order }: { order: InboundOrder }) {
     return (
         <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3 rounded-2xl border border-gray-100 bg-gray-50/70 p-4 dark:border-gray-800 dark:bg-black/20">
-                <ReadonlyCell label="入库单" value={`#${order.id}`} />
+                <ReadonlyCell label="入库单" value={`RK-${order.id}`} />
+                <ReadonlyCell
+                    label="来源"
+                    value={
+                        order.source_type === 'purchase_order'
+                            ? `JH-${order.purchase_order_id}`
+                            : '历史库存'
+                    }
+                />
                 <ReadonlyCell label="进货商家" value={order.supplier?.name || '-'} />
                 <ReadonlyCell label="入库时间" value={formatDate(order.inbound_at)} />
-                <ReadonlyCell label="货款小计" value={formatPrice(goodsAmount)} strong />
                 <ReadonlyCell label="明细数" value={`${order.items?.length || 0} 条`} />
                 <ReadonlyCell label="库存件数" value={`${totalQuantity} 件`} />
-                <ReadonlyCell label="当前运费" value={formatPrice(order.shipping_fee || 0)} />
-                <ReadonlyCell label="当前杂费" value={formatPrice(order.misc_fee || 0)} />
+                <ReadonlyCell label="入库成本" value={formatPrice(goodsAmount)} strong />
             </div>
 
             <div className="space-y-3">
@@ -591,6 +991,9 @@ function InboundOrderReadonlyDetails({ order }: { order: InboundOrder }) {
                             </div>
                         </div>
                         <div className="mt-3 flex flex-wrap gap-2">
+                            <Tag color={item.serial_tracking_enabled ? 'blue' : 'default'}>
+                                {item.serial_tracking_enabled ? '序列号管理' : '未启用序列号管理'}
+                            </Tag>
                             <Tag color={item.warranty_enabled ? 'green' : 'default'}>
                                 {item.warranty_enabled
                                     ? `质保至 ${item.warranty_until ? formatDate(item.warranty_until) : '-'}`
@@ -655,24 +1058,18 @@ function InboundSummary({
         lineCount: number;
         totalQuantity: number;
         goodsAmount: number;
-        shippingFee: number;
-        miscFee: number;
-        totalAmount: number;
     };
 }) {
     return (
         <div className="mt-6 rounded-2xl border border-blue-100 bg-blue-50/70 p-4 dark:border-blue-900/40 dark:bg-blue-900/10">
             <div className="mb-3 flex items-center justify-between">
                 <div className="font-bold text-gray-900 dark:text-gray-100">本次入库汇总</div>
-                <div className="text-xs text-gray-400">提交前核对数量和总金额</div>
+                <div className="text-xs text-gray-400">提交前核对数量、成本和序列号</div>
             </div>
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
                 <SummaryCell label="明细数" value={`${summary.lineCount} 条`} />
                 <SummaryCell label="入库数量" value={`${summary.totalQuantity} 件`} />
-                <SummaryCell label="货款小计" value={formatPrice(summary.goodsAmount)} />
-                <SummaryCell label="运费" value={formatPrice(summary.shippingFee)} />
-                <SummaryCell label="杂费" value={formatPrice(summary.miscFee)} />
-                <SummaryCell label="应付合计" value={formatPrice(summary.totalAmount)} strong />
+                <SummaryCell label="入库成本" value={formatPrice(summary.goodsAmount)} strong />
             </div>
         </div>
     );

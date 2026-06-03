@@ -1,33 +1,12 @@
 import { getDb } from '@/lib/db';
+import { listPurchaseOrders } from '@/lib/db/purchaseOrders';
 import { toYuan } from '@/lib/db/serializers';
 import { error, success } from '@/lib/request/apiResponse';
 
 export async function GET() {
     try {
         const db = getDb();
-        const payableRows = db
-            .prepare(
-                `
-                SELECT io.id,
-                       io.supplier_id,
-                       io.shipping_fee_cents,
-                       io.misc_fee_cents,
-                       io.inbound_at,
-                       io.note,
-                       io.created_at,
-                       s.name AS supplier_name,
-                       COUNT(ioi.id) AS line_count,
-                       COALESCE(SUM(ioi.quantity), 0) AS total_quantity,
-                       COALESCE(SUM(ioi.quantity * ioi.purchase_price_cents), 0) AS goods_amount_cents
-                FROM inbound_orders io
-                LEFT JOIN suppliers s ON s.id = io.supplier_id
-                LEFT JOIN inbound_order_items ioi ON ioi.inbound_order_id = io.id
-                WHERE io.is_paid = 0
-                GROUP BY io.id
-                ORDER BY io.inbound_at DESC, io.created_at DESC
-            `
-            )
-            .all() as Array<Record<string, unknown>>;
+        const purchaseOrders = listPurchaseOrders(db, { status: 'all' });
 
         const receivableRows = db
             .prepare(
@@ -50,26 +29,36 @@ export async function GET() {
             )
             .all() as Array<Record<string, unknown>>;
 
-        const payables = payableRows.map((row) => {
-            const goodsAmountCents = Number(row.goods_amount_cents || 0);
-            const shippingFeeCents = Number(row.shipping_fee_cents || 0);
-            const miscFeeCents = Number(row.misc_fee_cents || 0);
-
-            return {
-                id: row.id,
-                supplier_id: row.supplier_id,
-                supplier_name: row.supplier_name || '未命名商家',
-                line_count: Number(row.line_count || 0),
-                total_quantity: Number(row.total_quantity || 0),
-                goods_amount: toYuan(goodsAmountCents),
-                shipping_fee: toYuan(shippingFeeCents),
-                misc_fee: toYuan(miscFeeCents),
-                amount: toYuan(goodsAmountCents + shippingFeeCents + miscFeeCents),
-                inbound_at: row.inbound_at,
-                note: row.note,
-                created_at: row.created_at,
-            };
-        });
+        const payables = purchaseOrders
+            .filter(
+                (order) =>
+                    order.status !== 'cancelled' &&
+                    (order.summary.pending_payment > 0 || order.summary.pending_refund > 0)
+            )
+            .map((order) => ({
+                id: order.id,
+                supplier_id: order.supplier_id,
+                supplier_name: order.supplier?.name || '未命名商家',
+                line_count: order.summary.line_count,
+                total_quantity: order.summary.total_ordered_quantity,
+                received_quantity: order.summary.total_received_quantity,
+                remaining_quantity: order.summary.total_remaining_quantity,
+                goods_amount: order.summary.goods_amount,
+                return_amount: order.summary.return_amount,
+                shipping_fee: order.shipping_fee,
+                misc_fee: order.misc_fee,
+                payable_amount: order.summary.payable_amount,
+                paid_amount: order.summary.paid_amount,
+                refunded_amount: order.summary.refunded_amount,
+                net_paid: order.summary.net_paid,
+                pending_payment: order.summary.pending_payment,
+                pending_refund: order.summary.pending_refund,
+                amount: order.summary.pending_payment,
+                payment_status: order.summary.payment_status,
+                ordered_at: order.ordered_at,
+                note: order.note,
+                created_at: order.created_at,
+            }));
 
         const receivables = receivableRows.map((row) => ({
             id: row.id,
@@ -88,9 +77,11 @@ export async function GET() {
                 payables,
                 receivables,
                 summary: {
-                    payable_count: payables.length,
+                    payable_count: payables.filter((item) => item.pending_payment > 0).length,
+                    refund_count: payables.filter((item) => item.pending_refund > 0).length,
                     receivable_count: receivables.length,
-                    payable_amount: payables.reduce((sum, item) => sum + item.amount, 0),
+                    payable_amount: payables.reduce((sum, item) => sum + item.pending_payment, 0),
+                    refund_amount: payables.reduce((sum, item) => sum + item.pending_refund, 0),
                     receivable_amount: receivables.reduce((sum, item) => sum + item.amount, 0),
                 },
             },

@@ -242,6 +242,111 @@ CREATE TABLE IF NOT EXISTS suppliers
     CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS purchase_orders
+(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    supplier_id INTEGER NOT NULL REFERENCES suppliers (id),
+    status TEXT NOT NULL DEFAULT 'ordered',
+    ordered_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expected_inbound_at TEXT,
+    shipping_fee_cents INTEGER NOT NULL DEFAULT 0,
+    misc_fee_cents INTEGER NOT NULL DEFAULT 0,
+    note TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_purchase_orders_supplier_status
+    ON purchase_orders(supplier_id, status);
+CREATE INDEX IF NOT EXISTS idx_purchase_orders_ordered_at ON purchase_orders(ordered_at);
+
+CREATE TABLE IF NOT EXISTS purchase_order_items
+(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    purchase_order_id INTEGER NOT NULL REFERENCES purchase_orders (id) ON DELETE CASCADE,
+    product_id INTEGER NOT NULL REFERENCES products (id),
+    ordered_quantity INTEGER NOT NULL DEFAULT 1,
+    received_quantity INTEGER NOT NULL DEFAULT 0,
+    purchase_price_cents INTEGER NOT NULL DEFAULT 0,
+    note TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_purchase_order_items_order_id
+    ON purchase_order_items(purchase_order_id);
+CREATE INDEX IF NOT EXISTS idx_purchase_order_items_product_id
+    ON purchase_order_items(product_id);
+
+CREATE TABLE IF NOT EXISTS purchase_payments
+(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    purchase_order_id INTEGER NOT NULL REFERENCES purchase_orders (id) ON DELETE CASCADE,
+    amount_cents INTEGER NOT NULL,
+    payment_account TEXT,
+    paid_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    status TEXT NOT NULL DEFAULT 'active',
+    voided_at TEXT,
+    void_reason TEXT,
+    note TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK (amount_cents > 0)
+);
+
+CREATE INDEX IF NOT EXISTS idx_purchase_payments_order_status
+    ON purchase_payments(purchase_order_id, status);
+
+CREATE TABLE IF NOT EXISTS purchase_returns
+(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    purchase_order_id INTEGER NOT NULL REFERENCES purchase_orders (id),
+    inbound_order_id INTEGER REFERENCES inbound_orders (id),
+    type TEXT NOT NULL DEFAULT 'return',
+    reason TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'completed',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_purchase_returns_order_id
+    ON purchase_returns(purchase_order_id);
+
+CREATE TABLE IF NOT EXISTS purchase_return_items
+(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    purchase_return_id INTEGER NOT NULL REFERENCES purchase_returns (id) ON DELETE CASCADE,
+    purchase_order_item_id INTEGER REFERENCES purchase_order_items (id),
+    inbound_order_item_id INTEGER REFERENCES inbound_order_items (id),
+    inventory_item_id INTEGER REFERENCES inventory_items (id),
+    product_id INTEGER NOT NULL REFERENCES products (id),
+    purchase_price_cents INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_purchase_return_items_return_id
+    ON purchase_return_items(purchase_return_id);
+
+CREATE TABLE IF NOT EXISTS purchase_refunds
+(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    purchase_order_id INTEGER NOT NULL REFERENCES purchase_orders (id) ON DELETE CASCADE,
+    purchase_return_id INTEGER REFERENCES purchase_returns (id),
+    amount_cents INTEGER NOT NULL,
+    refund_account TEXT,
+    refunded_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    status TEXT NOT NULL DEFAULT 'active',
+    voided_at TEXT,
+    void_reason TEXT,
+    note TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK (amount_cents > 0)
+);
+
+CREATE INDEX IF NOT EXISTS idx_purchase_refunds_order_status
+    ON purchase_refunds(purchase_order_id, status);
+
 CREATE TABLE IF NOT EXISTS inbound_orders
 (
     id
@@ -261,6 +366,9 @@ CREATE TABLE IF NOT EXISTS inbound_orders
     shipping_fee_cents INTEGER NOT NULL DEFAULT 0,
     misc_fee_cents INTEGER NOT NULL DEFAULT 0,
     is_paid INTEGER NOT NULL DEFAULT 0,
+    source_type TEXT NOT NULL DEFAULT 'opening_stock',
+    purchase_order_id INTEGER REFERENCES purchase_orders (id),
+    status TEXT NOT NULL DEFAULT 'completed',
     inbound_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     note TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -289,6 +397,8 @@ CREATE TABLE IF NOT EXISTS inbound_order_items
 ),
     quantity INTEGER NOT NULL DEFAULT 1,
     purchase_price_cents INTEGER NOT NULL DEFAULT 0,
+    purchase_order_item_id INTEGER REFERENCES purchase_order_items (id),
+    serial_tracking_enabled INTEGER NOT NULL DEFAULT 0,
     warranty_enabled INTEGER NOT NULL DEFAULT 0,
     warranty_until TEXT,
     note TEXT,

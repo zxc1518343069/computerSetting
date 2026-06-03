@@ -3,12 +3,28 @@ import { createPurchaseReturnForInboundOrder, listPurchaseReturns } from '@/lib/
 import { error, success } from '@/lib/request/apiResponse';
 import { NextRequest } from 'next/server';
 
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const { id: idParam } = await params;
+        const inboundOrderId = Number(idParam);
+        const db = getDb();
+
+        const order = db.prepare('SELECT id FROM inbound_orders WHERE id = ?').get(inboundOrderId);
+        if (!order) return error(404, '入库单不存在');
+
+        return success(listPurchaseReturns(db, { inboundOrderId }), '获取入库单退货记录成功');
+    } catch (e) {
+        console.error('Get inbound order returns error:', e);
+        return error(500, '获取入库单退货记录失败');
+    }
+}
+
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         const { id: idParam } = await params;
         const inboundOrderId = Number(idParam);
         const db = getDb();
-        const { reason, inventory_item_ids } = await request.json();
+        const { reason, inventory_item_ids, type = 'return' } = await request.json();
 
         try {
             const purchaseReturnId = createPurchaseReturnForInboundOrder(db, inboundOrderId, {
@@ -16,6 +32,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                 inventoryItemIds: Array.isArray(inventory_item_ids)
                     ? inventory_item_ids.map((id) => Number(id)).filter(Boolean)
                     : undefined,
+                type: type === 'exchange' ? 'exchange' : 'return',
             });
 
             return success(
@@ -40,7 +57,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             throw e;
         }
     } catch (e) {
-        console.error('Return inbound order error:', e);
+        console.error('Create inbound order return error:', e);
         return error(500, '采购退货失败');
     }
 }
