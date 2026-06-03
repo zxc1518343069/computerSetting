@@ -7,6 +7,7 @@ export async function POST() {
     // 清除 Cookie
     cookieStore.delete('admin_session');
     cookieStore.delete('is_admin');
+    cookieStore.delete('admin_role');
 
     return success(null, '已退出登录');
 }

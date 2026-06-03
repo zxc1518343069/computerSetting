@@ -18,18 +18,32 @@ import {
     ShoppingCartOutlined,
     TagsOutlined,
     RightOutlined,
+    UserOutlined,
     WalletOutlined,
 } from '@ant-design/icons';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import ThemeToggle from '@/app/_components/ThemeToggle';
+
+function getCookie(name: string) {
+    if (typeof document === 'undefined') return undefined;
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop()?.split(';').shift();
+    return undefined;
+}
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+    const [adminRole, setAdminRole] = useState<string | undefined>();
+
+    useEffect(() => {
+        setAdminRole(getCookie('admin_role'));
+    }, []);
 
     const handleLogout = async () => {
         try {
@@ -128,6 +142,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 },
             ],
         },
+        ...(adminRole === 'admin'
+            ? [
+                  {
+                      title: '系统管理',
+                      items: [
+                          {
+                              title: '账号管理',
+                              path: '/admin/dashboard/system/accounts',
+                              icon: <UserOutlined />,
+                          },
+                      ],
+                  },
+              ]
+            : []),
     ];
 
     return (

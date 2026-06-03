@@ -244,6 +244,8 @@ export interface SalesOrder {
     status: 'pending' | 'completed' | 'cancelled';
     is_paid?: boolean;
     source?: string | null;
+    created_by_user_id?: number | null;
+    created_by_username?: string | null;
     note?: string | null;
     sold_at?: string | null;
     created_at?: string;
@@ -286,10 +288,15 @@ export interface OperatingCost {
     updated_at?: string;
 }
 
+export type AdminRole = 'admin' | 'staff';
+export type AdminUserStatus = 'active' | 'disabled';
+
 export interface AdminUser {
     id: number;
     username: string;
-    password_hash: string;
+    role: AdminRole;
+    status: AdminUserStatus;
+    last_login_at?: string | null;
     created_at?: string;
     updated_at?: string;
 }

@@ -33,9 +33,15 @@ const resetBusinessTables = (db: ReturnType<typeof getDb>) => {
         'order_inventory_items',
         'sales_order_items',
         'sales_orders',
+        'purchase_refunds',
+        'purchase_return_items',
+        'purchase_returns',
         'inventory_items',
         'inbound_order_items',
         'inbound_orders',
+        'purchase_payments',
+        'purchase_order_items',
+        'purchase_orders',
         'package_items',
         'packages',
         'operating_costs',
@@ -223,27 +229,57 @@ const seedProducts = (db: ReturnType<typeof getDb>) => {
     });
 };
 
-const seedInboundOrders = (
+const seedPurchaseOrders = (
     db: ReturnType<typeof getDb>,
     products: ProductRecord[],
     supplierIds: number[]
 ) => {
-    const orderInsert = db.prepare(
+    const purchaseOrderInsert = db.prepare(
         `
-        INSERT INTO inbound_orders (
-            supplier_id, shipping_fee_cents, misc_fee_cents, is_paid, inbound_at, note, updated_at
+        INSERT INTO purchase_orders (
+            supplier_id, status, ordered_at, expected_inbound_at,
+            shipping_fee_cents, misc_fee_cents, note, updated_at
         )
-        VALUES (@supplier_id, @shipping_fee_cents, @misc_fee_cents, @is_paid, @inbound_at, @note, CURRENT_TIMESTAMP)
+        VALUES (
+            @supplier_id, @status, @ordered_at, @expected_inbound_at,
+            @shipping_fee_cents, @misc_fee_cents, @note, CURRENT_TIMESTAMP
+        )
     `
     );
-    const itemInsert = db.prepare(
+    const purchaseItemInsert = db.prepare(
+        `
+        INSERT INTO purchase_order_items (
+            purchase_order_id, product_id, ordered_quantity, received_quantity,
+            purchase_price_cents, note, updated_at
+        )
+        VALUES (
+            @purchase_order_id, @product_id, @ordered_quantity, 0,
+            @purchase_price_cents, @note, CURRENT_TIMESTAMP
+        )
+    `
+    );
+    const inboundOrderInsert = db.prepare(
+        `
+        INSERT INTO inbound_orders (
+            supplier_id, shipping_fee_cents, misc_fee_cents, is_paid,
+            source_type, purchase_order_id, status, inbound_at, note, updated_at
+        )
+        VALUES (
+            @supplier_id, 0, 0, 0,
+            'purchase_order', @purchase_order_id, 'completed', @inbound_at, @note, CURRENT_TIMESTAMP
+        )
+    `
+    );
+    const inboundItemInsert = db.prepare(
         `
         INSERT INTO inbound_order_items (
             inbound_order_id, product_id, quantity, purchase_price_cents,
+            purchase_order_item_id, serial_tracking_enabled,
             warranty_enabled, warranty_until, note
         )
         VALUES (
             @inbound_order_id, @product_id, @quantity, @purchase_price_cents,
+            @purchase_order_item_id, @serial_tracking_enabled,
             @warranty_enabled, @warranty_until, @note
         )
     `
@@ -262,22 +298,107 @@ const seedInboundOrders = (
         )
     `
     );
+    const updateReceivedQuantity = db.prepare(
+        `
+        UPDATE purchase_order_items
+        SET received_quantity = received_quantity + @quantity,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = @id
+    `
+    );
+    const updatePurchaseOrderStatus = db.prepare(
+        `
+        UPDATE purchase_orders
+        SET status = @status, updated_at = CURRENT_TIMESTAMP
+        WHERE id = @id
+    `
+    );
+    const paymentInsert = db.prepare(
+        `
+        INSERT INTO purchase_payments (
+            purchase_order_id, amount_cents, payment_account, paid_at,
+            status, note, updated_at
+        )
+        VALUES (
+            @purchase_order_id, @amount_cents, @payment_account, @paid_at,
+            'active', @note, CURRENT_TIMESTAMP
+        )
+    `
+    );
+    const returnInsert = db.prepare(
+        `
+        INSERT INTO purchase_returns (
+            purchase_order_id, inbound_order_id, type, reason, status, updated_at
+        )
+        VALUES (
+            @purchase_order_id, @inbound_order_id, 'return', @reason, 'completed', CURRENT_TIMESTAMP
+        )
+    `
+    );
+    const returnItemInsert = db.prepare(
+        `
+        INSERT INTO purchase_return_items (
+            purchase_return_id, purchase_order_item_id, inbound_order_item_id,
+            inventory_item_id, product_id, purchase_price_cents
+        )
+        VALUES (
+            @purchase_return_id, @purchase_order_item_id, @inbound_order_item_id,
+            @inventory_item_id, @product_id, @purchase_price_cents
+        )
+    `
+    );
+    const markInventoryReturned = db.prepare(
+        "UPDATE inventory_items SET status = 'returned', updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+    );
+    const refundInsert = db.prepare(
+        `
+        INSERT INTO purchase_refunds (
+            purchase_order_id, purchase_return_id, amount_cents,
+            refund_account, refunded_at, status, note, updated_at
+        )
+        VALUES (
+            @purchase_order_id, @purchase_return_id, @amount_cents,
+            @refund_account, @refunded_at, 'active', @note, CURRENT_TIMESTAMP
+        )
+    `
+    );
 
-    const stockedProducts = products.slice(0, products.length - 8);
+    const stockedProducts = products.slice(0, products.length - 4);
     for (let orderIndex = 0; orderIndex < 18; orderIndex += 1) {
         const supplierId = pick(supplierIds, orderIndex);
-        const inboundAt = addDays(now, -42 + orderIndex * 2);
-        const isPaid = orderIndex % 4 !== 0;
-        const orderResult = orderInsert.run({
+        const orderedAt = addDays(now, -48 + orderIndex * 2);
+        const expectedInboundAt = addDays(new Date(orderedAt), 4 + (orderIndex % 5));
+        const initialStatus =
+            orderIndex % 17 === 0 ? 'draft' : orderIndex % 13 === 0 ? 'cancelled' : 'ordered';
+        const shippingFeeCents = toCents(20 + (orderIndex % 6) * 12);
+        const miscFeeCents = toCents(orderIndex % 3 === 0 ? 35 : 0);
+        const orderResult = purchaseOrderInsert.run({
             supplier_id: supplierId,
-            shipping_fee_cents: toCents(20 + (orderIndex % 6) * 12),
-            misc_fee_cents: toCents(orderIndex % 3 === 0 ? 35 : 0),
-            is_paid: isPaid ? 1 : 0,
-            inbound_at: inboundAt,
-            note: isPaid ? '演示入库单：已付款' : '演示入库单：用于账款管理待付',
+            status: initialStatus,
+            ordered_at: orderedAt,
+            expected_inbound_at: expectedInboundAt,
+            shipping_fee_cents: shippingFeeCents,
+            misc_fee_cents: miscFeeCents,
+            note:
+                initialStatus === 'cancelled'
+                    ? '演示进货单：已取消'
+                    : initialStatus === 'draft'
+                      ? '演示进货单：草稿，尚未提交'
+                      : '演示进货单：用于采购、入库和账款管理',
         });
-        const inboundOrderId = Number(orderResult.lastInsertRowid);
+        const purchaseOrderId = Number(orderResult.lastInsertRowid);
         const lineCount = 3 + (orderIndex % 4);
+        let goodsAmountCents = 0;
+        let totalOrderedQuantity = 0;
+        let totalReceivedQuantity = 0;
+        let inboundOrderId: number | null = null;
+        const createdInventory: Array<{
+            id: number;
+            productId: number;
+            purchaseOrderItemId: number;
+            inboundOrderItemId: number;
+            purchasePriceCents: number;
+        }> = [];
 
         for (let lineIndex = 0; lineIndex < lineCount; lineIndex += 1) {
             const product = pick(stockedProducts, orderIndex * 5 + lineIndex * 3);
@@ -290,32 +411,145 @@ const seedInboundOrders = (
             const warrantyUntil = warrantyEnabled
                 ? addMonths(now, 12 + ((orderIndex + lineIndex) % 3) * 12)
                 : null;
-            const itemResult = itemInsert.run({
+            const purchasePriceCents = toCents(purchasePrice);
+            const purchaseItemResult = purchaseItemInsert.run({
+                purchase_order_id: purchaseOrderId,
+                product_id: product.id,
+                ordered_quantity: quantity,
+                purchase_price_cents: purchasePriceCents,
+                note: `演示采购成本 ${purchasePrice}`,
+            });
+            const purchaseOrderItemId = Number(purchaseItemResult.lastInsertRowid);
+
+            goodsAmountCents += quantity * purchasePriceCents;
+            totalOrderedQuantity += quantity;
+
+            if (initialStatus === 'draft' || initialStatus === 'cancelled') continue;
+            if (orderIndex % 7 === 2) continue;
+
+            const receiveQuantity =
+                orderIndex % 6 === 1 ? Math.max(1, Math.floor(quantity / 2)) : quantity;
+            const inboundAt = addDays(new Date(orderedAt), 2 + (lineIndex % 3));
+            if (inboundOrderId === null) {
+                const inboundOrderResult = inboundOrderInsert.run({
+                    supplier_id: supplierId,
+                    purchase_order_id: purchaseOrderId,
+                    inbound_at: inboundAt,
+                    note: orderIndex % 6 === 1 ? '演示部分入库' : '演示进货单入库',
+                });
+                inboundOrderId = Number(inboundOrderResult.lastInsertRowid);
+            }
+
+            const serialTrackingEnabled = (orderIndex + lineIndex) % 2 === 0;
+            const itemResult = inboundItemInsert.run({
                 inbound_order_id: inboundOrderId,
                 product_id: product.id,
-                quantity,
-                purchase_price_cents: toCents(purchasePrice),
+                quantity: receiveQuantity,
+                purchase_price_cents: purchasePriceCents,
+                purchase_order_item_id: purchaseOrderItemId,
+                serial_tracking_enabled: serialTrackingEnabled ? 1 : 0,
                 warranty_enabled: warrantyEnabled ? 1 : 0,
                 warranty_until: warrantyUntil,
                 note: `演示成本 ${purchasePrice}`,
             });
             const inboundOrderItemId = Number(itemResult.lastInsertRowid);
+            totalReceivedQuantity += receiveQuantity;
+            updateReceivedQuantity.run({ id: purchaseOrderItemId, quantity: receiveQuantity });
 
-            for (let unitIndex = 0; unitIndex < quantity; unitIndex += 1) {
-                const shouldHaveSerial = (orderIndex + lineIndex + unitIndex) % 2 === 0;
-                inventoryInsert.run({
+            for (let unitIndex = 0; unitIndex < receiveQuantity; unitIndex += 1) {
+                const inventoryResult = inventoryInsert.run({
                     product_id: product.id,
                     supplier_id: supplierId,
                     inbound_order_id: inboundOrderId,
                     inbound_order_item_id: inboundOrderItemId,
-                    cost_price_cents: toCents(purchasePrice),
-                    serial_number: shouldHaveSerial
+                    cost_price_cents: purchasePriceCents,
+                    serial_number: serialTrackingEnabled
                         ? `DEMO-${String(product.id).padStart(3, '0')}-${orderIndex}-${lineIndex}-${unitIndex}`
                         : null,
                     warranty_enabled: warrantyEnabled ? 1 : 0,
                     warranty_until: warrantyUntil,
                     inbound_at: inboundAt,
                     note: '演示库存',
+                });
+                createdInventory.push({
+                    id: Number(inventoryResult.lastInsertRowid),
+                    productId: product.id,
+                    purchaseOrderItemId,
+                    inboundOrderItemId,
+                    purchasePriceCents,
+                });
+            }
+        }
+
+        let nextStatus = initialStatus;
+        if (initialStatus !== 'draft' && initialStatus !== 'cancelled') {
+            if (totalReceivedQuantity >= totalOrderedQuantity) {
+                nextStatus = 'completed';
+            } else if (totalReceivedQuantity > 0) {
+                nextStatus = 'partial_inbound';
+            } else {
+                nextStatus = 'ordered';
+            }
+            updatePurchaseOrderStatus.run({ id: purchaseOrderId, status: nextStatus });
+        }
+
+        const payableAmountCents = goodsAmountCents + shippingFeeCents + miscFeeCents;
+        let paymentAmountCents = 0;
+        if (initialStatus !== 'draft' && initialStatus !== 'cancelled') {
+            if (orderIndex % 5 === 0) {
+                paymentAmountCents = Math.floor(payableAmountCents * 0.45);
+            } else if (orderIndex % 6 === 0) {
+                paymentAmountCents = 0;
+            } else {
+                paymentAmountCents = payableAmountCents;
+            }
+        }
+
+        if (paymentAmountCents > 0) {
+            paymentInsert.run({
+                purchase_order_id: purchaseOrderId,
+                amount_cents: paymentAmountCents,
+                payment_account: orderIndex % 2 === 0 ? '企业微信' : '银行卡',
+                paid_at: addDays(new Date(orderedAt), 1),
+                note:
+                    paymentAmountCents >= payableAmountCents
+                        ? '演示付款：已结清'
+                        : '演示付款：部分付款',
+            });
+        }
+
+        if (nextStatus === 'completed' && createdInventory.length > 2 && orderIndex % 8 === 3) {
+            const returnItems = createdInventory.slice(0, 2);
+            const inboundOrderItem = db
+                .prepare('SELECT inbound_order_id FROM inbound_order_items WHERE id = ?')
+                .get(returnItems[0].inboundOrderItemId) as { inbound_order_id: number };
+            const returnResult = returnInsert.run({
+                purchase_order_id: purchaseOrderId,
+                inbound_order_id: inboundOrderItem.inbound_order_id,
+                reason: '演示采购退货：到货外观瑕疵',
+            });
+            const purchaseReturnId = Number(returnResult.lastInsertRowid);
+            const returnAmountCents = returnItems.reduce((sum, item) => {
+                returnItemInsert.run({
+                    purchase_return_id: purchaseReturnId,
+                    purchase_order_item_id: item.purchaseOrderItemId,
+                    inbound_order_item_id: item.inboundOrderItemId,
+                    inventory_item_id: item.id,
+                    product_id: item.productId,
+                    purchase_price_cents: item.purchasePriceCents,
+                });
+                markInventoryReturned.run(item.id);
+                return sum + item.purchasePriceCents;
+            }, 0);
+
+            if (orderIndex % 16 === 11) {
+                refundInsert.run({
+                    purchase_order_id: purchaseOrderId,
+                    purchase_return_id: purchaseReturnId,
+                    amount_cents: returnAmountCents,
+                    refund_account: '银行卡',
+                    refunded_at: addDays(new Date(orderedAt), 7),
+                    note: '演示退款：退货已退款',
                 });
             }
         }
@@ -560,7 +794,7 @@ const main = () => {
         seedPricingConfig(db);
         const supplierIds = seedSuppliers(db);
         const products = seedProducts(db);
-        seedInboundOrders(db, products, supplierIds);
+        seedPurchaseOrders(db, products, supplierIds);
         seedPackages(db, products);
         seedSalesOrders(db, products);
         seedOperatingCosts(db);
@@ -583,13 +817,48 @@ const main = () => {
         inboundOrders: (
             db.prepare('SELECT COUNT(*) AS count FROM inbound_orders').get() as { count: number }
         ).count,
+        purchaseOrders: (
+            db.prepare('SELECT COUNT(*) AS count FROM purchase_orders').get() as { count: number }
+        ).count,
         salesOrders: (
             db.prepare('SELECT COUNT(*) AS count FROM sales_orders').get() as { count: number }
         ).count,
         payables: (
-            db.prepare('SELECT COUNT(*) AS count FROM inbound_orders WHERE is_paid = 0').get() as {
-                count: number;
-            }
+            db
+                .prepare(
+                    `
+                    SELECT COUNT(*) AS count
+                    FROM purchase_orders po
+                    WHERE po.status != 'cancelled'
+                      AND (
+                          SELECT MAX(
+                              COALESCE((
+                                  SELECT SUM(ordered_quantity * purchase_price_cents)
+                                  FROM purchase_order_items
+                                  WHERE purchase_order_id = po.id
+                              ), 0) + po.shipping_fee_cents + po.misc_fee_cents
+                              - COALESCE((
+                                  SELECT SUM(pri.purchase_price_cents)
+                                  FROM purchase_return_items pri
+                                  JOIN purchase_returns pr ON pr.id = pri.purchase_return_id
+                                  WHERE pr.purchase_order_id = po.id AND pr.status = 'completed'
+                              ), 0)
+                              - COALESCE((
+                                  SELECT SUM(amount_cents)
+                                  FROM purchase_payments
+                                  WHERE purchase_order_id = po.id AND status = 'active'
+                              ), 0)
+                              + COALESCE((
+                                  SELECT SUM(amount_cents)
+                                  FROM purchase_refunds
+                                  WHERE purchase_order_id = po.id AND status = 'active'
+                              ), 0),
+                              0
+                          )
+                      ) > 0
+                `
+                )
+                .get() as { count: number }
         ).count,
         receivables: (
             db

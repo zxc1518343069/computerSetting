@@ -94,6 +94,21 @@ CREATE TABLE IF NOT EXISTS pricing_config
     CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS admin_users
+(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'staff' CHECK (role IN ('admin', 'staff')),
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'disabled')),
+    last_login_at TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_users_role_status
+    ON admin_users(role, status);
+
 CREATE TABLE IF NOT EXISTS products
 (
     id
@@ -507,6 +522,10 @@ CREATE TABLE IF NOT EXISTS sales_orders
     DEFAULT
     0,
     source
+    TEXT,
+    created_by_user_id
+    INTEGER,
+    created_by_username
     TEXT,
     note
     TEXT,

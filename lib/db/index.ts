@@ -1,4 +1,5 @@
 import Database from 'better-sqlite3';
+import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import path from 'path';
 
@@ -146,9 +147,65 @@ const migrateLegacyInboundOrders = (database: Database.Database) => {
     migrate();
 };
 
+const ensureAdminUsersTable = (database: Database.Database) => {
+    database.exec(`
+        CREATE TABLE IF NOT EXISTS admin_users
+        (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'staff' CHECK (role IN ('admin', 'staff')),
+            status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'disabled')),
+            last_login_at TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_admin_users_role_status
+            ON admin_users(role, status);
+    `);
+};
+
+const ensureDefaultSuperAdmin = (database: Database.Database) => {
+    const username = 'yangshuhao';
+    const existing = database
+        .prepare('SELECT id FROM admin_users WHERE username = ?')
+        .get(username) as { id: number } | undefined;
+
+    if (!existing) {
+        database
+            .prepare(
+                `
+                INSERT INTO admin_users (username, password_hash, role, status, updated_at)
+                VALUES (@username, @password_hash, 'admin', 'active', CURRENT_TIMESTAMP)
+            `
+            )
+            .run({
+                username,
+                password_hash: bcrypt.hashSync('wangman', 10),
+            });
+        return;
+    }
+
+    database
+        .prepare(
+            `
+            UPDATE admin_users
+            SET role = 'admin',
+                status = 'active',
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        `
+        )
+        .run(existing.id);
+};
+
 const runCompatMigrations = (database: Database.Database) => {
+    ensureAdminUsersTable(database);
     ensureColumn(database, 'products', 'barcode', 'TEXT');
     ensureColumn(database, 'sales_orders', 'is_paid', 'INTEGER NOT NULL DEFAULT 0');
+    ensureColumn(database, 'sales_orders', 'created_by_user_id', 'INTEGER');
+    ensureColumn(database, 'sales_orders', 'created_by_username', 'TEXT');
     const addedInboundSource = ensureColumn(
         database,
         'inbound_orders',
@@ -180,6 +237,7 @@ const runCompatMigrations = (database: Database.Database) => {
     if (addedInboundSource || addedInboundPurchaseOrder) {
         migrateLegacyInboundOrders(database);
     }
+    ensureDefaultSuperAdmin(database);
 };
 
 export const getDb = () => {

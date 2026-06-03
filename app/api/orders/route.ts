@@ -1,4 +1,5 @@
 import { getDb } from '@/lib/db';
+import { isAuthError, requireAdminUser } from '@/lib/auth/currentUser';
 import { ProductRow, serializeProduct, toCents, toYuan } from '@/lib/db/serializers';
 import { error, success } from '@/lib/request/apiResponse';
 import { NextRequest } from 'next/server';
@@ -31,6 +32,8 @@ const serializeOrderRow = (row: Record<string, unknown>) => ({
     status: row.status,
     is_paid: Boolean(row.is_paid),
     source: row.source,
+    created_by_user_id: row.created_by_user_id,
+    created_by_username: row.created_by_username,
     note: row.note,
     sold_at: row.sold_at,
     created_at: row.created_at,
@@ -106,6 +109,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
+        const currentUser = await requireAdminUser();
         const db = getDb();
         const {
             customer_name,
@@ -131,12 +135,14 @@ export async function POST(request: NextRequest) {
                     INSERT INTO sales_orders (
                         order_no, customer_name, customer_phone, original_amount_cents,
                         final_amount_cents, discount_amount_cents, cost_amount_cents,
-                        profit_amount_cents, status, is_paid, source, note, updated_at
+                        profit_amount_cents, status, is_paid, source, created_by_user_id,
+                        created_by_username, note, updated_at
                     )
                     VALUES (
                         @order_no, @customer_name, @customer_phone, @original_amount_cents,
                         @final_amount_cents, @discount_amount_cents, 0,
-                        @profit_amount_cents, 'pending', 0, @source, @note, CURRENT_TIMESTAMP
+                        @profit_amount_cents, 'pending', 0, @source, @created_by_user_id,
+                        @created_by_username, @note, CURRENT_TIMESTAMP
                     )
                 `
                 )
@@ -149,6 +155,8 @@ export async function POST(request: NextRequest) {
                     discount_amount_cents: originalCents - finalCents,
                     profit_amount_cents: finalCents,
                     source,
+                    created_by_user_id: currentUser.id,
+                    created_by_username: currentUser.username,
                     note,
                 });
 
@@ -180,6 +188,7 @@ export async function POST(request: NextRequest) {
         const order = getOrders(null, null).find((item) => item.id === orderId);
         return success(order, '订单保存成功');
     } catch (e) {
+        if (isAuthError(e)) return error(e.code, e.message);
         console.error('Create order error:', e);
         return error(500, '保存订单失败');
     }
