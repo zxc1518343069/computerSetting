@@ -47,22 +47,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             title: '仓库管理',
             items: [
                 {
-                    title: '产品型号',
+                    title: '商品信息',
                     path: '/admin/dashboard/config',
                     icon: <DatabaseOutlined />,
                 },
                 {
-                    title: '物品列表',
+                    title: '库存状况',
                     path: '/admin/dashboard/warehouse/products',
                     icon: <SettingOutlined />,
                 },
                 {
-                    title: '进货商家',
+                    title: '供货商信息',
                     path: '/admin/dashboard/warehouse/suppliers',
                     icon: <ShopOutlined />,
                 },
                 {
-                    title: '进货单',
+                    title: '进货订单',
                     path: '/admin/dashboard/warehouse/purchase-orders',
                     icon: <AuditOutlined />,
                 },
