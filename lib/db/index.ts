@@ -200,6 +200,27 @@ const ensureDefaultSuperAdmin = (database: Database.Database) => {
         .run(existing.id);
 };
 
+const ensureCustomersTable = (database: Database.Database) => {
+    database.exec(`
+        CREATE TABLE IF NOT EXISTS customers
+        (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            phone TEXT NOT NULL CHECK (phone <> ''),
+            wechat TEXT,
+            address TEXT,
+            note TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_customers_name_phone
+            ON customers(name, phone);
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_phone_unique
+            ON customers(phone);
+    `);
+};
+
 const ensureSalesOrderAdjustmentTables = (database: Database.Database) => {
     database.exec(`
         CREATE TABLE IF NOT EXISTS sales_order_adjustments
@@ -289,7 +310,9 @@ const ensureOrderInventoryAdjustmentBinding = (database: Database.Database) => {
 
 const runCompatMigrations = (database: Database.Database) => {
     ensureAdminUsersTable(database);
+    ensureCustomersTable(database);
     ensureColumn(database, 'products', 'barcode', 'TEXT');
+    ensureColumn(database, 'sales_orders', 'customer_id', 'INTEGER REFERENCES customers (id)');
     ensureColumn(database, 'sales_orders', 'is_paid', 'INTEGER NOT NULL DEFAULT 0');
     ensureColumn(database, 'sales_orders', 'created_by_user_id', 'INTEGER');
     ensureColumn(database, 'sales_orders', 'created_by_username', 'TEXT');
@@ -323,6 +346,9 @@ const runCompatMigrations = (database: Database.Database) => {
     );
     database.exec(
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode) WHERE barcode IS NOT NULL AND barcode <> ''"
+    );
+    database.exec(
+        'CREATE INDEX IF NOT EXISTS idx_sales_orders_customer_id ON sales_orders(customer_id)'
     );
     if (addedInboundSource || addedInboundPurchaseOrder) {
         migrateLegacyInboundOrders(database);

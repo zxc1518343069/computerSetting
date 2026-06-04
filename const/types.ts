@@ -66,6 +66,20 @@ export interface Supplier {
     updated_at?: string;
 }
 
+export interface Customer {
+    id: number;
+    name: string;
+    phone: string;
+    wechat?: string | null;
+    address?: string | null;
+    note?: string | null;
+    order_count?: number;
+    receivable_amount?: number;
+    latest_order_at?: string | null;
+    created_at?: string;
+    updated_at?: string;
+}
+
 export interface InventoryItem {
     id: number;
     product_id: number;
@@ -234,8 +248,10 @@ export interface PurchaseOrder {
 export interface SalesOrder {
     id: number;
     order_no: string;
+    customer_id?: number | null;
     customer_name: string;
     customer_phone?: string | null;
+    customer?: Customer | null;
     original_amount: number;
     final_amount: number;
     discount_amount: number;

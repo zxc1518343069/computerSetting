@@ -1,5 +1,11 @@
 import { getDb } from '@/lib/db';
 import { isAuthError, requireAdminUser } from '@/lib/auth/currentUser';
+import {
+    createCustomer,
+    getCustomerRowById,
+    normalizeCustomerName,
+    normalizeCustomerPhone,
+} from '@/lib/db/customers';
 import { ProductRow, serializeProduct, toCents, toYuan } from '@/lib/db/serializers';
 import { error, success } from '@/lib/request/apiResponse';
 import { NextRequest } from 'next/server';
@@ -22,6 +28,7 @@ const createOrderNo = () => {
 const serializeOrderRow = (row: Record<string, unknown>) => ({
     id: row.id,
     order_no: row.order_no,
+    customer_id: row.customer_id,
     customer_name: row.customer_name,
     customer_phone: row.customer_phone,
     original_amount: toYuan(row.original_amount_cents as number),
@@ -40,6 +47,60 @@ const serializeOrderRow = (row: Record<string, unknown>) => ({
     created_at: row.created_at,
     updated_at: row.updated_at,
 });
+
+const resolveOrderCustomer = (
+    db: ReturnType<typeof getDb>,
+    input: {
+        customer_id?: number | null;
+        customer_name?: string | null;
+        customer_phone?: string | null;
+        save_customer?: boolean;
+    }
+) => {
+    if (input.customer_id) {
+        const customer = getCustomerRowById(db, Number(input.customer_id));
+        if (!customer) throw new Error('CUSTOMER_NOT_FOUND');
+        return {
+            customerId: customer.id,
+            customerName: customer.name,
+            customerPhone: customer.phone,
+        };
+    }
+
+    const customerName = normalizeCustomerName(input.customer_name);
+    const customerPhone = normalizeCustomerPhone(input.customer_phone);
+    if (!customerName) throw new Error('CUSTOMER_NAME_REQUIRED');
+
+    if (!input.save_customer) {
+        return {
+            customerId: null,
+            customerName,
+            customerPhone: customerPhone || null,
+        };
+    }
+
+    const customerId = createCustomer(db, {
+        name: customerName,
+        phone: customerPhone,
+    });
+    const customer = getCustomerRowById(db, customerId);
+    if (!customer) throw new Error('CUSTOMER_NOT_FOUND');
+
+    return {
+        customerId: customer.id,
+        customerName: customer.name,
+        customerPhone: customer.phone,
+    };
+};
+
+const orderCustomerError = (e: unknown) => {
+    const message = e instanceof Error ? e.message : '';
+    if (message === 'CUSTOMER_NOT_FOUND') return error(400, '客户不存在');
+    if (message === 'CUSTOMER_NAME_REQUIRED') return error(400, '客户名称不能为空');
+    if (message === 'CUSTOMER_PHONE_REQUIRED') return error(400, '手机号不能为空');
+    if (message === 'CUSTOMER_PHONE_EXISTS') return error(400, '该手机号已存在，请选择已有客户');
+    return null;
+};
 
 const serializeAdjustmentRow = (row: Record<string, unknown>) => ({
     id: row.id,
@@ -200,8 +261,10 @@ export async function POST(request: NextRequest) {
         const currentUser = await requireAdminUser();
         const db = getDb();
         const {
+            customer_id,
             customer_name,
             customer_phone,
+            save_customer,
             original_amount = 0,
             final_amount,
             source = 'manual',
@@ -209,7 +272,6 @@ export async function POST(request: NextRequest) {
             items,
         } = await request.json();
 
-        if (!customer_name) return error(400, '客户名称不能为空');
         if (!Array.isArray(items) || items.length === 0) return error(400, '订单明细不能为空');
 
         const finalAmount = Number(final_amount ?? original_amount);
@@ -217,17 +279,23 @@ export async function POST(request: NextRequest) {
         const finalCents = toCents(finalAmount);
 
         const createOrder = db.transaction(() => {
+            const customer = resolveOrderCustomer(db, {
+                customer_id,
+                customer_name,
+                customer_phone,
+                save_customer,
+            });
             const orderResult = db
                 .prepare(
                     `
                     INSERT INTO sales_orders (
-                        order_no, customer_name, customer_phone, original_amount_cents,
+                        order_no, customer_id, customer_name, customer_phone, original_amount_cents,
                         final_amount_cents, discount_amount_cents, cost_amount_cents,
                         profit_amount_cents, status, is_paid, source, created_by_user_id,
                         created_by_username, note, updated_at
                     )
                     VALUES (
-                        @order_no, @customer_name, @customer_phone, @original_amount_cents,
+                        @order_no, @customer_id, @customer_name, @customer_phone, @original_amount_cents,
                         @final_amount_cents, @discount_amount_cents, 0,
                         @profit_amount_cents, 'pending', 0, @source, @created_by_user_id,
                         @created_by_username, @note, CURRENT_TIMESTAMP
@@ -236,8 +304,9 @@ export async function POST(request: NextRequest) {
                 )
                 .run({
                     order_no: createOrderNo(),
-                    customer_name,
-                    customer_phone,
+                    customer_id: customer.customerId,
+                    customer_name: customer.customerName,
+                    customer_phone: customer.customerPhone,
                     original_amount_cents: originalCents,
                     final_amount_cents: finalCents,
                     discount_amount_cents: originalCents - finalCents,
@@ -277,6 +346,8 @@ export async function POST(request: NextRequest) {
         return success(order, '订单保存成功');
     } catch (e) {
         if (isAuthError(e)) return error(e.code, e.message);
+        const knownError = orderCustomerError(e);
+        if (knownError) return knownError;
         console.error('Create order error:', e);
         return error(500, '保存订单失败');
     }

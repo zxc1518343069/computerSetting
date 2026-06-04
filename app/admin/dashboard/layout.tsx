@@ -110,6 +110,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     path: '/admin/dashboard/sales/orders',
                     icon: <ShoppingCartOutlined />,
                 },
+                {
+                    title: '客户信息',
+                    path: '/admin/dashboard/sales/customers',
+                    icon: <UserOutlined />,
+                },
             ],
         },
         {

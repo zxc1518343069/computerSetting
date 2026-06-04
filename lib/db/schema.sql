@@ -461,6 +461,23 @@ CREATE TABLE IF NOT EXISTS inventory_items
 
 CREATE INDEX IF NOT EXISTS idx_inventory_items_product_status ON inventory_items(product_id, status);
 
+CREATE TABLE IF NOT EXISTS customers
+(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    phone TEXT NOT NULL CHECK (phone <> ''),
+    wechat TEXT,
+    address TEXT,
+    note TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_customers_name_phone
+    ON customers(name, phone);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_phone_unique
+    ON customers(phone);
+
 CREATE TABLE IF NOT EXISTS sales_orders
 (
     id
@@ -479,6 +496,13 @@ CREATE TABLE IF NOT EXISTS sales_orders
     NULL,
     customer_phone
     TEXT,
+    customer_id
+    INTEGER
+    REFERENCES
+    customers
+(
+    id
+),
     original_amount_cents
     INTEGER
     NOT

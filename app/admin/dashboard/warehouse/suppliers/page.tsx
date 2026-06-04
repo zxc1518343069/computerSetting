@@ -1,7 +1,7 @@
 'use client';
 
 import { Supplier } from '@/const/types';
-import { formatDate } from '@/utils';
+import { formatDate, formatPrice } from '@/utils';
 import {
     DeleteOutlined,
     EditOutlined,
@@ -9,12 +9,14 @@ import {
     ReloadOutlined,
     SearchOutlined,
     ShopOutlined,
+    WalletOutlined,
 } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
 import { Button, Form, Input, message, Modal, Popconfirm, Table, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import React, { useState } from 'react';
-import { deleteSupplier, fetchSuppliers, saveSupplier } from '../../services';
+import Link from 'next/link';
+import React, { useMemo, useState } from 'react';
+import { deleteSupplier, fetchAccountsOverview, fetchSuppliers, saveSupplier } from '../../services';
 
 export default function SuppliersPage() {
     const [search, setSearch] = useState('');
@@ -30,6 +32,14 @@ export default function SuppliersPage() {
         refreshDeps: [search],
         debounceWait: 300,
     });
+    const { data: accounts } = useRequest(fetchAccountsOverview);
+    const supplierAccountMap = useMemo(() => {
+        const map = new Map<number, NonNullable<typeof accounts>['supplier_accounts'][number]>();
+        (accounts?.supplier_accounts || []).forEach((account) => {
+            if (account.supplier_id) map.set(account.supplier_id, account);
+        });
+        return map;
+    }, [accounts]);
 
     const { runAsync: submitSupplier, loading: saving } = useRequest(
         async () => {
@@ -93,6 +103,26 @@ export default function SuppliersPage() {
             render: (text) => text || '-',
         },
         {
+            title: '账款',
+            width: 220,
+            render: (_, record) => {
+                const account = supplierAccountMap.get(record.id);
+                if (!account) return <span className="text-gray-400">无未结账款</span>;
+
+                return (
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                        <div>未结 {account.order_count} 单</div>
+                        <div className="font-mono text-red-500">
+                            待付 {formatPrice(account.pending_payment)}
+                        </div>
+                        <div className="font-mono text-orange-500">
+                            待退 {formatPrice(account.pending_refund)}
+                        </div>
+                    </div>
+                );
+            },
+        },
+        {
             title: '创建时间',
             dataIndex: 'created_at',
             width: 180,
@@ -104,6 +134,13 @@ export default function SuppliersPage() {
             align: 'center',
             render: (_, record) => (
                 <div className="flex items-center justify-center gap-2">
+                    <Tooltip title="查看账款">
+                        <Link
+                            href={`/admin/dashboard/finance/accounts?view=summary&type=supplier&supplier_id=${record.id}`}
+                        >
+                            <Button type="text" icon={<WalletOutlined />} />
+                        </Link>
+                    </Tooltip>
                     <Tooltip title="编辑">
                         <Button
                             type="text"

@@ -14,11 +14,13 @@ import {
 import { useRequest } from 'ahooks';
 import {
     Button,
+    Checkbox,
     Form,
     Input,
     InputNumber,
     message,
     Modal,
+    Segmented,
     Select,
     Switch,
     Table,
@@ -26,8 +28,14 @@ import {
     Tooltip,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import React, { useState } from 'react';
-import { fetchInventoryItems, fetchOrders, settleOrder, updateOrder } from '../../services';
+import React, { useMemo, useState } from 'react';
+import {
+    fetchCustomers,
+    fetchInventoryItems,
+    fetchOrders,
+    settleOrder,
+    updateOrder,
+} from '../../services';
 import { ConfigAdjustmentModal } from './components/ConfigAdjustmentModal';
 
 const getSettlementItemKey = (item: OrderSettlementItem) =>
@@ -42,6 +50,8 @@ export default function OrdersPage() {
     const [inventoryOptions, setInventoryOptions] = useState<Record<string, InventoryItem[]>>({});
     const [editForm] = Form.useForm();
     const [settleForm] = Form.useForm();
+    const editCustomerSource = Form.useWatch('customer_source', editForm) || 'new';
+    const shouldSaveCustomer = Form.useWatch('save_customer', editForm);
 
     const {
         data: orders = [],
@@ -51,12 +61,31 @@ export default function OrdersPage() {
         refreshDeps: [query],
         debounceWait: 300,
     });
+    const { data: customers = [] } = useRequest(fetchCustomers);
+    const customerOptions = useMemo(
+        () =>
+            customers.map((customer) => ({
+                label: `${customer.name} / ${customer.phone}`,
+                value: customer.id,
+            })),
+        [customers]
+    );
 
     const { runAsync: submitEdit, loading: editSaving } = useRequest(
         async () => {
             if (!currentOrder) return;
             const values = await editForm.validateFields();
-            await updateOrder(currentOrder.id, values);
+            await updateOrder(currentOrder.id, {
+                customer_id:
+                    values.customer_source === 'existing' ? values.customer_id || null : null,
+                customer_name: values.customer_name,
+                customer_phone: values.customer_phone,
+                save_customer:
+                    values.customer_source === 'new' ? Boolean(values.save_customer) : false,
+                final_amount: values.final_amount,
+                is_paid: values.is_paid,
+                note: values.note,
+            });
         },
         {
             manual: true,
@@ -96,9 +125,13 @@ export default function OrdersPage() {
 
     const openEdit = (order: SalesOrder) => {
         setCurrentOrder(order);
+        editForm.resetFields();
         editForm.setFieldsValue({
+            customer_source: order.customer_id ? 'existing' : 'new',
+            customer_id: order.customer_id || undefined,
             customer_name: order.customer_name,
             customer_phone: order.customer_phone,
+            save_customer: false,
             final_amount: Number(order.final_amount),
             is_paid: Boolean(order.is_paid),
             note: order.note,
@@ -153,6 +186,11 @@ export default function OrdersPage() {
                     <div className="text-xs text-gray-400">
                         {record.customer_phone || '未留手机号'}
                     </div>
+                    {record.customer_id && (
+                        <Tag className="mt-1" color="blue">
+                            已关联客户
+                        </Tag>
+                    )}
                 </div>
             ),
         },
@@ -320,18 +358,63 @@ export default function OrdersPage() {
                 onOk={submitEdit}
                 confirmLoading={editSaving}
                 destroyOnHidden
+                width={680}
             >
                 <Form form={editForm} layout="vertical" className="pt-4">
-                    <Form.Item
-                        name="customer_name"
-                        label="客户名称"
-                        rules={[{ required: true, message: '请输入客户名称' }]}
-                    >
-                        <Input />
+                    <Form.Item name="customer_source" label="客户来源">
+                        <Segmented
+                            options={[
+                                { label: '已有客户', value: 'existing' },
+                                { label: '新客户', value: 'new' },
+                            ]}
+                        />
                     </Form.Item>
-                    <Form.Item name="customer_phone" label="手机号">
-                        <Input />
-                    </Form.Item>
+                    {editCustomerSource === 'existing' ? (
+                        <Form.Item
+                            name="customer_id"
+                            label="选择客户"
+                            rules={[{ required: true, message: '请选择客户' }]}
+                        >
+                            <Select
+                                showSearch
+                                placeholder="请选择已有客户"
+                                optionFilterProp="label"
+                                options={customerOptions}
+                                onChange={(id) => {
+                                    const customer = customers.find((item) => item.id === id);
+                                    editForm.setFieldsValue({
+                                        customer_name: customer?.name,
+                                        customer_phone: customer?.phone,
+                                    });
+                                }}
+                            />
+                        </Form.Item>
+                    ) : (
+                        <>
+                            <Form.Item
+                                name="customer_name"
+                                label="客户名称"
+                                rules={[{ required: true, message: '请输入客户名称' }]}
+                            >
+                                <Input />
+                            </Form.Item>
+                            <Form.Item
+                                name="customer_phone"
+                                label="手机号"
+                                rules={[
+                                    {
+                                        required: Boolean(shouldSaveCustomer),
+                                        message: '保存客户信息时请输入手机号',
+                                    },
+                                ]}
+                            >
+                                <Input />
+                            </Form.Item>
+                            <Form.Item name="save_customer" valuePropName="checked">
+                                <Checkbox>是否保存客户信息</Checkbox>
+                            </Form.Item>
+                        </>
+                    )}
                     <Form.Item
                         name="final_amount"
                         label="最终成交金额"

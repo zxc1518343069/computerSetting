@@ -11,13 +11,13 @@ import {
     SaveOutlined,
     ShoppingCartOutlined,
 } from '@ant-design/icons';
-import { Button, Form, Input, InputNumber, Modal } from 'antd';
+import { Button, Checkbox, Form, Input, InputNumber, Modal, Segmented, Select } from 'antd';
 import React, { useImperativeHandle, useMemo, useState } from 'react';
 import { ExportButton } from './components/ExportButton';
 import { InfoSection } from './components/InfoSection';
 import { TestConfigModal } from './components/TestConfigModal';
 import { useTableControl } from './hooks/useTableControl';
-import { saveOrder } from '@/app/admin/dashboard/services';
+import { fetchCustomers, saveOrder } from '@/app/admin/dashboard/services';
 import { useRequest } from 'ahooks';
 import { useAuth } from '@/app/_components/AuthProvider';
 
@@ -48,10 +48,13 @@ export function Content(props: ContentProps) {
     const [orderModalVisible, setOrderModalVisible] = useState(false);
     const [orderForm] = Form.useForm();
     const { isLoggedIn } = useAuth();
+    const customerSource = Form.useWatch('customer_source', orderForm) || 'new';
+    const shouldSaveCustomer = Form.useWatch('save_customer', orderForm);
 
     // 获取产品和定价数据
     const { products, pricingConfig, loading } = usePackageTableData();
     const { getItemMetrics, totalPrice } = usePackageCalculator(products, pricingConfig, tableData);
+    const { data: customers = [] } = useRequest(fetchCustomers);
 
     useImperativeHandle(
         customRef,
@@ -99,6 +102,14 @@ export function Content(props: ContentProps) {
             getItemMetrics,
         }),
         [tableData, products, totalPrice, discountedPrice, getItemMetrics]
+    );
+    const customerOptions = useMemo(
+        () =>
+            customers.map((customer) => ({
+                label: `${customer.name} / ${customer.phone}`,
+                value: customer.id,
+            })),
+        [customers]
     );
 
     // 是否有有效配置
@@ -156,8 +167,12 @@ export function Content(props: ContentProps) {
             });
 
             await saveOrder({
+                customer_id:
+                    values.customer_source === 'existing' ? values.customer_id || null : null,
                 customer_name: values.customer_name,
                 customer_phone: values.customer_phone,
+                save_customer:
+                    values.customer_source === 'new' ? Boolean(values.save_customer) : false,
                 original_amount: totalPrice,
                 final_amount: values.final_amount || totalPrice,
                 source: 'frontend_quote',
@@ -186,7 +201,12 @@ export function Content(props: ContentProps) {
             return;
         }
         const finalAmount = discountedPrice > 0 ? discountedPrice : totalPrice;
-        orderForm.setFieldsValue({ final_amount: finalAmount });
+        orderForm.resetFields();
+        orderForm.setFieldsValue({
+            customer_source: 'new',
+            save_customer: true,
+            final_amount: finalAmount,
+        });
         setOrderModalVisible(true);
     };
 
@@ -293,18 +313,63 @@ export function Content(props: ContentProps) {
                 onOk={handleSaveOrder}
                 confirmLoading={savingOrder}
                 destroyOnHidden
+                width={680}
             >
                 <Form form={orderForm} layout="vertical" className="pt-4">
-                    <Form.Item
-                        name="customer_name"
-                        label="客户名称"
-                        rules={[{ required: true, message: '请输入客户名称' }]}
-                    >
-                        <Input placeholder="请输入客户名称" />
+                    <Form.Item name="customer_source" label="客户来源">
+                        <Segmented
+                            options={[
+                                { label: '已有客户', value: 'existing' },
+                                { label: '新客户', value: 'new' },
+                            ]}
+                        />
                     </Form.Item>
-                    <Form.Item name="customer_phone" label="手机号">
-                        <Input placeholder="可选，但建议填写" />
-                    </Form.Item>
+                    {customerSource === 'existing' ? (
+                        <Form.Item
+                            name="customer_id"
+                            label="选择客户"
+                            rules={[{ required: true, message: '请选择客户' }]}
+                        >
+                            <Select
+                                showSearch
+                                placeholder="请选择已有客户"
+                                optionFilterProp="label"
+                                options={customerOptions}
+                                onChange={(id) => {
+                                    const customer = customers.find((item) => item.id === id);
+                                    orderForm.setFieldsValue({
+                                        customer_name: customer?.name,
+                                        customer_phone: customer?.phone,
+                                    });
+                                }}
+                            />
+                        </Form.Item>
+                    ) : (
+                        <>
+                            <Form.Item
+                                name="customer_name"
+                                label="客户名称"
+                                rules={[{ required: true, message: '请输入客户名称' }]}
+                            >
+                                <Input placeholder="请输入客户名称" />
+                            </Form.Item>
+                            <Form.Item
+                                name="customer_phone"
+                                label="手机号"
+                                rules={[
+                                    {
+                                        required: Boolean(shouldSaveCustomer),
+                                        message: '保存客户信息时请输入手机号',
+                                    },
+                                ]}
+                            >
+                                <Input placeholder="保存客户信息时必填" />
+                            </Form.Item>
+                            <Form.Item name="save_customer" valuePropName="checked">
+                                <Checkbox>是否保存客户信息</Checkbox>
+                            </Form.Item>
+                        </>
+                    )}
                     <Form.Item
                         name="final_amount"
                         label="最终成交金额"

@@ -9,10 +9,46 @@ import {
     PurchaseReturn,
     SalesOrder,
     Supplier,
+    Customer,
 } from '@/const/types';
 
 export const fetchSuppliers = (params?: { search?: string }) => {
     return api.get<any, Supplier[]>('/suppliers', { params });
+};
+
+export interface CustomerOrderSummary {
+    id: number;
+    order_no: string;
+    customer_name: string;
+    customer_phone?: string | null;
+    final_amount: number;
+    cost_amount: number;
+    profit_amount: number;
+    status: SalesOrder['status'];
+    is_paid: boolean;
+    line_count: number;
+    total_quantity: number;
+    created_at?: string;
+    sold_at?: string | null;
+}
+
+export const fetchCustomers = (params?: { search?: string }) => {
+    return api.get<any, Customer[]>('/customers', { params });
+};
+
+export const saveCustomer = (data: Partial<Customer>, id?: number) => {
+    if (id) {
+        return api.put<any, Customer>(`/customers/${id}`, data);
+    }
+    return api.post<any, Customer>('/customers', data);
+};
+
+export const deleteCustomer = (id: number) => {
+    return api.delete<any, void>(`/customers/${id}`);
+};
+
+export const fetchCustomerOrders = (id: number) => {
+    return api.get<any, CustomerOrderSummary[]>(`/customers/${id}/orders`);
 };
 
 export const fetchDashboardProducts = (params?: { search?: string; category?: string }) => {
@@ -134,42 +170,77 @@ export const fetchOrders = (params?: { search?: string; status?: string }) => {
     return api.get<any, SalesOrder[]>('/orders', { params });
 };
 
+export interface AccountPayableDetail {
+    id: number;
+    supplier_id?: number;
+    supplier_name: string;
+    contact_name?: string | null;
+    phone?: string | null;
+    line_count: number;
+    total_quantity: number;
+    received_quantity: number;
+    remaining_quantity: number;
+    goods_amount: number;
+    return_amount: number;
+    shipping_fee: number;
+    misc_fee: number;
+    payable_amount: number;
+    paid_amount: number;
+    refunded_amount: number;
+    net_paid: number;
+    pending_payment: number;
+    pending_refund: number;
+    amount: number;
+    payment_status: string;
+    ordered_at?: string;
+    note?: string | null;
+    created_at?: string;
+}
+
+export interface AccountReceivableDetail {
+    id: number;
+    customer_id?: number | null;
+    customer_key: string;
+    order_no: string;
+    customer_name: string;
+    customer_phone?: string | null;
+    line_count: number;
+    total_quantity: number;
+    amount: number;
+    status: SalesOrder['status'];
+    created_at?: string;
+}
+
 export interface AccountsOverview {
-    payables: Array<{
-        id: number;
+    supplier_accounts: Array<{
         supplier_id?: number;
         supplier_name: string;
+        contact_name?: string | null;
+        phone?: string | null;
+        order_count: number;
         line_count: number;
-        total_quantity: number;
-        received_quantity: number;
-        remaining_quantity: number;
-        goods_amount: number;
-        return_amount: number;
-        shipping_fee: number;
-        misc_fee: number;
         payable_amount: number;
         paid_amount: number;
         refunded_amount: number;
-        net_paid: number;
         pending_payment: number;
         pending_refund: number;
-        amount: number;
-        payment_status: string;
-        ordered_at?: string;
-        note?: string | null;
-        created_at?: string;
+        latest_ordered_at?: string;
+        orders: AccountPayableDetail[];
     }>;
-    receivables: Array<{
-        id: number;
-        order_no: string;
+    customer_accounts: Array<{
+        customer_key: string;
+        customer_id?: number | null;
         customer_name: string;
         customer_phone?: string | null;
+        order_count: number;
         line_count: number;
         total_quantity: number;
-        amount: number;
-        status: SalesOrder['status'];
-        created_at?: string;
+        receivable_amount: number;
+        latest_order_at?: string;
+        orders: AccountReceivableDetail[];
     }>;
+    payables: AccountPayableDetail[];
+    receivables: AccountReceivableDetail[];
     summary: {
         payable_count: number;
         refund_count: number;
@@ -192,7 +263,10 @@ export const saveOrder = (data: any) => {
     return api.post<any, SalesOrder>('/orders', data);
 };
 
-export const updateOrder = (id: number, data: Partial<SalesOrder>) => {
+export const updateOrder = (
+    id: number,
+    data: Partial<SalesOrder> & { save_customer?: boolean }
+) => {
     return api.put<any, SalesOrder>(`/orders/${id}`, data);
 };
 

@@ -5,6 +5,7 @@ import {
     CheckCircleOutlined,
     ReloadOutlined,
     ShoppingCartOutlined,
+    UnorderedListOutlined,
     WalletOutlined,
 } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
@@ -17,6 +18,7 @@ import {
     message,
     Modal,
     Popconfirm,
+    Segmented,
     Table,
     Tabs,
     Tag,
@@ -25,7 +27,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import Link from 'next/link';
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     AccountsOverview,
     createPurchasePayment,
@@ -36,18 +38,56 @@ import {
 
 type Payable = AccountsOverview['payables'][number];
 type Receivable = AccountsOverview['receivables'][number];
+type SupplierAccount = AccountsOverview['supplier_accounts'][number];
+type CustomerAccount = AccountsOverview['customer_accounts'][number];
 
 export default function AccountsPage() {
+    const [view, setView] = useState<'summary' | 'detail'>('summary');
+    const [summaryType, setSummaryType] = useState<'supplier' | 'customer'>('supplier');
+    const [detailType, setDetailType] = useState<'payables' | 'receivables'>('payables');
+    const [supplierFilter, setSupplierFilter] = useState<number | null>(null);
+    const [customerFilter, setCustomerFilter] = useState<number | null>(null);
+    const [customerKeyFilter, setCustomerKeyFilter] = useState<string | null>(null);
     const [paymentTarget, setPaymentTarget] = useState<Payable | null>(null);
     const [refundTarget, setRefundTarget] = useState<Payable | null>(null);
     const [paymentForm] = Form.useForm();
     const [refundForm] = Form.useForm();
 
     const {
-        data = { payables: [], receivables: [], summary: emptySummary },
+        data = {
+            supplier_accounts: [],
+            customer_accounts: [],
+            payables: [],
+            receivables: [],
+            summary: emptySummary,
+        },
         loading,
         refresh,
     } = useRequest(fetchAccountsOverview);
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const nextView = params.get('view');
+        const nextType = params.get('type');
+        const supplierId = Number(params.get('supplier_id') || 0);
+        const customerId = Number(params.get('customer_id') || 0);
+
+        if (nextView === 'detail') setView('detail');
+        if (nextView === 'summary') setView('summary');
+        if (nextType === 'customer') {
+            setSummaryType('customer');
+            setDetailType('receivables');
+        }
+        if (nextType === 'supplier') {
+            setSummaryType('supplier');
+            setDetailType('payables');
+        }
+        if (supplierId) setSupplierFilter(supplierId);
+        if (customerId) {
+            setCustomerFilter(customerId);
+            setCustomerKeyFilter(null);
+        }
+    }, []);
 
     const { runAsync: markPaid, loading: marking } = useRequest(updateAccountPayment, {
         manual: true,
@@ -121,6 +161,192 @@ export default function AccountsPage() {
             refunded_at: dayjs(),
         });
     };
+
+    const filteredSupplierAccounts = useMemo(
+        () =>
+            supplierFilter
+                ? data.supplier_accounts.filter((item) => item.supplier_id === supplierFilter)
+                : data.supplier_accounts,
+        [data.supplier_accounts, supplierFilter]
+    );
+
+    const filteredCustomerAccounts = useMemo(
+        () =>
+            customerFilter
+                ? data.customer_accounts.filter((item) => item.customer_id === customerFilter)
+                : customerKeyFilter
+                  ? data.customer_accounts.filter((item) => item.customer_key === customerKeyFilter)
+                : data.customer_accounts,
+        [customerFilter, customerKeyFilter, data.customer_accounts]
+    );
+
+    const filteredPayables = useMemo(
+        () =>
+            supplierFilter
+                ? data.payables.filter((item) => item.supplier_id === supplierFilter)
+                : data.payables,
+        [data.payables, supplierFilter]
+    );
+
+    const filteredReceivables = useMemo(
+        () =>
+            customerFilter
+                ? data.receivables.filter((item) => item.customer_id === customerFilter)
+                : customerKeyFilter
+                  ? data.receivables.filter((item) => item.customer_key === customerKeyFilter)
+                : data.receivables,
+        [customerFilter, customerKeyFilter, data.receivables]
+    );
+
+    const supplierAccountColumns: ColumnsType<SupplierAccount> = [
+        {
+            title: '商家',
+            render: (_, record) => (
+                <div>
+                    <div className="font-bold text-gray-900 dark:text-gray-100">
+                        {record.supplier_name}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                        {[record.contact_name, record.phone].filter(Boolean).join(' / ') || '-'}
+                    </div>
+                </div>
+            ),
+        },
+        {
+            title: '未结进货单',
+            dataIndex: 'order_count',
+            width: 130,
+            render: (count) => `${count || 0} 单`,
+        },
+        {
+            title: '应付/已付',
+            width: 220,
+            render: (_, record) => (
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                    <div>应付 {formatPrice(record.payable_amount)}</div>
+                    <div>已付 {formatPrice(record.paid_amount)}</div>
+                    <div>已退款 {formatPrice(record.refunded_amount)}</div>
+                </div>
+            ),
+        },
+        {
+            title: '待处理金额',
+            width: 180,
+            align: 'right',
+            render: (_, record) => (
+                <div className="space-y-1 font-mono font-black">
+                    {record.pending_payment > 0 && (
+                        <div className="text-red-500">付 {formatPrice(record.pending_payment)}</div>
+                    )}
+                    {record.pending_refund > 0 && (
+                        <div className="text-orange-500">
+                            退 {formatPrice(record.pending_refund)}
+                        </div>
+                    )}
+                </div>
+            ),
+        },
+        {
+            title: '最近下单',
+            dataIndex: 'latest_ordered_at',
+            width: 180,
+            render: (text) => formatDate(text),
+        },
+        {
+            title: '操作',
+            width: 200,
+            align: 'center',
+            render: (_, record) => (
+                <div className="flex items-center justify-center gap-2">
+                    <Button
+                        type="link"
+                        onClick={() => {
+                            setSupplierFilter(record.supplier_id || null);
+                            setView('detail');
+                            setDetailType('payables');
+                        }}
+                    >
+                        查看明细
+                    </Button>
+                    <Link href="/admin/dashboard/warehouse/purchase-orders">进货单</Link>
+                </div>
+            ),
+        },
+    ];
+
+    const customerAccountColumns: ColumnsType<CustomerAccount> = [
+        {
+            title: '客户',
+            render: (_, record) => (
+                <div>
+                    <div className="font-bold text-gray-900 dark:text-gray-100">
+                        {record.customer_name}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                        {record.customer_phone || '未留手机号'}
+                    </div>
+                    {!record.customer_id && (
+                        <Tag className="mt-1" color="default">
+                            未关联客户档案
+                        </Tag>
+                    )}
+                </div>
+            ),
+        },
+        {
+            title: '未收订单',
+            dataIndex: 'order_count',
+            width: 120,
+            render: (count) => `${count || 0} 单`,
+        },
+        {
+            title: '明细',
+            width: 150,
+            render: (_, record) => `${record.line_count} 条 / ${record.total_quantity} 件`,
+        },
+        {
+            title: '待收金额',
+            dataIndex: 'receivable_amount',
+            width: 150,
+            align: 'right',
+            render: (amount) => (
+                <span className="font-mono font-black text-blue-600 dark:text-blue-400">
+                    {formatPrice(Number(amount || 0))}
+                </span>
+            ),
+        },
+        {
+            title: '最近订单',
+            dataIndex: 'latest_order_at',
+            width: 180,
+            render: (text) => formatDate(text),
+        },
+        {
+            title: '操作',
+            width: 210,
+            align: 'center',
+            render: (_, record) => (
+                <div className="flex items-center justify-center gap-2">
+                    <Button
+                        type="link"
+                        onClick={() => {
+                            setCustomerFilter(record.customer_id || null);
+                            setCustomerKeyFilter(record.customer_id ? null : record.customer_key);
+                            setView('detail');
+                            setDetailType('receivables');
+                        }}
+                    >
+                        查看明细
+                    </Button>
+                    {record.customer_id ? (
+                        <Link href="/admin/dashboard/sales/customers">客户信息</Link>
+                    ) : (
+                        <span className="text-xs text-gray-400">未建档</span>
+                    )}
+                </div>
+            ),
+        },
+    ];
 
     const payableColumns: ColumnsType<Payable> = [
         {
@@ -331,38 +557,142 @@ export default function AccountsPage() {
                 </div>
 
                 <div className="bg-white dark:bg-[#1f1f1f] rounded-2xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm">
-                    <Tabs
-                        items={[
-                            {
-                                key: 'payables',
-                                label: `待付 ${data.summary.payable_count}`,
-                                children: (
-                                    <Table
-                                        rowKey="id"
-                                        loading={loading}
-                                        columns={payableColumns}
-                                        dataSource={data.payables}
-                                        pagination={{ pageSize: 10 }}
-                                        scroll={{ x: 1100 }}
-                                    />
-                                ),
-                            },
-                            {
-                                key: 'receivables',
-                                label: `待收 ${data.summary.receivable_count}`,
-                                children: (
-                                    <Table
-                                        rowKey="id"
-                                        loading={loading}
-                                        columns={receivableColumns}
-                                        dataSource={data.receivables}
-                                        pagination={{ pageSize: 10 }}
-                                        scroll={{ x: 1100 }}
-                                    />
-                                ),
-                            },
-                        ]}
-                    />
+                    <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <Segmented
+                            value={view}
+                            onChange={(value) => setView(value as 'summary' | 'detail')}
+                            options={[
+                                {
+                                    label: (
+                                        <span className="inline-flex items-center gap-2">
+                                            <WalletOutlined />
+                                            汇总视图
+                                        </span>
+                                    ),
+                                    value: 'summary',
+                                },
+                                {
+                                    label: (
+                                        <span className="inline-flex items-center gap-2">
+                                            <UnorderedListOutlined />
+                                            分笔明细
+                                        </span>
+                                    ),
+                                    value: 'detail',
+                                },
+                            ]}
+                        />
+                        {(supplierFilter || customerFilter || customerKeyFilter) && (
+                            <Button
+                                size="small"
+                                onClick={() => {
+                                    setSupplierFilter(null);
+                                    setCustomerFilter(null);
+                                    setCustomerKeyFilter(null);
+                                }}
+                            >
+                                清除筛选
+                            </Button>
+                        )}
+                    </div>
+
+                    {view === 'summary' ? (
+                        <Tabs
+                            activeKey={summaryType}
+                            onChange={(key) => setSummaryType(key as 'supplier' | 'customer')}
+                            items={[
+                                {
+                                    key: 'supplier',
+                                    label: `应付商家 ${filteredSupplierAccounts.length}`,
+                                    children: (
+                                        <Table
+                                            rowKey={(record) =>
+                                                String(record.supplier_id || record.supplier_name)
+                                            }
+                                            loading={loading}
+                                            columns={supplierAccountColumns}
+                                            dataSource={filteredSupplierAccounts}
+                                            pagination={{ pageSize: 10 }}
+                                            scroll={{ x: 1100 }}
+                                            expandable={{
+                                                expandedRowRender: (record) => (
+                                                    <Table
+                                                        rowKey="id"
+                                                        columns={payableColumns}
+                                                        dataSource={record.orders}
+                                                        pagination={false}
+                                                        size="small"
+                                                        scroll={{ x: 1100 }}
+                                                    />
+                                                ),
+                                            }}
+                                        />
+                                    ),
+                                },
+                                {
+                                    key: 'customer',
+                                    label: `应收客户 ${filteredCustomerAccounts.length}`,
+                                    children: (
+                                        <Table
+                                            rowKey="customer_key"
+                                            loading={loading}
+                                            columns={customerAccountColumns}
+                                            dataSource={filteredCustomerAccounts}
+                                            pagination={{ pageSize: 10 }}
+                                            scroll={{ x: 1100 }}
+                                            expandable={{
+                                                expandedRowRender: (record) => (
+                                                    <Table
+                                                        rowKey="id"
+                                                        columns={receivableColumns}
+                                                        dataSource={record.orders}
+                                                        pagination={false}
+                                                        size="small"
+                                                        scroll={{ x: 1100 }}
+                                                    />
+                                                ),
+                                            }}
+                                        />
+                                    ),
+                                },
+                            ]}
+                        />
+                    ) : (
+                        <Tabs
+                            activeKey={detailType}
+                            onChange={(key) => setDetailType(key as 'payables' | 'receivables')}
+                            items={[
+                                {
+                                    key: 'payables',
+                                    label: `进货应付/退款 ${filteredPayables.length}`,
+                                    children: (
+                                        <Table
+                                            rowKey="id"
+                                            loading={loading}
+                                            columns={payableColumns}
+                                            dataSource={filteredPayables}
+                                            pagination={{ pageSize: 10 }}
+                                            scroll={{ x: 1100 }}
+                                        />
+                                    ),
+                                },
+                                {
+                                    key: 'receivables',
+                                    label: `销售待收 ${filteredReceivables.length}`,
+                                    children: (
+                                        <Table
+                                            rowKey="id"
+                                            loading={loading}
+                                            columns={receivableColumns}
+                                            dataSource={filteredReceivables}
+                                            pagination={{ pageSize: 10 }}
+                                            scroll={{ x: 1100 }}
+                                        />
+                                    ),
+                                },
+                            ]}
+                        />
+                    )}
                 </div>
             </div>
 
