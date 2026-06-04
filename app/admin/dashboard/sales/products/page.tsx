@@ -1,6 +1,6 @@
 'use client';
 
-import { CATEGORY_CONFIG, categoryOptions } from '@/const/categories';
+import { getCategoryTagClass, useProductCategories } from '@/app/hooks/useProductCategories';
 import { formatDate, formatPrice } from '@/utils';
 import {
     InfoCircleOutlined,
@@ -15,8 +15,14 @@ import React, { useMemo, useState } from 'react';
 import { fetchSalesProducts, SalesProduct } from '../../services';
 
 export default function SalesProductsPage() {
-    const [query, setQuery] = useState({ search: '', category: undefined as string | undefined });
+    const [query, setQuery] = useState({
+        search: '',
+        category_id: undefined as number | undefined,
+    });
     const [detailProduct, setDetailProduct] = useState<SalesProduct | null>(null);
+    const { activeCategories, categoryMap, categoryCodeMap } = useProductCategories({
+        includeInactive: true,
+    });
 
     const {
         data: products = [],
@@ -38,15 +44,20 @@ export default function SalesProductsPage() {
 
     const columns: ColumnsType<SalesProduct> = [
         {
-            title: '硬件类型',
+            title: '商品类目',
             dataIndex: 'category',
             width: 150,
-            render: (category) => {
-                const config = CATEGORY_CONFIG[category];
+            render: (category, record) => {
+                const config =
+                    (record.category_id ? categoryMap[record.category_id] : undefined) ||
+                    categoryCodeMap[category];
                 return (
-                    <div className="flex items-center gap-2">
-                        <span>{config?.icon || '📦'}</span>
-                        <span className="font-medium text-gray-700 dark:text-gray-300">
+                    <div className="flex items-center">
+                        <span
+                            className={`inline-flex rounded border px-2.5 py-1 text-xs font-bold ${getCategoryTagClass(
+                                config?.tag_color
+                            )}`}
+                        >
                             {config?.name || category}
                         </span>
                     </div>
@@ -190,11 +201,14 @@ export default function SalesProductsPage() {
                     />
                     <Select
                         allowClear
-                        placeholder="硬件类型"
-                        value={query.category}
-                        onChange={(category) => setQuery((prev) => ({ ...prev, category }))}
+                        placeholder="商品类目"
+                        value={query.category_id}
+                        onChange={(category_id) => setQuery((prev) => ({ ...prev, category_id }))}
                         className="w-52"
-                        options={categoryOptions}
+                        options={activeCategories.map((category) => ({
+                            label: category.label,
+                            value: category.id,
+                        }))}
                     />
                 </div>
 

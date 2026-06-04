@@ -8,15 +8,7 @@ const DEFAULT_PRICING_CONFIG = {
     unifiedPricing: true,
     unifiedRate: 0,
     roundingType: 'none' as const,
-    cpu: 0,
-    motherboard: 0,
-    ram: 0,
-    gpu: 0,
-    storage: 0,
-    psu: 0,
-    case: 0,
-    cooling: 0,
-    monitor: 0,
+    categoryRates: {},
 };
 
 export const usePricing = () => {

@@ -27,6 +27,26 @@ export const dataExchangeTables: DataExchangeTable[] = [
         ],
     },
     {
+        table: 'product_categories',
+        sheet: '商品类目',
+        columns: [
+            'id',
+            'code',
+            'name',
+            'label',
+            'tag_color',
+            'sort_order',
+            'is_active',
+            'created_at',
+            'updated_at',
+        ],
+    },
+    {
+        table: 'category_pricing_rates',
+        sheet: '类目溢价',
+        columns: ['id', 'category_id', 'rate', 'created_at', 'updated_at'],
+    },
+    {
         table: 'suppliers',
         sheet: '进货商家',
         columns: [
@@ -46,6 +66,7 @@ export const dataExchangeTables: DataExchangeTable[] = [
         columns: [
             'id',
             'category',
+            'category_id',
             'name',
             'barcode',
             'price_cents',
@@ -337,5 +358,7 @@ export const dataExchangeDeleteOrder = [
     'operating_costs',
     'products',
     'suppliers',
+    'category_pricing_rates',
+    'product_categories',
     'pricing_config',
 ];

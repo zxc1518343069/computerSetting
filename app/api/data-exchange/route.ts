@@ -1,5 +1,7 @@
 import { getDb } from '@/lib/db';
 import { dataExchangeDeleteOrder, dataExchangeTables } from '@/lib/db/dataExchange';
+import { ensureProductCategoriesReady } from '@/lib/db/productCategories';
+import { migrateLegacyPricingRates } from '@/lib/db/pricing';
 import { error, success } from '@/lib/request/apiResponse';
 import { NextRequest } from 'next/server';
 
@@ -10,6 +12,8 @@ const normalizeCellValue = (value: unknown) => {
 
 const isBarcodeConflict = (e: unknown) =>
     e instanceof Error && e.message.includes('UNIQUE constraint failed: products.barcode');
+
+const optionalLegacySheets = new Set(['product_categories', 'category_pricing_rates']);
 
 const ensureDefaultPricingConfig = (db: ReturnType<typeof getDb>) => {
     const existing = db.prepare('SELECT id FROM pricing_config ORDER BY id DESC LIMIT 1').get();
@@ -61,7 +65,12 @@ const assertForeignKeysValid = (db: ReturnType<typeof getDb>) => {
 
 const validateSheets = (sheets: Record<string, unknown>) => {
     const missingSheets = dataExchangeTables
-        .filter((table) => !(table.sheet in sheets) && !(table.table in sheets))
+        .filter(
+            (table) =>
+                !optionalLegacySheets.has(table.table) &&
+                !(table.sheet in sheets) &&
+                !(table.table in sheets)
+        )
         .map((table) => table.sheet);
 
     if (missingSheets.length > 0) {
@@ -165,6 +174,8 @@ export async function POST(request: NextRequest) {
             });
 
             ensureDefaultPricingConfig(db);
+            ensureProductCategoriesReady(db);
+            migrateLegacyPricingRates(db);
             recalculateAllProductStock(db);
             assertForeignKeysValid(db);
         });

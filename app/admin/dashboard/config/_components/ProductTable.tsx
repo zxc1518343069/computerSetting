@@ -1,4 +1,4 @@
-import { CATEGORY_CONFIG, categoryOptions } from '@/const/categories';
+import { getCategoryTagClass, useProductCategories } from '@/app/hooks/useProductCategories';
 import { formatPrice } from '@/utils';
 import { DeleteOutlined, EditOutlined, InfoCircleOutlined, RiseOutlined } from '@ant-design/icons';
 import { Button, Popconfirm, Table, Tag, Tooltip, Typography } from 'antd';
@@ -25,6 +25,8 @@ export const ProductTable: React.FC<ProductTableProps> = ({
     onDelete,
     deleteLoading,
 }) => {
+    const { categoryMap, categoryCodeMap } = useProductCategories({ includeInactive: true });
+
     const columns: ColumnsType<Product> = [
         {
             title: 'ID',
@@ -35,24 +37,23 @@ export const ProductTable: React.FC<ProductTableProps> = ({
             render: (text) => <span className="text-gray-400 font-mono text-xs">#{text}</span>,
         },
         {
-            title: '硬件类型',
+            title: '商品类目',
             dataIndex: 'category',
             key: 'category',
             width: 160,
-            filters: categoryOptions.map((c) => ({ text: c.label, value: c.value })),
-            onFilter: (value, record) => record.category === value,
-            render: (category) => {
-                const config = CATEGORY_CONFIG[category];
+            filters: Object.values(categoryMap).map((c) => ({ text: c.label, value: c.id })),
+            onFilter: (value, record) => record.category_id === value,
+            render: (category, record) => {
+                const config =
+                    (record?.category_id ? categoryMap[record.category_id] : undefined) ||
+                    categoryCodeMap[category];
                 return (
-                    <div className="flex items-center gap-2">
-                        <div
-                            className={`w-8 h-8 rounded-lg flex items-center justify-center text-lg shadow-sm ${
-                                config?.twColor?.split(' ')[0] || 'bg-gray-100 dark:bg-gray-800'
-                            }`}
+                    <div className="flex items-center">
+                        <span
+                            className={`inline-flex items-center rounded border px-2.5 py-1 text-xs font-bold ${getCategoryTagClass(
+                                config?.tag_color
+                            )}`}
                         >
-                            {config?.icon || '📦'}
-                        </div>
-                        <span className="font-medium text-gray-700 dark:text-gray-300">
                             {config?.name || category}
                         </span>
                     </div>

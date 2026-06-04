@@ -1,9 +1,10 @@
 import { isAuthError, requireAdminUser } from '@/lib/auth/currentUser';
 import { getDb } from '@/lib/db';
+import { getPricingConfig } from '@/lib/db/pricing';
 import { ProductRow, serializeProduct, toCents, toYuan } from '@/lib/db/serializers';
 import { error, success } from '@/lib/request/apiResponse';
 import { PricingCalculator } from '@/utils/pricing';
-import { PricingConfig, Product } from '@/const/types';
+import { Product } from '@/const/types';
 import { NextRequest } from 'next/server';
 
 interface AdjustmentItemInput {
@@ -11,44 +12,6 @@ interface AdjustmentItemInput {
     product_id: number;
     quantity: number;
 }
-
-const getPricingConfig = (db: ReturnType<typeof getDb>): PricingConfig => {
-    const row = db.prepare('SELECT * FROM pricing_config ORDER BY id DESC LIMIT 1').get() as
-        | Record<string, number | string>
-        | undefined;
-
-    if (!row) {
-        return {
-            unifiedPricing: true,
-            unifiedRate: 0,
-            roundingType: 'none',
-            cpu: 0,
-            motherboard: 0,
-            ram: 0,
-            gpu: 0,
-            storage: 0,
-            psu: 0,
-            case: 0,
-            cooling: 0,
-            monitor: 0,
-        };
-    }
-
-    return {
-        unifiedPricing: Boolean(row.unified_pricing),
-        unifiedRate: Number(row.unified_rate || 0),
-        roundingType: (row.rounding_type || 'none') as PricingConfig['roundingType'],
-        cpu: Number(row.cpu_rate || 0),
-        motherboard: Number(row.motherboard_rate || 0),
-        ram: Number(row.ram_rate || 0),
-        gpu: Number(row.gpu_rate || 0),
-        storage: Number(row.storage_rate || 0),
-        psu: Number(row.psu_rate || 0),
-        case: Number(row.case_rate || 0),
-        cooling: Number(row.cooling_rate || 0),
-        monitor: Number(row.monitor_rate || 0),
-    };
-};
 
 const getQuoteProduct = (
     product: ProductRow,

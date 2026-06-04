@@ -1,6 +1,7 @@
 import { error, success } from '@/lib/request/apiResponse';
 import { getDb } from '@/lib/db';
 import { ProductRow, serializeProduct, toCents } from '@/lib/db/serializers';
+import { resolveProductCategoryInput } from '@/lib/db/productCategories';
 import { NextRequest } from 'next/server';
 
 const normalizeBarcode = (value: unknown) => {
@@ -17,7 +18,20 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     try {
         const { id: idParam } = await params;
         const db = getDb();
-        const row = db.prepare('SELECT * FROM products WHERE id = ?').get(parseInt(idParam)) as
+        const row = db
+            .prepare(
+                `
+                SELECT
+                    p.*,
+                    pc.name AS category_name,
+                    pc.label AS category_label,
+                    pc.tag_color AS category_tag_color
+                FROM products p
+                LEFT JOIN product_categories pc ON pc.id = p.category_id
+                WHERE p.id = ?
+            `
+            )
+            .get(parseInt(idParam)) as
             | ProductRow
             | undefined;
 
@@ -37,10 +51,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         const { id: idParam } = await params;
         const id = parseInt(idParam);
         const db = getDb();
-        const { category, name, barcode, price, selling_price, is_use_premium } =
+        const { category_id, category, name, barcode, price, selling_price, is_use_premium } =
             await request.json();
 
-        if (!category || !name || price === undefined) {
+        const resolvedCategory = resolveProductCategoryInput(db, { category_id, category });
+
+        if (!resolvedCategory || !name || price === undefined) {
             return error(400, '产品类别、名称和价格不能为空');
         }
 
@@ -49,6 +65,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
                 `
                 UPDATE products
                 SET category = @category,
+                    category_id = @category_id,
                     name = @name,
                     barcode = @barcode,
                     price_cents = @price_cents,
@@ -60,7 +77,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             )
             .run({
                 id,
-                category,
+                category: resolvedCategory.code || String(resolvedCategory.id),
+                category_id: resolvedCategory.id,
                 name,
                 barcode: normalizeBarcode(barcode),
                 price_cents: toCents(price),
@@ -72,7 +90,20 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             return error(404, '产品不存在');
         }
 
-        const row = db.prepare('SELECT * FROM products WHERE id = ?').get(id) as ProductRow;
+        const row = db
+            .prepare(
+                `
+                SELECT
+                    p.*,
+                    pc.name AS category_name,
+                    pc.label AS category_label,
+                    pc.tag_color AS category_tag_color
+                FROM products p
+                LEFT JOIN product_categories pc ON pc.id = p.category_id
+                WHERE p.id = ?
+            `
+            )
+            .get(id) as ProductRow;
         return success(serializeProduct(row), '产品更新成功');
     } catch (e) {
         if (isBarcodeConflict(e)) {

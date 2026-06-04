@@ -1,6 +1,10 @@
 export interface Product {
     id: number;
+    category_id?: number | null;
     category: string;
+    category_name?: string | null;
+    category_label?: string | null;
+    category_tag_color?: string | null;
     name: string;
     barcode?: string | null;
     price: number;
@@ -11,20 +15,48 @@ export interface Product {
     updated_at?: string;
 }
 
+export interface ProductCategory {
+    id: number;
+    code?: string | null;
+    name: string;
+    label: string;
+    tag_color: string;
+    sort_order: number;
+    is_active: boolean;
+    product_count?: number;
+    pricing_rate_id?: number | null;
+    pricing_rate?: number | null;
+    created_at?: string;
+    updated_at?: string;
+}
+
 export interface PricingConfig {
     id?: number;
     unifiedPricing: boolean;
     unifiedRate: number;
     roundingType: 'none' | 'integer' | 'ten';
-    cpu: number;
-    motherboard: number;
-    ram: number;
-    gpu: number;
-    storage: number;
-    psu: number;
-    case: number;
-    cooling: number;
-    monitor: number;
+    categoryRates: Record<number, number>;
+    rates?: Array<{
+        id: number;
+        categoryId: number;
+        categoryCode?: string | null;
+        categoryName: string;
+        categoryLabel: string;
+        tagColor: string;
+        sortOrder: number;
+        isActive: boolean;
+        rate: number;
+    }>;
+    // Legacy fixed-rate fields kept temporarily while older code is being retired.
+    cpu?: number;
+    motherboard?: number;
+    ram?: number;
+    gpu?: number;
+    storage?: number;
+    psu?: number;
+    case?: number;
+    cooling?: number;
+    monitor?: number;
     created_at?: string;
     updated_at?: string;
 }

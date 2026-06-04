@@ -38,7 +38,10 @@ export const useProductList = () => {
     });
 
     // 搜索操作
-    const handleSearch = (key: keyof ProductQueryParams, value: string | undefined) => {
+    const handleSearch = (
+        key: keyof ProductQueryParams,
+        value: string | number | undefined
+    ) => {
         setQueryParams((prev) => ({ ...prev, [key]: value }));
     };
 

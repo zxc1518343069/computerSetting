@@ -1,6 +1,6 @@
 'use client';
 
-import { CATEGORY_CONFIG, categoryOptions } from '@/const/categories';
+import { getCategoryTagClass, useProductCategories } from '@/app/hooks/useProductCategories';
 import { formatPrice } from '@/utils';
 import {
     AppstoreOutlined,
@@ -24,6 +24,7 @@ export default function ConfigPage() {
     // 列表数据逻辑
     const { products, loading, queryParams, handleSearch, deleteProduct, deleteLoading, refresh } =
         useProductList();
+    const { activeCategories, categoryMap } = useProductCategories({ includeInactive: true });
 
     // 价格计算逻辑
     const { getSellingPriceInfo } = usePricing();
@@ -115,7 +116,7 @@ export default function ConfigPage() {
                             <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
                                 {stats.activeCategories}
                                 <span className="text-gray-400 dark:text-gray-500 text-lg font-normal ml-2">
-                                    / {categoryOptions.length}
+                                    / {activeCategories.length}
                                 </span>
                             </div>
                         </div>
@@ -139,11 +140,11 @@ export default function ConfigPage() {
                             </div>
                             <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 mx-2" />
                             <Select
-                                placeholder="所有硬件类型"
+                                placeholder="所有商品类目"
                                 allowClear
                                 style={{ width: 200 }}
-                                value={queryParams.category}
-                                onChange={(val) => handleSearch('category', val)}
+                                value={queryParams.category_id}
+                                onChange={(val) => handleSearch('category_id', val)}
                                 suffixIcon={
                                     <FilterOutlined className="text-gray-400 dark:text-gray-500" />
                                 }
@@ -155,11 +156,20 @@ export default function ConfigPage() {
                                     return optLabel?.toLowerCase().includes(input.toLowerCase());
                                 }}
                             >
-                                {categoryOptions.map((opt) => (
-                                    <Option key={opt.value} value={opt.value} label={opt.label}>
+                                {activeCategories.map((category) => (
+                                    <Option
+                                        key={category.id}
+                                        value={category.id}
+                                        label={category.label}
+                                    >
                                         <div className="flex items-center gap-2 py-1">
-                                            <span>{CATEGORY_CONFIG[opt.value]?.icon}</span>
-                                            <span>{opt.label}</span>
+                                            <span
+                                                className={`inline-flex rounded border px-2 py-0.5 text-xs font-bold ${getCategoryTagClass(
+                                                    categoryMap[category.id]?.tag_color
+                                                )}`}
+                                            >
+                                                {category.label}
+                                            </span>
                                         </div>
                                     </Option>
                                 ))}

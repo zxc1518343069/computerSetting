@@ -1,12 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import api from '@/lib/request/axios';
-import { PricingConfig, Product, ProductQueryParams } from './types';
+import { PricingConfig, Product, ProductCategory, ProductQueryParams } from './types';
 
 /**
  * 获取产品列表
  */
 export const fetchProductsService = (params: ProductQueryParams) => {
     return api.get<any, Product[]>('/products', { params });
+};
+
+export const fetchProductCategoriesService = (params?: { includeInactive?: boolean }) => {
+    return api.get<any, ProductCategory[]>('/product-categories', { params });
 };
 
 /**
@@ -20,7 +24,19 @@ export const fetchPricingConfigService = () => {
  * 保存定价配置
  */
 export const savePricingConfigService = (config: PricingConfig) => {
-    return api.post<any, void>('/pricing', config);
+    return api.post<any, PricingConfig>('/pricing', config);
+};
+
+export const createPricingRateService = (data: { category_id: number; rate: number }) => {
+    return api.post<any, PricingConfig>('/pricing/rates', data);
+};
+
+export const updatePricingRateService = (id: number, data: { rate: number }) => {
+    return api.put<any, PricingConfig>(`/pricing/rates/${id}`, data);
+};
+
+export const deletePricingRateService = (id: number) => {
+    return api.delete<any, PricingConfig>(`/pricing/rates/${id}`);
 };
 
 /**
@@ -34,6 +50,7 @@ export const saveProductService = (product: Partial<Product>, isEdit: boolean) =
         url,
         method,
         data: {
+            category_id: product.category_id,
             category: product.category,
             name: product.name,
             barcode: product.barcode,

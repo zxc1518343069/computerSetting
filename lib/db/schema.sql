@@ -94,6 +94,31 @@ CREATE TABLE IF NOT EXISTS pricing_config
     CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS product_categories
+(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT UNIQUE,
+    name TEXT NOT NULL,
+    label TEXT NOT NULL,
+    tag_color TEXT NOT NULL DEFAULT 'blue',
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_product_categories_active_sort
+    ON product_categories(is_active, sort_order);
+
+CREATE TABLE IF NOT EXISTS category_pricing_rates
+(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category_id INTEGER NOT NULL UNIQUE REFERENCES product_categories(id),
+    rate REAL NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS admin_users
 (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -120,6 +145,13 @@ CREATE TABLE IF NOT EXISTS products
     TEXT
     NOT
     NULL,
+    category_id
+    INTEGER
+    REFERENCES
+    product_categories
+(
+    id
+),
     name
     TEXT
     NOT

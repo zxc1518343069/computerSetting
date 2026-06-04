@@ -12,26 +12,24 @@ export class PricingCalculator {
      * @param category 产品分类
      * @returns 倍率 (e.g., 1.15 表示溢价 15%)
      */
-    getPricingRate(category: string): number {
+    getPricingRate(category: string | number | null | undefined): number {
         if (!this.config) return 1;
 
         if (this.config.unifiedPricing) {
             return 1 + (this.config.unifiedRate || 0) / 100;
         }
 
-        const rateMap: Record<string, number> = {
-            cpu: this.config.cpu,
-            motherboard: this.config.motherboard,
-            ram: this.config.ram,
-            gpu: this.config.gpu,
-            storage: this.config.storage,
-            psu: this.config.psu,
-            case: this.config.case,
-            cooling: this.config.cooling,
-            monitor: this.config.monitor || 0,
-        };
+        if (typeof category === 'number') {
+            return 1 + (this.config.categoryRates?.[category] || 0) / 100;
+        }
 
-        const rate = rateMap[category] || 0;
+        const normalizedCategoryId = Number(category);
+        if (Number.isInteger(normalizedCategoryId) && normalizedCategoryId > 0) {
+            return 1 + (this.config.categoryRates?.[normalizedCategoryId] || 0) / 100;
+        }
+
+        const legacyConfig = this.config as PricingConfig & Record<string, number | undefined>;
+        const rate = category ? legacyConfig[category] || 0 : 0;
         return 1 + rate / 100;
     }
 
@@ -51,7 +49,7 @@ export class PricingCalculator {
             return product.price;
         }
 
-        const rawPrice = product.price * this.getPricingRate(product.category);
+        const rawPrice = product.price * this.getPricingRate(product.category_id || product.category);
 
         if (!this.config?.roundingType || this.config.roundingType === 'none') {
             return rawPrice;

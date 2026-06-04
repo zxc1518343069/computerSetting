@@ -66,6 +66,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     icon: <DatabaseOutlined />,
                 },
                 {
+                    title: '商品类目',
+                    path: '/admin/dashboard/config/categories',
+                    icon: <AppstoreOutlined />,
+                },
+                {
                     title: '库存状况',
                     path: '/admin/dashboard/warehouse/products',
                     icon: <SettingOutlined />,

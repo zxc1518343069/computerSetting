@@ -1,48 +1,10 @@
 import { getDb } from '@/lib/db';
 import { ProductRow, serializeProduct, toYuan } from '@/lib/db/serializers';
+import { getPricingConfig } from '@/lib/db/pricing';
 import { PricingCalculator } from '@/utils/pricing';
 import { NextRequest } from 'next/server';
 import { error, success } from '@/lib/request/apiResponse';
-import { PricingConfig, Product } from '@/const/types';
-
-const getPricingConfig = (): PricingConfig => {
-    const db = getDb();
-    const row = db.prepare('SELECT * FROM pricing_config ORDER BY id DESC LIMIT 1').get() as
-        | Record<string, number | string>
-        | undefined;
-
-    if (!row) {
-        return {
-            unifiedPricing: true,
-            unifiedRate: 0,
-            roundingType: 'none',
-            cpu: 0,
-            motherboard: 0,
-            ram: 0,
-            gpu: 0,
-            storage: 0,
-            psu: 0,
-            case: 0,
-            cooling: 0,
-            monitor: 0,
-        };
-    }
-
-    return {
-        unifiedPricing: Boolean(row.unified_pricing),
-        unifiedRate: Number(row.unified_rate || 0),
-        roundingType: (row.rounding_type || 'none') as PricingConfig['roundingType'],
-        cpu: Number(row.cpu_rate || 0),
-        motherboard: Number(row.motherboard_rate || 0),
-        ram: Number(row.ram_rate || 0),
-        gpu: Number(row.gpu_rate || 0),
-        storage: Number(row.storage_rate || 0),
-        psu: Number(row.psu_rate || 0),
-        case: Number(row.case_rate || 0),
-        cooling: Number(row.cooling_rate || 0),
-        monitor: Number(row.monitor_rate || 0),
-    };
-};
+import { Product } from '@/const/types';
 
 export async function GET(request: NextRequest) {
     try {
@@ -50,23 +12,41 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const search = searchParams.get('search');
         const category = searchParams.get('category');
+        const categoryId = searchParams.get('category_id');
 
         const conditions: string[] = [];
-        const params: Record<string, string> = {};
+        const params: Record<string, string | number> = {};
+
+        if (categoryId) {
+            conditions.push('p.category_id = @category_id');
+            params.category_id = parseInt(categoryId);
+        }
 
         if (category) {
-            conditions.push('category = @category');
+            conditions.push('(p.category = @category OR pc.code = @category)');
             params.category = category;
         }
 
         if (search) {
-            conditions.push('(name LIKE @search OR barcode LIKE @search)');
+            conditions.push('(p.name LIKE @search OR p.barcode LIKE @search)');
             params.search = `%${search}%`;
         }
 
         const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
         const products = db
-            .prepare(`SELECT * FROM products ${where} ORDER BY category ASC, name ASC`)
+            .prepare(
+                `
+                SELECT
+                    p.*,
+                    pc.name AS category_name,
+                    pc.label AS category_label,
+                    pc.tag_color AS category_tag_color
+                FROM products p
+                LEFT JOIN product_categories pc ON pc.id = p.category_id
+                ${where}
+                ORDER BY pc.sort_order ASC, p.category ASC, p.name ASC
+            `
+            )
             .all(params) as ProductRow[];
 
         const inventoryStmt = db.prepare(
@@ -79,7 +59,7 @@ export async function GET(request: NextRequest) {
         `
         );
 
-        const calculator = new PricingCalculator(getPricingConfig());
+        const calculator = new PricingCalculator(getPricingConfig(db));
 
         const data = products.map((row) => {
             const product = serializeProduct(row);

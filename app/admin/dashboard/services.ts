@@ -52,7 +52,11 @@ export const fetchCustomerOrders = (id: number) => {
     return api.get<any, CustomerOrderSummary[]>(`/customers/${id}/orders`);
 };
 
-export const fetchDashboardProducts = (params?: { search?: string; category?: string }) => {
+export const fetchDashboardProducts = (params?: {
+    search?: string;
+    category?: string;
+    category_id?: number;
+}) => {
     return api.get<any, Product[]>('/products', { params });
 };
 
@@ -74,7 +78,11 @@ export interface SalesProduct extends Product {
     }>;
 }
 
-export const fetchSalesProducts = (params?: { search?: string; category?: string }) => {
+export const fetchSalesProducts = (params?: {
+    search?: string;
+    category?: string;
+    category_id?: number;
+}) => {
     return api.get<any, SalesProduct[]>('/sales-products', { params });
 };
 
@@ -162,6 +170,7 @@ export const fetchInventoryItems = (params?: {
     product_id?: number;
     status?: string;
     category?: string;
+    category_id?: number;
     search?: string;
 }) => {
     return api.get<any, InventoryItem[]>('/inventory-items', { params });

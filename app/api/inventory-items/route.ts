@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
         const productId = searchParams.get('product_id');
         const status = searchParams.get('status') || 'in_stock';
         const category = searchParams.get('category');
+        const categoryId = searchParams.get('category_id');
         const search = searchParams.get('search');
 
         const conditions: string[] = [];
@@ -30,8 +31,13 @@ export async function GET(request: NextRequest) {
             params.status = status;
         }
 
+        if (categoryId) {
+            conditions.push('p.category_id = @category_id');
+            params.category_id = parseInt(categoryId);
+        }
+
         if (category) {
-            conditions.push('p.category = @category');
+            conditions.push('(p.category = @category OR pc.code = @category)');
             params.category = category;
         }
 
@@ -49,6 +55,7 @@ export async function GET(request: NextRequest) {
                 SELECT ii.*, s.name AS supplier_name
                 FROM inventory_items ii
                 LEFT JOIN products p ON p.id = ii.product_id
+                LEFT JOIN product_categories pc ON pc.id = p.category_id
                 LEFT JOIN suppliers s ON s.id = ii.supplier_id
                 ${where}
                 ORDER BY ii.created_at DESC
@@ -56,7 +63,19 @@ export async function GET(request: NextRequest) {
             )
             .all(params) as Array<InventoryItemRow & { supplier_name?: string | null }>;
 
-        const products = db.prepare('SELECT * FROM products').all() as ProductRow[];
+        const products = db
+            .prepare(
+                `
+                SELECT
+                    p.*,
+                    pc.name AS category_name,
+                    pc.label AS category_label,
+                    pc.tag_color AS category_tag_color
+                FROM products p
+                LEFT JOIN product_categories pc ON pc.id = p.category_id
+            `
+            )
+            .all() as ProductRow[];
         const productMap = new Map(
             products.map((product) => [product.id, serializeProduct(product)])
         );

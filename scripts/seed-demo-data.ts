@@ -46,6 +46,7 @@ const resetBusinessTables = (db: ReturnType<typeof getDb>) => {
         'packages',
         'operating_costs',
         'products',
+        'category_pricing_rates',
         'suppliers',
     ];
 
@@ -60,6 +61,7 @@ const resetBusinessTables = (db: ReturnType<typeof getDb>) => {
 
 const seedPricingConfig = (db: ReturnType<typeof getDb>) => {
     db.prepare('DELETE FROM pricing_config').run();
+    db.prepare('DELETE FROM category_pricing_rates').run();
     db.prepare(
         `
         INSERT INTO pricing_config (
@@ -70,6 +72,29 @@ const seedPricingConfig = (db: ReturnType<typeof getDb>) => {
         VALUES (0, 12, 'ten', 10, 11, 14, 9, 16, 12, 18, 15, 8, CURRENT_TIMESTAMP)
     `
     ).run();
+
+    const rates = {
+        cpu: 10,
+        motherboard: 11,
+        ram: 14,
+        gpu: 9,
+        storage: 16,
+        psu: 12,
+        case: 18,
+        cooling: 15,
+        monitor: 8,
+    };
+
+    const insertRate = db.prepare(`
+        INSERT INTO category_pricing_rates (category_id, rate, updated_at)
+        SELECT id, @rate, CURRENT_TIMESTAMP
+        FROM product_categories
+        WHERE code = @code
+    `);
+
+    Object.entries(rates).forEach(([code, rate]) => {
+        insertRate.run({ code, rate });
+    });
 };
 
 const supplierSeeds = [
@@ -202,12 +227,17 @@ const seedSuppliers = (db: ReturnType<typeof getDb>) => {
 };
 
 const seedProducts = (db: ReturnType<typeof getDb>) => {
+    const categoryRows = db.prepare('SELECT id, code FROM product_categories').all() as Array<{
+        id: number;
+        code: string;
+    }>;
+    const categoryIdMap = new Map(categoryRows.map((row) => [row.code, row.id]));
     const insert = db.prepare(
         `
         INSERT INTO products (
-            category, name, barcode, price_cents, stock_quantity, selling_price_cents, is_use_premium, updated_at
+            category, category_id, name, barcode, price_cents, stock_quantity, selling_price_cents, is_use_premium, updated_at
         )
-        VALUES (@category, @name, @barcode, @price_cents, 0, @selling_price_cents, @is_use_premium, CURRENT_TIMESTAMP)
+        VALUES (@category, @category_id, @name, @barcode, @price_cents, 0, @selling_price_cents, @is_use_premium, CURRENT_TIMESTAMP)
     `
     );
 
@@ -218,6 +248,7 @@ const seedProducts = (db: ReturnType<typeof getDb>) => {
             : product.barcode || `690${String(index + 1).padStart(10, '0')}`;
         const result = insert.run({
             category: product.category,
+            category_id: categoryIdMap.get(product.category) || null,
             name: product.name,
             barcode,
             price_cents: toCents(product.referencePrice),

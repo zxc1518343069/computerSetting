@@ -2,7 +2,11 @@ import { centsToYuan, yuanToCents } from './money';
 
 export interface ProductRow {
     id: number;
+    category_id?: number | null;
     category: string;
+    category_name?: string | null;
+    category_label?: string | null;
+    category_tag_color?: string | null;
     name: string;
     barcode?: string | null;
     price_cents: number;
@@ -15,7 +19,11 @@ export interface ProductRow {
 
 export const serializeProduct = (row: ProductRow) => ({
     id: row.id,
+    category_id: row.category_id ?? null,
     category: row.category,
+    category_name: row.category_name ?? null,
+    category_label: row.category_label ?? null,
+    category_tag_color: row.category_tag_color ?? null,
     name: row.name,
     barcode: row.barcode || null,
     price: centsToYuan(row.price_cents),

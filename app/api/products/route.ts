@@ -1,6 +1,7 @@
 import { error, success } from '@/lib/request/apiResponse';
 import { getDb } from '@/lib/db';
 import { ProductRow, serializeProduct, toCents } from '@/lib/db/serializers';
+import { resolveProductCategoryInput } from '@/lib/db/productCategories';
 import { NextRequest } from 'next/server';
 
 const normalizeBarcode = (value: unknown) => {
@@ -18,24 +19,42 @@ export async function GET(request: NextRequest) {
         const db = getDb();
         const { searchParams } = new URL(request.url);
         const category = searchParams.get('category');
+        const categoryId = searchParams.get('category_id');
         const search = searchParams.get('search');
 
         const conditions: string[] = [];
-        const params: Record<string, string> = {};
+        const params: Record<string, string | number> = {};
+
+        if (categoryId) {
+            conditions.push('p.category_id = @category_id');
+            params.category_id = parseInt(categoryId);
+        }
 
         if (category) {
-            conditions.push('category = @category');
+            conditions.push('(p.category = @category OR pc.code = @category)');
             params.category = category;
         }
 
         if (search) {
-            conditions.push('(name LIKE @search OR barcode LIKE @search)');
+            conditions.push('(p.name LIKE @search OR p.barcode LIKE @search)');
             params.search = `%${search}%`;
         }
 
         const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
         const rows = db
-            .prepare(`SELECT * FROM products ${where} ORDER BY created_at DESC`)
+            .prepare(
+                `
+                SELECT
+                    p.*,
+                    pc.name AS category_name,
+                    pc.label AS category_label,
+                    pc.tag_color AS category_tag_color
+                FROM products p
+                LEFT JOIN product_categories pc ON pc.id = p.category_id
+                ${where}
+                ORDER BY p.created_at DESC
+            `
+            )
             .all(params) as ProductRow[];
 
         return success(rows.map(serializeProduct), '获取产品列表成功');
@@ -48,10 +67,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const db = getDb();
-        const { category, name, barcode, price, selling_price, is_use_premium } =
+        const { category_id, category, name, barcode, price, selling_price, is_use_premium } =
             await request.json();
 
-        if (!category || !name || price === undefined) {
+        const resolvedCategory = resolveProductCategoryInput(db, { category_id, category });
+
+        if (!resolvedCategory || !name || price === undefined) {
             return error(400, '产品类别、名称和价格不能为空');
         }
 
@@ -60,6 +81,7 @@ export async function POST(request: NextRequest) {
                 `
                 INSERT INTO products (
                     category,
+                    category_id,
                     name,
                     barcode,
                     price_cents,
@@ -68,11 +90,12 @@ export async function POST(request: NextRequest) {
                     is_use_premium,
                     updated_at
                 )
-                VALUES (@category, @name, @barcode, @price_cents, 0, @selling_price_cents, @is_use_premium, CURRENT_TIMESTAMP)
+                VALUES (@category, @category_id, @name, @barcode, @price_cents, 0, @selling_price_cents, @is_use_premium, CURRENT_TIMESTAMP)
             `
             )
             .run({
-                category,
+                category: resolvedCategory.code || String(resolvedCategory.id),
+                category_id: resolvedCategory.id,
                 name,
                 barcode: normalizeBarcode(barcode),
                 price_cents: toCents(price),
@@ -81,7 +104,18 @@ export async function POST(request: NextRequest) {
             });
 
         const row = db
-            .prepare('SELECT * FROM products WHERE id = ?')
+            .prepare(
+                `
+                SELECT
+                    p.*,
+                    pc.name AS category_name,
+                    pc.label AS category_label,
+                    pc.tag_color AS category_tag_color
+                FROM products p
+                LEFT JOIN product_categories pc ON pc.id = p.category_id
+                WHERE p.id = ?
+            `
+            )
             .get(result.lastInsertRowid) as ProductRow;
 
         return success(serializeProduct(row), '产品创建成功');

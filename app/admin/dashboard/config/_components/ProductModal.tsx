@@ -1,4 +1,4 @@
-import { CATEGORY_CONFIG, categoryOptions } from '@/const/categories';
+import { getCategoryTagClass, useProductCategories } from '@/app/hooks/useProductCategories';
 import { formatPrice } from '@/utils';
 import {
     CalculatorOutlined,
@@ -27,12 +27,15 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
     const [form] = Form.useForm();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
+    const { activeCategories, categoryMap, categoryCodeMap } = useProductCategories({
+        includeInactive: true,
+    });
 
     // 引入定价计算逻辑
     const { getSellingPriceInfo } = usePricing();
 
     // 监听表单值以实时计算
-    const watchedCategory = Form.useWatch('category', form);
+    const watchedCategoryId = Form.useWatch('category_id', form);
     const watchedPrice = Form.useWatch('price', form);
     const watchedIsUsePremium = Form.useWatch('is_use_premium', form);
     const watchedSellingPrice = Form.useWatch('selling_price', form);
@@ -47,11 +50,14 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
             id: 0,
             name: '',
             price: price,
-            category: watchedCategory || 'cpu',
+            category_id: watchedCategoryId,
+            category: '',
         } as Product;
 
         return getSellingPriceInfo(tempProduct);
-    }, [watchedCategory, watchedPrice, getSellingPriceInfo]);
+    }, [watchedCategoryId, watchedPrice, getSellingPriceInfo]);
+
+    const getDefaultCategoryId = () => activeCategories[0]?.id;
 
     // 暴露给父组件的方法
     useImperativeHandle(ref, () => ({
@@ -60,7 +66,9 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
                 setIsEditMode(true);
                 setCurrentProduct(product);
                 form.setFieldsValue({
-                    category: product.category,
+                    category_id:
+                        product.category_id ||
+                        (product.category ? categoryCodeMap[product.category]?.id : undefined),
                     name: product.name,
                     barcode: product.barcode,
                     price: product.price,
@@ -71,7 +79,7 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
                 setIsEditMode(false);
                 setCurrentProduct(null);
                 form.resetFields();
-                form.setFieldsValue({ category: 'cpu', is_use_premium: true }); // 默认值
+                form.setFieldsValue({ category_id: getDefaultCategoryId(), is_use_premium: true });
             }
             setVisible(true);
         },
@@ -93,7 +101,8 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
             // 构造部分对象用于保存，ID 在 Service 内部根据 isEditMode 处理或由 currentProduct 提供
             const productData: Partial<Product> = {
                 id: currentProduct?.id, // 编辑时需要 ID
-                category: values.category,
+                category_id: values.category_id,
+                category: categoryMap[values.category_id]?.code || currentProduct?.category || '',
                 name: values.name,
                 barcode: values.barcode?.trim() || null,
                 price: parseFloat(values.price),
@@ -118,7 +127,7 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
     );
 
     // 获取当前分类的配置
-    const currentCategoryConfig = CATEGORY_CONFIG[watchedCategory || 'cpu'];
+    const currentCategory = watchedCategoryId ? categoryMap[watchedCategoryId] : undefined;
 
     return (
         <Modal
@@ -159,20 +168,25 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
                         form={form}
                         layout="vertical"
                         name="productForm"
-                        initialValues={{ category: 'cpu', is_use_premium: true }}
+                        initialValues={{ category_id: getDefaultCategoryId(), is_use_premium: true }}
                         size="large"
                     >
                         <Form.Item
-                            name="category"
-                            label="硬件类型"
-                            rules={[{ required: true, message: '请选择硬件类型' }]}
+                            name="category_id"
+                            label="商品类目"
+                            rules={[{ required: true, message: '请选择商品类目' }]}
                         >
                             <Select placeholder="请选择" className="w-full">
-                                {categoryOptions.map((opt) => (
-                                    <Option key={opt.value} value={opt.value}>
+                                {activeCategories.map((category) => (
+                                    <Option key={category.id} value={category.id}>
                                         <div className="flex items-center gap-2">
-                                            <span>{CATEGORY_CONFIG[opt.value]?.icon}</span>
-                                            <span>{opt.label}</span>
+                                            <span
+                                                className={`inline-flex h-5 px-2 items-center rounded border text-xs ${getCategoryTagClass(
+                                                    category.tag_color
+                                                )}`}
+                                            >
+                                                {category.label || category.name}
+                                            </span>
                                         </div>
                                     </Option>
                                 ))}
@@ -277,8 +291,12 @@ export const ProductModal = forwardRef<ProductModalRef, ProductModalProps>(({ on
 
                     <div className="relative z-10">
                         <div className="text-center mb-6">
-                            <div className="w-16 h-16 mx-auto bg-white dark:bg-[#2a2a2a] rounded-2xl shadow-sm flex items-center justify-center text-3xl mb-3">
-                                {currentCategoryConfig?.icon || '📦'}
+                            <div
+                                className={`min-w-16 h-16 px-3 mx-auto rounded-2xl shadow-sm border flex items-center justify-center text-sm font-black mb-3 ${getCategoryTagClass(
+                                    currentCategory?.tag_color
+                                )}`}
+                            >
+                                {currentCategory?.name || '类目'}
                             </div>
                             <h3 className="font-bold text-gray-800 dark:text-gray-100 text-lg">
                                 价格预览

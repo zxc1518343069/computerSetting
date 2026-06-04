@@ -4,6 +4,7 @@ import { toCents, toYuan } from '../lib/db/serializers';
 type PackageProduct = {
     id: number;
     category: string;
+    category_id?: number | null;
     name: string;
     price_cents: number;
 };
@@ -27,7 +28,7 @@ const getProductsByCategory = (db: ReturnType<typeof getDb>) => {
     const products = db
         .prepare(
             `
-            SELECT id, category, name, price_cents
+            SELECT id, category, category_id, name, price_cents
             FROM products
             WHERE category IN (${packageCategories.map(() => '?').join(',')})
             ORDER BY category ASC, price_cents ASC, id ASC
@@ -45,14 +46,19 @@ const getProductsByCategory = (db: ReturnType<typeof getDb>) => {
 
 const ensureFallbackProducts = (db: ReturnType<typeof getDb>) => {
     const productsByCategory = getProductsByCategory(db);
+    const categoryRows = db.prepare('SELECT id, code FROM product_categories').all() as Array<{
+        id: number;
+        code: string;
+    }>;
+    const categoryIdMap = new Map(categoryRows.map((row) => [row.code, row.id]));
     const insertProduct = db.prepare(
         `
         INSERT INTO products (
-            category, name, barcode, price_cents, stock_quantity,
+            category, category_id, name, barcode, price_cents, stock_quantity,
             selling_price_cents, is_use_premium, updated_at
         )
         VALUES (
-            @category, @name, @barcode, @price_cents, 0,
+            @category, @category_id, @name, @barcode, @price_cents, 0,
             NULL, 1, CURRENT_TIMESTAMP
         )
     `
@@ -63,6 +69,7 @@ const ensureFallbackProducts = (db: ReturnType<typeof getDb>) => {
 
         insertProduct.run({
             category,
+            category_id: categoryIdMap.get(category) || null,
             name,
             barcode: `TESTPKG${String(index + 1).padStart(5, '0')}`,
             price_cents: toCents(price),
