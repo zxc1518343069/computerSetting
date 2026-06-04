@@ -1,9 +1,11 @@
 'use client';
 
+import { authService, type CurrentAdminUser } from '@/app/services/auth';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 interface AuthContextType {
     isLoggedIn: boolean;
+    currentUser: CurrentAdminUser | null;
     checkAuth: () => void;
 }
 
@@ -22,10 +24,26 @@ function getCookie(name: string): string | undefined {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [currentUser, setCurrentUser] = useState<CurrentAdminUser | null>(null);
 
     const checkAuth = () => {
         const isAdmin = getCookie('is_admin') === 'true';
         setIsLoggedIn(isAdmin);
+
+        if (!isAdmin) {
+            setCurrentUser(null);
+            return;
+        }
+
+        authService
+            .me()
+            .then((user) => {
+                setCurrentUser(user);
+            })
+            .catch(() => {
+                setIsLoggedIn(false);
+                setCurrentUser(null);
+            });
     };
 
     // 初始化时检查一次
@@ -34,7 +52,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, []);
 
     return (
-        <AuthContext.Provider value={{ isLoggedIn, checkAuth }}>{children}</AuthContext.Provider>
+        <AuthContext.Provider value={{ isLoggedIn, currentUser, checkAuth }}>
+            {children}
+        </AuthContext.Provider>
     );
 };
 

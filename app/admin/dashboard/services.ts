@@ -10,6 +10,7 @@ import {
     SalesOrder,
     Supplier,
     Customer,
+    AdminRole,
 } from '@/const/types';
 
 export const fetchSuppliers = (params?: { search?: string }) => {
@@ -168,6 +169,16 @@ export const fetchInventoryItems = (params?: {
 
 export const fetchOrders = (params?: { search?: string; status?: string }) => {
     return api.get<any, SalesOrder[]>('/orders', { params });
+};
+
+export interface OrderHandlerUser {
+    id: number;
+    username: string;
+    role: AdminRole;
+}
+
+export const fetchActiveAdminUsers = () => {
+    return api.get<any, OrderHandlerUser[]>('/admin-users/active');
 };
 
 export interface AccountPayableDetail {

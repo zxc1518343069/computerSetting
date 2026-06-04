@@ -12,12 +12,16 @@ import {
     ShoppingCartOutlined,
 } from '@ant-design/icons';
 import { Button, Checkbox, Form, Input, InputNumber, Modal, Segmented, Select } from 'antd';
-import React, { useImperativeHandle, useMemo, useState } from 'react';
+import React, { useEffect, useImperativeHandle, useMemo, useState } from 'react';
 import { ExportButton } from './components/ExportButton';
 import { InfoSection } from './components/InfoSection';
 import { TestConfigModal } from './components/TestConfigModal';
 import { useTableControl } from './hooks/useTableControl';
-import { fetchCustomers, saveOrder } from '@/app/admin/dashboard/services';
+import {
+    fetchActiveAdminUsers,
+    fetchCustomers,
+    saveOrder,
+} from '@/app/admin/dashboard/services';
 import { useRequest } from 'ahooks';
 import { useAuth } from '@/app/_components/AuthProvider';
 
@@ -47,7 +51,7 @@ export function Content(props: ContentProps) {
     const [testModalVisible, setTestModalVisible] = useState(false);
     const [orderModalVisible, setOrderModalVisible] = useState(false);
     const [orderForm] = Form.useForm();
-    const { isLoggedIn } = useAuth();
+    const { isLoggedIn, currentUser } = useAuth();
     const customerSource = Form.useWatch('customer_source', orderForm) || 'new';
     const shouldSaveCustomer = Form.useWatch('save_customer', orderForm);
 
@@ -55,6 +59,12 @@ export function Content(props: ContentProps) {
     const { products, pricingConfig, loading } = usePackageTableData();
     const { getItemMetrics, totalPrice } = usePackageCalculator(products, pricingConfig, tableData);
     const { data: customers = [] } = useRequest(fetchCustomers);
+    const { data: handlerUsers = [], loading: loadingHandlerUsers } = useRequest(
+        fetchActiveAdminUsers,
+        {
+            ready: isLoggedIn,
+        }
+    );
 
     useImperativeHandle(
         customRef,
@@ -110,6 +120,18 @@ export function Content(props: ContentProps) {
                 value: customer.id,
             })),
         [customers]
+    );
+    const handlerUserOptions = useMemo(
+        () =>
+            handlerUsers.map((user) => ({
+                label: user.username,
+                value: user.id,
+            })),
+        [handlerUsers]
+    );
+    const defaultHandlerUserId = useMemo(
+        () => handlerUsers.find((user) => user.id === currentUser?.id)?.id ?? handlerUsers[0]?.id,
+        [handlerUsers, currentUser?.id]
     );
 
     // 是否有有效配置
@@ -167,6 +189,7 @@ export function Content(props: ContentProps) {
             });
 
             await saveOrder({
+                handler_user_id: values.handler_user_id,
                 customer_id:
                     values.customer_source === 'existing' ? values.customer_id || null : null,
                 customer_name: values.customer_name,
@@ -206,9 +229,18 @@ export function Content(props: ContentProps) {
             customer_source: 'new',
             save_customer: true,
             final_amount: finalAmount,
+            handler_user_id: defaultHandlerUserId,
         });
         setOrderModalVisible(true);
     };
+
+    useEffect(() => {
+        if (!orderModalVisible || orderForm.getFieldValue('handler_user_id')) return;
+
+        if (defaultHandlerUserId) {
+            orderForm.setFieldValue('handler_user_id', defaultHandlerUserId);
+        }
+    }, [defaultHandlerUserId, orderForm, orderModalVisible]);
 
     return (
         <div className="flex flex-col gap-4 h-full">
@@ -370,6 +402,19 @@ export function Content(props: ContentProps) {
                             </Form.Item>
                         </>
                     )}
+                    <Form.Item
+                        name="handler_user_id"
+                        label="经手人"
+                        rules={[{ required: true, message: '请选择经手人' }]}
+                    >
+                        <Select
+                            showSearch
+                            placeholder="请选择经手人"
+                            loading={loadingHandlerUsers}
+                            optionFilterProp="label"
+                            options={handlerUserOptions}
+                        />
+                    </Form.Item>
                     <Form.Item
                         name="final_amount"
                         label="最终成交金额"

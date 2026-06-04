@@ -18,6 +18,13 @@ interface OrderItemInput {
     sale_price: number;
 }
 
+interface OrderHandlerUserRow {
+    id: number;
+    username: string;
+    role: 'admin' | 'staff';
+    status: 'active' | 'disabled';
+}
+
 const createOrderNo = () => {
     const now = new Date();
     const date = now.toISOString().slice(0, 10).replace(/-/g, '');
@@ -99,6 +106,28 @@ const orderCustomerError = (e: unknown) => {
     if (message === 'CUSTOMER_NAME_REQUIRED') return error(400, '客户名称不能为空');
     if (message === 'CUSTOMER_PHONE_REQUIRED') return error(400, '手机号不能为空');
     if (message === 'CUSTOMER_PHONE_EXISTS') return error(400, '该手机号已存在，请选择已有客户');
+    return null;
+};
+
+const resolveActiveHandlerUser = (
+    db: ReturnType<typeof getDb>,
+    handlerUserId: unknown
+): OrderHandlerUserRow => {
+    const id = Number(handlerUserId);
+    if (!Number.isInteger(id) || id <= 0) throw new Error('HANDLER_REQUIRED');
+
+    const row = db
+        .prepare('SELECT id, username, role, status FROM admin_users WHERE id = ?')
+        .get(id) as OrderHandlerUserRow | undefined;
+
+    if (!row || row.status !== 'active') throw new Error('HANDLER_NOT_FOUND');
+    return row;
+};
+
+const orderHandlerError = (e: unknown) => {
+    const message = e instanceof Error ? e.message : '';
+    if (message === 'HANDLER_REQUIRED') return error(400, '请选择经手人');
+    if (message === 'HANDLER_NOT_FOUND') return error(400, '经手人不存在或已停用');
     return null;
 };
 
@@ -258,9 +287,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
-        const currentUser = await requireAdminUser();
+        await requireAdminUser();
         const db = getDb();
         const {
+            handler_user_id,
             customer_id,
             customer_name,
             customer_phone,
@@ -279,6 +309,7 @@ export async function POST(request: NextRequest) {
         const finalCents = toCents(finalAmount);
 
         const createOrder = db.transaction(() => {
+            const handlerUser = resolveActiveHandlerUser(db, handler_user_id);
             const customer = resolveOrderCustomer(db, {
                 customer_id,
                 customer_name,
@@ -312,8 +343,8 @@ export async function POST(request: NextRequest) {
                     discount_amount_cents: originalCents - finalCents,
                     profit_amount_cents: finalCents,
                     source,
-                    created_by_user_id: currentUser.id,
-                    created_by_username: currentUser.username,
+                    created_by_user_id: handlerUser.id,
+                    created_by_username: handlerUser.username,
                     note,
                 });
 
@@ -346,6 +377,8 @@ export async function POST(request: NextRequest) {
         return success(order, '订单保存成功');
     } catch (e) {
         if (isAuthError(e)) return error(e.code, e.message);
+        const handlerError = orderHandlerError(e);
+        if (handlerError) return handlerError;
         const knownError = orderCustomerError(e);
         if (knownError) return knownError;
         console.error('Create order error:', e);
