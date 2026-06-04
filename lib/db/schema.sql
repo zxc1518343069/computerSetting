@@ -527,6 +527,8 @@ CREATE TABLE IF NOT EXISTS sales_orders
     INTEGER,
     created_by_username
     TEXT,
+    latest_adjustment_id
+    INTEGER,
     note
     TEXT,
     sold_at
@@ -575,6 +577,75 @@ CREATE TABLE IF NOT EXISTS sales_order_items
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
+CREATE TABLE IF NOT EXISTS sales_order_adjustments
+(
+    id
+    INTEGER
+    PRIMARY
+    KEY
+    AUTOINCREMENT,
+    order_id
+    INTEGER
+    NOT
+    NULL
+    REFERENCES
+    sales_orders
+(
+    id
+) ON DELETE CASCADE,
+    previous_adjustment_id INTEGER REFERENCES sales_order_adjustments
+(
+    id
+),
+    original_amount_cents INTEGER NOT NULL DEFAULT 0,
+    previous_adjusted_amount_cents INTEGER NOT NULL DEFAULT 0,
+    adjusted_amount_cents INTEGER NOT NULL DEFAULT 0,
+    previous_final_amount_cents INTEGER NOT NULL DEFAULT 0,
+    final_amount_cents INTEGER NOT NULL DEFAULT 0,
+    adjustment_note TEXT NOT NULL,
+    created_by_user_id INTEGER,
+    created_by_username TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+CREATE INDEX IF NOT EXISTS idx_sales_order_adjustments_order_created
+    ON sales_order_adjustments(order_id, created_at);
+
+CREATE TABLE IF NOT EXISTS sales_order_adjustment_items
+(
+    id
+    INTEGER
+    PRIMARY
+    KEY
+    AUTOINCREMENT,
+    adjustment_id
+    INTEGER
+    NOT
+    NULL
+    REFERENCES
+    sales_order_adjustments
+(
+    id
+) ON DELETE CASCADE,
+    source_order_item_id INTEGER REFERENCES sales_order_items
+(
+    id
+)
+  ON DELETE SET NULL,
+    product_id INTEGER NOT NULL REFERENCES products
+(
+    id
+),
+    product_name TEXT NOT NULL,
+    product_category TEXT NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 1,
+    sale_price_cents INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+CREATE INDEX IF NOT EXISTS idx_sales_order_adjustment_items_adjustment
+    ON sales_order_adjustment_items(adjustment_id);
+
 CREATE TABLE IF NOT EXISTS order_inventory_items
 (
     id
@@ -591,7 +662,12 @@ CREATE TABLE IF NOT EXISTS order_inventory_items
 (
     id
 ) ON DELETE CASCADE,
-    order_item_id INTEGER NOT NULL REFERENCES sales_order_items
+    order_item_id INTEGER REFERENCES sales_order_items
+(
+    id
+)
+  ON DELETE CASCADE,
+    adjustment_item_id INTEGER REFERENCES sales_order_adjustment_items
 (
     id
 )
@@ -601,7 +677,12 @@ CREATE TABLE IF NOT EXISTS order_inventory_items
     id
 ),
     cost_price_cents INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK (
+        (order_item_id IS NOT NULL AND adjustment_item_id IS NULL)
+        OR
+        (order_item_id IS NULL AND adjustment_item_id IS NOT NULL)
+        )
     );
 
 CREATE TABLE IF NOT EXISTS operating_costs

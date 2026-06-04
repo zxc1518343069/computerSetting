@@ -1,6 +1,7 @@
 'use client';
 
-import { InventoryItem, SalesOrder } from '@/const/types';
+import { InventoryItem, OrderSettlementItem, SalesOrder } from '@/const/types';
+import { categoryNameMap } from '@/const';
 import { formatDate, formatPrice } from '@/utils';
 import {
     CheckCircleOutlined,
@@ -8,6 +9,7 @@ import {
     EditOutlined,
     ReloadOutlined,
     ShoppingCartOutlined,
+    SwapOutlined,
 } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
 import {
@@ -26,13 +28,18 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import React, { useState } from 'react';
 import { fetchInventoryItems, fetchOrders, settleOrder, updateOrder } from '../../services';
+import { ConfigAdjustmentModal } from './components/ConfigAdjustmentModal';
+
+const getSettlementItemKey = (item: OrderSettlementItem) =>
+    `${item.source_type || 'order_item'}_${item.id}`;
 
 export default function OrdersPage() {
     const [query, setQuery] = useState({ search: '', status: undefined as string | undefined });
     const [editVisible, setEditVisible] = useState(false);
+    const [adjustVisible, setAdjustVisible] = useState(false);
     const [settleVisible, setSettleVisible] = useState(false);
     const [currentOrder, setCurrentOrder] = useState<SalesOrder | null>(null);
-    const [inventoryOptions, setInventoryOptions] = useState<Record<number, InventoryItem[]>>({});
+    const [inventoryOptions, setInventoryOptions] = useState<Record<string, InventoryItem[]>>({});
     const [editForm] = Form.useForm();
     const [settleForm] = Form.useForm();
 
@@ -68,8 +75,10 @@ export default function OrdersPage() {
             if (!currentOrder) return;
             const values = await settleForm.validateFields();
             const bindings = (currentOrder.items || []).map((item) => ({
-                order_item_id: item.id,
-                inventory_item_ids: values[`item_${item.id}`] || [],
+                ...(item.source_type === 'adjustment_item'
+                    ? { adjustment_item_id: item.id }
+                    : { order_item_id: item.id }),
+                inventory_item_ids: values[`item_${getSettlementItemKey(item)}`] || [],
             }));
             await settleOrder(currentOrder.id, { bindings });
         },
@@ -97,6 +106,11 @@ export default function OrdersPage() {
         setEditVisible(true);
     };
 
+    const openAdjust = (order: SalesOrder) => {
+        setCurrentOrder(order);
+        setAdjustVisible(true);
+    };
+
     const openSettle = async (order: SalesOrder) => {
         setCurrentOrder(order);
         settleForm.resetFields();
@@ -106,7 +120,7 @@ export default function OrdersPage() {
                     product_id: item.product_id,
                     status: 'in_stock',
                 });
-                return [item.id, list] as const;
+                return [getSettlementItemKey(item), list] as const;
             })
         );
         setInventoryOptions(Object.fromEntries(optionEntries));
@@ -118,7 +132,16 @@ export default function OrdersPage() {
             title: '订单号',
             dataIndex: 'order_no',
             width: 180,
-            render: (text) => <span className="font-mono text-gray-500">{text}</span>,
+            render: (text, record) => (
+                <div className="space-y-1">
+                    <span className="font-mono text-gray-500">{text}</span>
+                    {record.latest_adjustment && (
+                        <div>
+                            <Tag color="blue">已调整配置</Tag>
+                        </div>
+                    )}
+                </div>
+            ),
         },
         {
             title: '客户',
@@ -195,7 +218,7 @@ export default function OrdersPage() {
         },
         {
             title: '操作',
-            width: 170,
+            width: 250,
             align: 'center',
             render: (_, record) => (
                 <div className="flex items-center justify-center gap-2">
@@ -207,6 +230,18 @@ export default function OrdersPage() {
                             disabled={record.status !== 'pending'}
                             icon={<EditOutlined />}
                             onClick={() => openEdit(record)}
+                        />
+                    </Tooltip>
+                    <Tooltip
+                        title={
+                            record.status === 'pending' ? '调整装机配置' : '已结算订单不可调整配置'
+                        }
+                    >
+                        <Button
+                            type="text"
+                            disabled={record.status !== 'pending'}
+                            icon={<SwapOutlined />}
+                            onClick={() => openAdjust(record)}
                         />
                     </Tooltip>
                     <Button
@@ -271,18 +306,7 @@ export default function OrdersPage() {
                         columns={columns}
                         dataSource={orders}
                         expandable={{
-                            expandedRowRender: (record) => (
-                                <div className="space-y-2">
-                                    {(record.items || []).map((item) => (
-                                        <div key={item.id} className="flex justify-between text-sm">
-                                            <span>
-                                                {item.product_name} × {item.quantity}
-                                            </span>
-                                            <span>{formatPrice(Number(item.sale_price || 0))}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            ),
+                            expandedRowRender: (record) => <OrderDetails order={record} />,
                         }}
                         pagination={{ pageSize: 10 }}
                     />
@@ -324,6 +348,17 @@ export default function OrdersPage() {
                 </Form>
             </Modal>
 
+            <ConfigAdjustmentModal
+                open={adjustVisible}
+                order={currentOrder}
+                onCancel={() => setAdjustVisible(false)}
+                onSuccess={() => {
+                    setAdjustVisible(false);
+                    setCurrentOrder(null);
+                    refresh();
+                }}
+            />
+
             <Modal
                 title="订单结算"
                 open={settleVisible}
@@ -335,11 +370,12 @@ export default function OrdersPage() {
             >
                 <Form form={settleForm} layout="vertical" className="pt-4">
                     {(currentOrder?.items || []).map((item) => {
-                        const options = inventoryOptions[item.id] || [];
+                        const itemKey = getSettlementItemKey(item);
+                        const options = inventoryOptions[itemKey] || [];
                         return (
                             <Form.Item
-                                key={item.id}
-                                name={`item_${item.id}`}
+                                key={itemKey}
+                                name={`item_${itemKey}`}
                                 label={`${item.product_name} × ${item.quantity}`}
                                 rules={[
                                     {
@@ -375,6 +411,98 @@ export default function OrdersPage() {
             </Modal>
         </div>
     );
+}
+
+function OrderDetails({ order }: { order: SalesOrder }) {
+    const originalItems = order.original_items || order.items || [];
+    const actualItems = order.latest_adjustment ? order.items || [] : [];
+
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <OrderItemsBlock title="原始下单配置" items={originalItems} />
+            <div className="space-y-3">
+                <OrderItemsBlock
+                    title="当前实际装机配置"
+                    items={actualItems.length ? actualItems : originalItems}
+                    emptyText="未调整，按原始配置装机"
+                />
+                {order.latest_adjustment && (
+                    <div className="rounded-lg border border-blue-100 bg-blue-50/70 p-3 text-xs text-blue-700 dark:border-blue-900/40 dark:bg-blue-900/10 dark:text-blue-300">
+                        <div className="font-bold mb-1">最近调整</div>
+                        <div>
+                            {formatDate(order.latest_adjustment.created_at)} /{' '}
+                            {order.latest_adjustment.created_by_username || '未知操作人'}
+                        </div>
+                        <div className="mt-1">{order.latest_adjustment.adjustment_note}</div>
+                        <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <span>
+                                调整后报价{' '}
+                                {formatPrice(Number(order.latest_adjustment.adjusted_amount || 0))}
+                            </span>
+                            <span>
+                                配置差价{' '}
+                                {formatSignedPrice(
+                                    Number(order.latest_adjustment.adjusted_amount || 0) -
+                                        Number(order.original_amount || 0)
+                                )}
+                            </span>
+                            <span>
+                                最终成交{' '}
+                                {formatPrice(Number(order.latest_adjustment.final_amount || 0))}
+                            </span>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+function OrderItemsBlock({
+    title,
+    items,
+    emptyText,
+}: {
+    title: string;
+    items: OrderSettlementItem[];
+    emptyText?: string;
+}) {
+    return (
+        <div className="rounded-lg border border-gray-100 bg-white p-3 dark:border-gray-800 dark:bg-[#141414]">
+            <div className="font-bold text-sm mb-3 text-gray-900 dark:text-gray-100">{title}</div>
+            {items.length === 0 ? (
+                <div className="text-sm text-gray-400">{emptyText || '暂无明细'}</div>
+            ) : (
+                <div className="space-y-2">
+                    {items.map((item) => (
+                        <div
+                            key={`${item.source_type || 'order_item'}_${item.id}`}
+                            className="flex items-center justify-between gap-3 text-sm"
+                        >
+                            <div className="min-w-0">
+                                <Tag>
+                                    {categoryNameMap[item.product_category] ||
+                                        item.product_category}
+                                </Tag>
+                                <span className="font-medium text-gray-900 dark:text-gray-100">
+                                    {item.product_name}
+                                </span>
+                            </div>
+                            <span className="shrink-0 font-mono text-gray-500">
+                                × {item.quantity} / {formatPrice(Number(item.sale_price || 0))}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function formatSignedPrice(value: number) {
+    if (value > 0) return `+${formatPrice(value)}`;
+    if (value < 0) return `-${formatPrice(Math.abs(value))}`;
+    return formatPrice(0);
 }
 
 function InventoryStatus({ order }: { order: SalesOrder }) {

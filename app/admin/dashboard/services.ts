@@ -196,6 +196,10 @@ export const updateOrder = (id: number, data: Partial<SalesOrder>) => {
     return api.put<any, SalesOrder>(`/orders/${id}`, data);
 };
 
+export const updateOrderConfigAdjustment = (id: number, data: any) => {
+    return api.put<any, { id: number }>(`/orders/${id}/config-adjustment`, data);
+};
+
 export const settleOrder = (id: number, data: any) => {
     return api.post<any, SalesOrder>(`/orders/${id}/settle`, data);
 };

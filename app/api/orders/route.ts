@@ -34,10 +34,69 @@ const serializeOrderRow = (row: Record<string, unknown>) => ({
     source: row.source,
     created_by_user_id: row.created_by_user_id,
     created_by_username: row.created_by_username,
+    latest_adjustment_id: row.latest_adjustment_id,
     note: row.note,
     sold_at: row.sold_at,
     created_at: row.created_at,
     updated_at: row.updated_at,
+});
+
+const serializeAdjustmentRow = (row: Record<string, unknown>) => ({
+    id: row.id,
+    order_id: row.order_id,
+    previous_adjustment_id: row.previous_adjustment_id,
+    original_amount: toYuan(row.original_amount_cents as number),
+    previous_adjusted_amount: toYuan(row.previous_adjusted_amount_cents as number),
+    adjusted_amount: toYuan(row.adjusted_amount_cents as number),
+    previous_final_amount: toYuan(row.previous_final_amount_cents as number),
+    final_amount: toYuan(row.final_amount_cents as number),
+    adjustment_note: row.adjustment_note,
+    created_by_user_id: row.created_by_user_id,
+    created_by_username: row.created_by_username,
+    created_at: row.created_at,
+});
+
+const serializeOrderItemRow = (
+    row: Record<string, unknown>,
+    product: ProductRow | undefined,
+    inventoryBindings: Record<string, unknown>[]
+) => ({
+    id: row.id,
+    order_id: row.order_id,
+    product_id: row.product_id,
+    product_name: row.product_name,
+    product_category: row.product_category,
+    quantity: row.quantity,
+    cost_price:
+        row.cost_price_cents === null || row.cost_price_cents === undefined
+            ? null
+            : toYuan(row.cost_price_cents as number),
+    sale_price: toYuan(row.sale_price_cents as number),
+    created_at: row.created_at,
+    source_type: 'order_item' as const,
+    product: product ? serializeProduct(product) : undefined,
+    inventory_bindings: inventoryBindings,
+});
+
+const serializeAdjustmentItemRow = (
+    row: Record<string, unknown>,
+    orderId: number,
+    product: ProductRow | undefined,
+    inventoryBindings: Record<string, unknown>[]
+) => ({
+    id: row.id,
+    adjustment_id: row.adjustment_id,
+    order_id: orderId,
+    source_order_item_id: row.source_order_item_id,
+    product_id: row.product_id,
+    product_name: row.product_name,
+    product_category: row.product_category,
+    quantity: row.quantity,
+    sale_price: toYuan(row.sale_price_cents as number),
+    created_at: row.created_at,
+    source_type: 'adjustment_item' as const,
+    product: product ? serializeProduct(product) : undefined,
+    inventory_bindings: inventoryBindings,
 });
 
 const getOrders = (search?: string | null, status?: string | null) => {
@@ -65,31 +124,60 @@ const getOrders = (search?: string | null, status?: string | null) => {
         'SELECT * FROM sales_order_items WHERE order_id = ? ORDER BY id ASC'
     );
     const productStmt = db.prepare('SELECT * FROM products WHERE id = ?');
-    const bindingStmt = db.prepare('SELECT * FROM order_inventory_items WHERE order_item_id = ?');
+    const adjustmentStmt = db.prepare(
+        'SELECT * FROM sales_order_adjustments WHERE order_id = ? ORDER BY created_at ASC, id ASC'
+    );
+    const adjustmentItemStmt = db.prepare(
+        'SELECT * FROM sales_order_adjustment_items WHERE adjustment_id = ? ORDER BY id ASC'
+    );
+    const orderItemBindingStmt = db.prepare(
+        'SELECT * FROM order_inventory_items WHERE order_item_id = ?'
+    );
+    const adjustmentItemBindingStmt = db.prepare(
+        'SELECT * FROM order_inventory_items WHERE adjustment_item_id = ?'
+    );
 
     return rows.map((row) => {
         const items = itemStmt.all(row.id) as Record<string, unknown>[];
+        const originalItems = items.map((item) => {
+            const product = productStmt.get(item.product_id) as ProductRow | undefined;
+            return serializeOrderItemRow(
+                item,
+                product,
+                orderItemBindingStmt.all(item.id) as Record<string, unknown>[]
+            );
+        });
+        const adjustments = adjustmentStmt.all(row.id) as Record<string, unknown>[];
+        const adjustmentHistory = adjustments.map(serializeAdjustmentRow);
+        const latestAdjustment =
+            adjustmentHistory.find((item) => item.id === row.latest_adjustment_id) ||
+            adjustmentHistory[adjustmentHistory.length - 1] ||
+            null;
+        const latestAdjustmentItems = latestAdjustment
+            ? (adjustmentItemStmt.all(latestAdjustment.id) as Record<string, unknown>[]).map(
+                  (item) => {
+                      const product = productStmt.get(item.product_id) as ProductRow | undefined;
+                      return serializeAdjustmentItemRow(
+                          item,
+                          row.id as number,
+                          product,
+                          adjustmentItemBindingStmt.all(item.id) as Record<string, unknown>[]
+                      );
+                  }
+              )
+            : [];
+
         return {
             ...serializeOrderRow(row),
-            items: items.map((item) => {
-                const product = productStmt.get(item.product_id) as ProductRow | undefined;
-                return {
-                    id: item.id,
-                    order_id: item.order_id,
-                    product_id: item.product_id,
-                    product_name: item.product_name,
-                    product_category: item.product_category,
-                    quantity: item.quantity,
-                    cost_price:
-                        item.cost_price_cents === null || item.cost_price_cents === undefined
-                            ? null
-                            : toYuan(item.cost_price_cents as number),
-                    sale_price: toYuan(item.sale_price_cents as number),
-                    created_at: item.created_at,
-                    product: product ? serializeProduct(product) : undefined,
-                    inventory_bindings: bindingStmt.all(item.id),
-                };
-            }),
+            adjusted_amount: latestAdjustment?.adjusted_amount ?? null,
+            adjustment_note: latestAdjustment?.adjustment_note ?? null,
+            adjusted_at: latestAdjustment?.created_at ?? null,
+            adjusted_by_username: latestAdjustment?.created_by_username ?? null,
+            latest_adjustment: latestAdjustment,
+            adjustment_history: adjustmentHistory,
+            original_items: originalItems,
+            latest_adjustment_items: latestAdjustmentItems,
+            items: latestAdjustment ? latestAdjustmentItems : originalItems,
         };
     });
 };

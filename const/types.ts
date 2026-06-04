@@ -246,12 +246,23 @@ export interface SalesOrder {
     source?: string | null;
     created_by_user_id?: number | null;
     created_by_username?: string | null;
+    latest_adjustment_id?: number | null;
+    latest_adjustment?: SalesOrderAdjustment | null;
+    latest_adjustment_items?: SalesOrderAdjustmentItem[];
+    adjustment_history?: SalesOrderAdjustment[];
+    original_items?: SalesOrderItem[];
+    adjusted_amount?: number | null;
+    adjustment_note?: string | null;
+    adjusted_at?: string | null;
+    adjusted_by_username?: string | null;
     note?: string | null;
     sold_at?: string | null;
     created_at?: string;
     updated_at?: string;
-    items?: SalesOrderItem[];
+    items?: OrderSettlementItem[];
 }
+
+export type OrderSettlementItem = SalesOrderItem | SalesOrderAdjustmentItem;
 
 export interface SalesOrderItem {
     id: number;
@@ -262,6 +273,38 @@ export interface SalesOrderItem {
     quantity: number;
     cost_price?: number | null;
     sale_price: number;
+    source_type?: 'order_item';
+    created_at?: string;
+    product?: Product;
+    inventory_bindings?: OrderInventoryItem[];
+}
+
+export interface SalesOrderAdjustment {
+    id: number;
+    order_id: number;
+    previous_adjustment_id?: number | null;
+    original_amount: number;
+    previous_adjusted_amount: number;
+    adjusted_amount: number;
+    previous_final_amount: number;
+    final_amount: number;
+    adjustment_note: string;
+    created_by_user_id?: number | null;
+    created_by_username?: string | null;
+    created_at?: string;
+}
+
+export interface SalesOrderAdjustmentItem {
+    id: number;
+    adjustment_id: number;
+    order_id?: number;
+    source_order_item_id?: number | null;
+    product_id: number;
+    product_name: string;
+    product_category: string;
+    quantity: number;
+    sale_price: number;
+    source_type: 'adjustment_item';
     created_at?: string;
     product?: Product;
     inventory_bindings?: OrderInventoryItem[];
@@ -270,7 +313,8 @@ export interface SalesOrderItem {
 export interface OrderInventoryItem {
     id: number;
     order_id: number;
-    order_item_id: number;
+    order_item_id?: number | null;
+    adjustment_item_id?: number | null;
     inventory_item_id: number;
     cost_price: number;
     created_at?: string;
