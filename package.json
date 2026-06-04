@@ -7,6 +7,7 @@
         "build": "next build",
         "start": "next start",
         "lint": "next lint",
+        "sqlite:migrate": "node scripts/migrate-sqlite.js",
         "sqlite:init": "ts-node -P tsconfig.node.json scripts/init-sqlite.ts",
         "sqlite:seed-demo": "ts-node -P tsconfig.node.json scripts/seed-demo-data.ts",
         "db:test-package": "ts-node -P tsconfig.node.json scripts/create-test-package.ts",

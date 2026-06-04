@@ -36,7 +36,9 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/lib/db/schema.sql ./lib/db/schema.sql
+COPY --from=builder --chown=nextjs:nodejs /app/lib/db/migrations.js ./lib/db/migrations.js
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/migrate-sqlite.js ./scripts/migrate-sqlite.js
 
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "node scripts/migrate-sqlite.js && node server.js"]
