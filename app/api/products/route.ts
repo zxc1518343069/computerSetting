@@ -1,8 +1,14 @@
 import { error, success } from '@/lib/request/apiResponse';
 import { getDb } from '@/lib/db';
-import { ProductRow, serializeProduct, toCents } from '@/lib/db/serializers';
+import { ProductRow, serializeProduct, toCents, toYuan } from '@/lib/db/serializers';
 import { resolveProductCategoryInput } from '@/lib/db/productCategories';
 import { NextRequest } from 'next/server';
+
+interface ProductListRow extends ProductRow {
+    in_stock_count?: number | null;
+    min_cost_price_cents?: number | null;
+    max_cost_price_cents?: number | null;
+}
 
 const normalizeBarcode = (value: unknown) => {
     if (value === null || value === undefined) return null;
@@ -13,6 +19,21 @@ const normalizeBarcode = (value: unknown) => {
 
 const isBarcodeConflict = (e: unknown) =>
     e instanceof Error && e.message.includes('UNIQUE constraint failed: products.barcode');
+
+const serializeProductListItem = (row: ProductListRow) => ({
+    ...serializeProduct(row),
+    inventory_summary: {
+        in_stock: Number(row.in_stock_count || 0),
+        min_cost_price:
+            row.min_cost_price_cents === null || row.min_cost_price_cents === undefined
+                ? null
+                : toYuan(row.min_cost_price_cents),
+        max_cost_price:
+            row.max_cost_price_cents === null || row.max_cost_price_cents === undefined
+                ? null
+                : toYuan(row.max_cost_price_cents),
+    },
+});
 
 export async function GET(request: NextRequest) {
     try {
@@ -36,7 +57,20 @@ export async function GET(request: NextRequest) {
         }
 
         if (search) {
-            conditions.push('(p.name LIKE @search OR p.barcode LIKE @search)');
+            conditions.push(`
+                (
+                    p.name LIKE @search
+                    OR p.barcode LIKE @search
+                    OR EXISTS (
+                        SELECT 1
+                        FROM inventory_items ii
+                        LEFT JOIN suppliers s ON s.id = ii.supplier_id
+                        WHERE ii.product_id = p.id
+                          AND ii.status = 'in_stock'
+                          AND (ii.serial_number LIKE @search OR s.name LIKE @search)
+                    )
+                )
+            `);
             params.search = `%${search}%`;
         }
 
@@ -48,16 +82,28 @@ export async function GET(request: NextRequest) {
                     p.*,
                     pc.name AS category_name,
                     pc.label AS category_label,
-                    pc.tag_color AS category_tag_color
+                    pc.tag_color AS category_tag_color,
+                    COALESCE(inv.in_stock_count, 0) AS in_stock_count,
+                    inv.min_cost_price_cents,
+                    inv.max_cost_price_cents
                 FROM products p
                 LEFT JOIN product_categories pc ON pc.id = p.category_id
+                LEFT JOIN (
+                    SELECT
+                        product_id,
+                        SUM(CASE WHEN status = 'in_stock' THEN 1 ELSE 0 END) AS in_stock_count,
+                        MIN(CASE WHEN status = 'in_stock' THEN cost_price_cents END) AS min_cost_price_cents,
+                        MAX(CASE WHEN status = 'in_stock' THEN cost_price_cents END) AS max_cost_price_cents
+                    FROM inventory_items
+                    GROUP BY product_id
+                ) inv ON inv.product_id = p.id
                 ${where}
                 ORDER BY p.created_at DESC
             `
             )
-            .all(params) as ProductRow[];
+            .all(params) as ProductListRow[];
 
-        return success(rows.map(serializeProduct), '获取产品列表成功');
+        return success(rows.map(serializeProductListItem), '获取产品列表成功');
     } catch (e) {
         console.error('Get products error:', e);
         return error(500, '获取产品列表失败');

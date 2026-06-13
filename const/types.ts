@@ -9,6 +9,11 @@ export interface Product {
     barcode?: string | null;
     price: number;
     stock_quantity?: number;
+    inventory_summary?: {
+        in_stock: number;
+        min_cost_price: number | null;
+        max_cost_price: number | null;
+    };
     selling_price?: number | null;
     is_use_premium?: boolean;
     created_at?: string;
@@ -173,12 +178,7 @@ export interface InboundOrderItem {
     inventory_items?: InventoryItem[];
 }
 
-export type PurchaseOrderStatus =
-    | 'draft'
-    | 'ordered'
-    | 'partial_inbound'
-    | 'inbound'
-    | 'cancelled';
+export type PurchaseOrderStatus = 'draft' | 'ordered' | 'partial_inbound' | 'inbound' | 'cancelled';
 
 export type PurchasePaymentStatus = 'active' | 'voided';
 

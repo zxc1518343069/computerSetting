@@ -1,6 +1,12 @@
 import { getCategoryTagClass, useProductCategories } from '@/app/hooks/useProductCategories';
 import { formatPrice } from '@/utils';
-import { DeleteOutlined, EditOutlined, InfoCircleOutlined, RiseOutlined } from '@ant-design/icons';
+import {
+    DeleteOutlined,
+    EditOutlined,
+    EyeOutlined,
+    InfoCircleOutlined,
+    RiseOutlined,
+} from '@ant-design/icons';
 import { Button, Popconfirm, Table, Tag, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import React from 'react';
@@ -12,6 +18,7 @@ interface ProductTableProps {
     loading: boolean;
     products: Product[];
     getSellingPriceInfo: (product: Product) => { price: number; rate: number };
+    onViewDetail: (product: Product) => void;
     onEdit: (product: Product) => void;
     onDelete: (id: number) => void;
     deleteLoading?: boolean;
@@ -21,6 +28,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
     loading,
     products,
     getSellingPriceInfo,
+    onViewDetail,
     onEdit,
     onDelete,
     deleteLoading,
@@ -99,23 +107,50 @@ export const ProductTable: React.FC<ProductTableProps> = ({
             ),
         },
         {
-            title: '库存',
-            dataIndex: 'stock_quantity',
+            title: '当前库存',
+            dataIndex: ['inventory_summary', 'in_stock'],
             key: 'stock_quantity',
             align: 'center',
-            width: 100,
-            sorter: (a, b) => (a.stock_quantity || 0) - (b.stock_quantity || 0),
-            render: (stock) => (
-                <span
-                    className={`font-mono font-bold ${
-                        Number(stock || 0) > 0
-                            ? 'text-emerald-600 dark:text-emerald-400'
-                            : 'text-rose-500 dark:text-rose-400'
-                    }`}
-                >
-                    {stock || 0}
-                </span>
-            ),
+            width: 110,
+            sorter: (a, b) =>
+                (a.inventory_summary?.in_stock ?? a.stock_quantity ?? 0) -
+                (b.inventory_summary?.in_stock ?? b.stock_quantity ?? 0),
+            render: (_, record) => {
+                const stock = record.inventory_summary?.in_stock ?? record.stock_quantity ?? 0;
+                return (
+                    <span
+                        className={`font-mono font-bold ${
+                            Number(stock || 0) > 0
+                                ? 'text-emerald-600 dark:text-emerald-400'
+                                : 'text-rose-500 dark:text-rose-400'
+                        }`}
+                    >
+                        {stock || 0}
+                    </span>
+                );
+            },
+        },
+        {
+            title: '在库成本区间',
+            key: 'inventoryCostRange',
+            align: 'right',
+            width: 170,
+            render: (_, record) => {
+                const min = record.inventory_summary?.min_cost_price;
+                const max = record.inventory_summary?.max_cost_price;
+
+                if (min === null || min === undefined || max === null || max === undefined) {
+                    return <span className="text-gray-300 dark:text-gray-600">暂无在库成本</span>;
+                }
+
+                return (
+                    <span className="font-mono text-gray-600 dark:text-gray-300">
+                        {min === max
+                            ? formatPrice(min)
+                            : `${formatPrice(min)} - ${formatPrice(max)}`}
+                    </span>
+                );
+            },
         },
         {
             title: (
@@ -184,10 +219,19 @@ export const ProductTable: React.FC<ProductTableProps> = ({
         {
             title: '操作',
             key: 'action',
-            width: 120,
+            width: 150,
             align: 'center',
             render: (_, record) => (
                 <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <Tooltip title="详情">
+                        <Button
+                            type="text"
+                            size="small"
+                            icon={<EyeOutlined />}
+                            onClick={() => onViewDetail(record)}
+                            className="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10"
+                        />
+                    </Tooltip>
                     <Tooltip title="编辑">
                         <Button
                             type="text"
@@ -236,7 +280,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                     position: ['bottomRight'],
                     className: '!mb-0 !mt-4',
                 }}
-                scroll={{ x: 1280 }}
+                scroll={{ x: 1450 }}
                 size="middle"
                 rowClassName="group hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors cursor-default"
                 className="custom-table"

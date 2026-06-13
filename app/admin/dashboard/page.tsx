@@ -6,8 +6,8 @@ export default function DashboardPage() {
     const router = useRouter();
 
     useEffect(() => {
-        // 默认重定向到销售列表页面
-        router.push('/admin/dashboard/sales/products');
+        // 默认重定向到商品中心页面
+        router.push('/admin/dashboard/config');
     }, [router]);
 
     return (

@@ -14,9 +14,7 @@ import {
     MenuFoldOutlined,
     MenuUnfoldOutlined,
     ShopOutlined,
-    SettingOutlined,
     ShoppingCartOutlined,
-    TagsOutlined,
     RightOutlined,
     UserOutlined,
     WalletOutlined,
@@ -61,7 +59,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             title: '仓库管理',
             items: [
                 {
-                    title: '商品信息',
+                    title: '商品中心',
                     path: '/admin/dashboard/config',
                     icon: <DatabaseOutlined />,
                 },
@@ -69,11 +67,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     title: '商品类目',
                     path: '/admin/dashboard/config/categories',
                     icon: <AppstoreOutlined />,
-                },
-                {
-                    title: '库存状况',
-                    path: '/admin/dashboard/warehouse/products',
-                    icon: <SettingOutlined />,
                 },
                 {
                     title: '供货商信息',
@@ -95,11 +88,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {
             title: '销售管理',
             items: [
-                {
-                    title: '销售列表',
-                    path: '/admin/dashboard/sales/products',
-                    icon: <TagsOutlined />,
-                },
                 {
                     title: '物品溢价',
                     path: '/admin/dashboard/sales/pricing',
