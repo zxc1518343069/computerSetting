@@ -399,6 +399,7 @@ CREATE TABLE IF NOT EXISTS purchase_returns
     shipping_fee_bearer TEXT NOT NULL DEFAULT 'self',
     self_shipping_fee_cents INTEGER NOT NULL DEFAULT 0,
     merchant_shipping_fee_cents INTEGER NOT NULL DEFAULT 0,
+    logistics_company_id INTEGER REFERENCES logistics_companies (id),
     logistics_company TEXT,
     tracking_no TEXT,
     shipped_at TEXT,

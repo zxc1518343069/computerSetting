@@ -268,7 +268,9 @@ export interface PurchaseReturn {
     shipping_fee_bearer: 'self' | 'merchant' | 'shared';
     self_shipping_fee: number;
     merchant_shipping_fee: number;
+    logistics_company_id?: number | null;
     logistics_company?: string | null;
+    logistics_record?: LogisticsRecord | null;
     tracking_no?: string | null;
     shipped_at?: string | null;
     merchant_received_at?: string | null;
@@ -349,6 +351,7 @@ export interface PurchaseOrder {
     payments?: PurchasePayment[];
     returns?: PurchaseReturn[];
     refunds?: PurchaseRefund[];
+    logistics_record?: LogisticsRecord | null;
     inbound_orders?: InboundOrder[];
     summary: PurchaseOrderSummary;
 }

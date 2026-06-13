@@ -4,6 +4,7 @@ import {
     getPurchaseOrderSummaryCents,
     recalculatePurchaseOrderStatus,
 } from '@/lib/db/purchaseOrders';
+import { syncLogisticsRecordForRelated } from '@/lib/db/logistics';
 import { toCents } from '@/lib/db/serializers';
 import { error, success } from '@/lib/request/apiResponse';
 import { NextRequest } from 'next/server';
@@ -52,7 +53,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         const { id: idParam } = await params;
         const purchaseOrderId = Number(idParam);
         const db = getDb();
-        const { inbound_at, note, shipping_fee, misc_fee, payment, items } = await request.json();
+        const {
+            inbound_at,
+            note,
+            shipping_fee,
+            misc_fee,
+            logistics_company_id,
+            tracking_no,
+            payment,
+            items,
+        } = await request.json();
 
         const receivePurchaseOrder = db.transaction(() => {
             const order = db
@@ -157,6 +167,22 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                     misc_fee_cents: nextMiscFeeCents,
                 });
             }
+
+            syncLogisticsRecordForRelated(db, {
+                type: 'purchase',
+                related_type: 'purchase_order',
+                related_id: purchaseOrderId,
+                company_id:
+                    logistics_company_id === undefined
+                        ? undefined
+                        : Number(logistics_company_id || 0) || null,
+                tracking_no: tracking_no === undefined ? undefined : tracking_no || null,
+                shipping_fee: nextShippingFeeCents / 100,
+                self_amount: nextShippingFeeCents / 100,
+                occurred_at: inboundAt,
+                shipping_fee_bearer: 'self',
+                note: '进货入库同步物流',
+            });
 
             const inboundOrderResult = db
                 .prepare(
@@ -316,6 +342,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                 DUPLICATE_SERIAL: '同一张入库单内序列号不能重复',
                 SERIAL_EXISTS: '序列号已存在',
                 PAYMENT_EXCEEDS_PAYABLE: '本次付款会超过当前应付款',
+                LOGISTICS_COMPANY_NOT_FOUND: '物流公司不存在',
             };
             if (messageMap[message])
                 return error(

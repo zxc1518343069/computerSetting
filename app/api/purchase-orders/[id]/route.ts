@@ -6,6 +6,7 @@ import {
     normalizePurchaseOrderStatus,
     recalculatePurchaseOrderStatus,
 } from '@/lib/db/purchaseOrders';
+import { syncLogisticsRecordForRelated } from '@/lib/db/logistics';
 import { toCents } from '@/lib/db/serializers';
 import { error, success } from '@/lib/request/apiResponse';
 import { NextRequest } from 'next/server';
@@ -99,6 +100,16 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
                 .get(nextSupplierId);
             if (!supplier) throw new Error('SUPPLIER_NOT_FOUND');
 
+            const nextOrderedAt = normalizeRequiredDate(payload.ordered_at, order.ordered_at);
+            const nextShippingFeeCents =
+                payload.shipping_fee === undefined
+                    ? Number(order.shipping_fee_cents || 0)
+                    : toCents(Number(payload.shipping_fee || 0));
+            const nextMiscFeeCents =
+                payload.misc_fee === undefined
+                    ? Number(order.misc_fee_cents || 0)
+                    : toCents(Number(payload.misc_fee || 0));
+
             db.prepare(
                 `
                 UPDATE purchase_orders
@@ -116,23 +127,32 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
                 id,
                 supplier_id: nextSupplierId,
                 status:
-                    payload.status ||
-                    normalizePurchaseOrderStatus(order.status) ||
-                    order.status,
-                ordered_at: normalizeRequiredDate(payload.ordered_at, order.ordered_at),
+                    payload.status || normalizePurchaseOrderStatus(order.status) || order.status,
+                ordered_at: nextOrderedAt,
                 expected_inbound_at:
                     payload.expected_inbound_at === undefined
                         ? order.expected_inbound_at
                         : normalizeOptionalDate(payload.expected_inbound_at),
-                shipping_fee_cents:
-                    payload.shipping_fee === undefined
-                        ? order.shipping_fee_cents
-                        : toCents(Number(payload.shipping_fee || 0)),
-                misc_fee_cents:
-                    payload.misc_fee === undefined
-                        ? order.misc_fee_cents
-                        : toCents(Number(payload.misc_fee || 0)),
+                shipping_fee_cents: nextShippingFeeCents,
+                misc_fee_cents: nextMiscFeeCents,
                 note: payload.note === undefined ? order.note : payload.note || null,
+            });
+
+            syncLogisticsRecordForRelated(db, {
+                type: 'purchase',
+                related_type: 'purchase_order',
+                related_id: id,
+                company_id:
+                    payload.logistics_company_id === undefined
+                        ? undefined
+                        : Number(payload.logistics_company_id || 0) || null,
+                tracking_no:
+                    payload.tracking_no === undefined ? undefined : payload.tracking_no || null,
+                shipping_fee: nextShippingFeeCents / 100,
+                self_amount: nextShippingFeeCents / 100,
+                occurred_at: nextOrderedAt,
+                shipping_fee_bearer: 'self',
+                note: '进货单物流',
             });
 
             if (payload.items !== undefined) {
@@ -281,6 +301,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
                 RECEIVED_ITEM_LOCKED: '已入库明细不能修改物品或采购单价',
                 DELETE_RECEIVED_ITEM: '已入库明细不能删除',
                 PAYABLE_LESS_THAN_PAID: '调整后应付款不能小于已付款净额',
+                LOGISTICS_COMPANY_NOT_FOUND: '物流公司不存在',
             };
             if (messageMap[message])
                 return error(

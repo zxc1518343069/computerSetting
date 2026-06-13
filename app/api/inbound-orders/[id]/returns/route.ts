@@ -41,6 +41,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                 shipping_fee_bearer: payload.shipping_fee_bearer,
                 self_shipping_fee: payload.self_shipping_fee,
                 merchant_shipping_fee: payload.merchant_shipping_fee,
+                logistics_company_id: payload.logistics_company_id || null,
                 logistics_company: payload.logistics_company || null,
                 tracking_no: payload.tracking_no || null,
             });
@@ -68,6 +69,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                 RETURN_QUANTITY_EXCEEDS_AVAILABLE: '退货数量不能超过可退数量',
                 DUPLICATE_INVENTORY_ITEM: '同一库存件不能重复退货',
                 INVALID_SHIPPING_FEE: '退货运费不能为负数',
+                LOGISTICS_COMPANY_NOT_FOUND: '物流公司不存在',
             };
             if (messageMap[message]) {
                 return error(message === 'ORDER_NOT_FOUND' ? 404 : 400, messageMap[message]);

@@ -1,4 +1,9 @@
 import type { SqliteDb } from './index';
+import {
+    getLogisticsRecordByRelated,
+    syncLogisticsRecordForRelated,
+    voidLogisticsRecordForRelated,
+} from './logistics';
 import { ProductRow, serializeProduct, toCents, toYuan } from './serializers';
 
 export type PurchaseReturnGoodsStatus =
@@ -21,6 +26,7 @@ interface PurchaseReturnRow {
     shipping_fee_bearer?: PurchaseReturnShippingFeeBearer;
     self_shipping_fee_cents?: number;
     merchant_shipping_fee_cents?: number;
+    logistics_company_id?: number | null;
     logistics_company?: string | null;
     tracking_no?: string | null;
     shipped_at?: string | null;
@@ -110,6 +116,20 @@ const normalizeDate = (value: unknown) =>
 const normalizeOptionalText = (value: unknown) => {
     const text = String(value || '').trim();
     return text || null;
+};
+
+const normalizeOptionalId = (value: unknown) => {
+    const id = Number(value || 0);
+    return id > 0 ? id : null;
+};
+
+const getLogisticsCompanyName = (db: SqliteDb, id?: number | null) => {
+    if (!id) return null;
+    const row = db.prepare('SELECT name FROM logistics_companies WHERE id = ?').get(id) as
+        | { name: string }
+        | undefined;
+    if (!row) throw new Error('LOGISTICS_COMPANY_NOT_FOUND');
+    return row.name;
 };
 
 const normalizeGoodsStatus = (row: PurchaseReturnRow): PurchaseReturnGoodsStatus => {
@@ -278,8 +298,15 @@ const serializeReturn = (db: SqliteDb, row: PurchaseReturnRow) => {
         shipping_fee_bearer: row.shipping_fee_bearer || 'self',
         self_shipping_fee: toYuan(Number(row.self_shipping_fee_cents || 0)),
         merchant_shipping_fee: toYuan(Number(row.merchant_shipping_fee_cents || 0)),
+        logistics_company_id: row.logistics_company_id || null,
         logistics_company: row.logistics_company,
         tracking_no: row.tracking_no,
+        logistics_record: getLogisticsRecordByRelated(
+            db,
+            'purchase_return',
+            row.id,
+            'purchase_return'
+        ),
         shipped_at: row.shipped_at,
         merchant_received_at: row.merchant_received_at,
         cancelled_at: row.cancelled_at,
@@ -450,6 +477,29 @@ const normalizeShippingFees = (input: {
     };
 };
 
+const syncPurchaseReturnLogisticsRecord = (
+    db: SqliteDb,
+    input: {
+        purchaseReturnId: number;
+        logisticsCompanyId?: number | null;
+        trackingNo?: string | null;
+        shipping: ReturnType<typeof normalizeShippingFees>;
+        occurredAt?: string | null;
+    }
+) =>
+    syncLogisticsRecordForRelated(db, {
+        type: 'purchase_return',
+        related_type: 'purchase_return',
+        related_id: input.purchaseReturnId,
+        company_id: input.logisticsCompanyId || null,
+        tracking_no: input.trackingNo || null,
+        shipping_fee: toYuan(input.shipping.shippingFeeCents),
+        self_amount: toYuan(input.shipping.selfShippingFeeCents),
+        occurred_at: input.occurredAt || undefined,
+        shipping_fee_bearer: input.shipping.shippingFeeBearer,
+        note: '采购退货物流',
+    });
+
 const selectInventoryRowsByIds = (
     db: SqliteDb,
     inboundOrderId: number,
@@ -510,6 +560,7 @@ export const createPurchaseReturn = (
         shipping_fee_bearer?: PurchaseReturnShippingFeeBearer;
         self_shipping_fee?: number;
         merchant_shipping_fee?: number;
+        logistics_company_id?: number | null;
         logistics_company?: string | null;
         tracking_no?: string | null;
     }
@@ -547,10 +598,7 @@ export const createPurchaseReturn = (
                     | Record<string, unknown>
                     | undefined;
                 if (!inboundItem) throw new Error('RETURN_ITEM_NOT_FOUND');
-                if (
-                    item.product_id &&
-                    Number(item.product_id) !== Number(inboundItem.product_id)
-                ) {
+                if (item.product_id && Number(item.product_id) !== Number(inboundItem.product_id)) {
                     throw new Error('RETURN_ITEM_PRODUCT_MISMATCH');
                 }
 
@@ -602,6 +650,11 @@ export const createPurchaseReturn = (
         });
 
         const shipping = normalizeShippingFees(input);
+        const logisticsCompanyId = normalizeOptionalId(input.logistics_company_id);
+        const logisticsCompanyName =
+            input.logistics_company === undefined
+                ? getLogisticsCompanyName(db, logisticsCompanyId)
+                : normalizeOptionalText(input.logistics_company);
         const returnResult = db
             .prepare(
                 `
@@ -609,13 +662,13 @@ export const createPurchaseReturn = (
                     purchase_order_id, inbound_order_id, type, reason, status,
                     goods_status, shipping_fee_cents, shipping_fee_bearer,
                     self_shipping_fee_cents, merchant_shipping_fee_cents,
-                    logistics_company, tracking_no, note, updated_at
+                    logistics_company_id, logistics_company, tracking_no, note, updated_at
                 )
                 VALUES (
                     @purchase_order_id, @inbound_order_id, @type, @reason, 'completed',
                     'pending_shipment', @shipping_fee_cents, @shipping_fee_bearer,
                     @self_shipping_fee_cents, @merchant_shipping_fee_cents,
-                    @logistics_company, @tracking_no, @note, CURRENT_TIMESTAMP
+                    @logistics_company_id, @logistics_company, @tracking_no, @note, CURRENT_TIMESTAMP
                 )
             `
             )
@@ -628,11 +681,18 @@ export const createPurchaseReturn = (
                 shipping_fee_bearer: shipping.shippingFeeBearer,
                 self_shipping_fee_cents: shipping.selfShippingFeeCents,
                 merchant_shipping_fee_cents: shipping.merchantShippingFeeCents,
-                logistics_company: normalizeOptionalText(input.logistics_company),
+                logistics_company_id: logisticsCompanyId,
+                logistics_company: logisticsCompanyName,
                 tracking_no: normalizeOptionalText(input.tracking_no),
                 note: normalizeOptionalText(input.note),
             });
         const purchaseReturnId = Number(returnResult.lastInsertRowid);
+        syncPurchaseReturnLogisticsRecord(db, {
+            purchaseReturnId,
+            logisticsCompanyId,
+            trackingNo: normalizeOptionalText(input.tracking_no),
+            shipping,
+        });
         const insertReturnItem = db.prepare(
             `
             INSERT INTO purchase_return_items (
@@ -697,6 +757,7 @@ export const updatePurchaseReturn = (
         shipping_fee_bearer?: PurchaseReturnShippingFeeBearer;
         self_shipping_fee?: number;
         merchant_shipping_fee?: number;
+        logistics_company_id?: number | null;
         logistics_company?: string | null;
         tracking_no?: string | null;
     }
@@ -726,6 +787,20 @@ export const updatePurchaseReturn = (
                     ? toYuan(Number(row.merchant_shipping_fee_cents || 0))
                     : input.merchant_shipping_fee,
         });
+        const logisticsCompanyId =
+            input.logistics_company_id === undefined
+                ? row.logistics_company_id || null
+                : normalizeOptionalId(input.logistics_company_id);
+        const logisticsCompanyName =
+            input.logistics_company !== undefined
+                ? normalizeOptionalText(input.logistics_company)
+                : input.logistics_company_id !== undefined
+                  ? getLogisticsCompanyName(db, logisticsCompanyId)
+                  : row.logistics_company;
+        const trackingNo =
+            input.tracking_no === undefined
+                ? row.tracking_no
+                : normalizeOptionalText(input.tracking_no);
 
         db.prepare(
             `
@@ -736,6 +811,7 @@ export const updatePurchaseReturn = (
                 shipping_fee_bearer = @shipping_fee_bearer,
                 self_shipping_fee_cents = @self_shipping_fee_cents,
                 merchant_shipping_fee_cents = @merchant_shipping_fee_cents,
+                logistics_company_id = @logistics_company_id,
                 logistics_company = @logistics_company,
                 tracking_no = @tracking_no,
                 updated_at = CURRENT_TIMESTAMP
@@ -749,12 +825,16 @@ export const updatePurchaseReturn = (
             shipping_fee_bearer: shipping.shippingFeeBearer,
             self_shipping_fee_cents: shipping.selfShippingFeeCents,
             merchant_shipping_fee_cents: shipping.merchantShippingFeeCents,
-            logistics_company:
-                input.logistics_company === undefined
-                    ? row.logistics_company
-                    : normalizeOptionalText(input.logistics_company),
-            tracking_no:
-                input.tracking_no === undefined ? row.tracking_no : normalizeOptionalText(input.tracking_no),
+            logistics_company_id: logisticsCompanyId,
+            logistics_company: logisticsCompanyName,
+            tracking_no: trackingNo,
+        });
+        syncPurchaseReturnLogisticsRecord(db, {
+            purchaseReturnId: id,
+            logisticsCompanyId,
+            trackingNo,
+            shipping,
+            occurredAt: row.shipped_at || row.created_at,
         });
 
         return id;
@@ -767,6 +847,7 @@ export const shipPurchaseReturn = (
     db: SqliteDb,
     id: number,
     input: {
+        logistics_company_id?: number | null;
         logistics_company?: string | null;
         tracking_no?: string | null;
         shipped_at?: string;
@@ -801,11 +882,27 @@ export const shipPurchaseReturn = (
                     ? toYuan(Number(row.merchant_shipping_fee_cents || 0))
                     : input.merchant_shipping_fee,
         });
+        const logisticsCompanyId =
+            input.logistics_company_id === undefined
+                ? row.logistics_company_id || null
+                : normalizeOptionalId(input.logistics_company_id);
+        const logisticsCompanyName =
+            input.logistics_company !== undefined
+                ? normalizeOptionalText(input.logistics_company)
+                : input.logistics_company_id !== undefined
+                  ? getLogisticsCompanyName(db, logisticsCompanyId)
+                  : row.logistics_company;
+        const trackingNo =
+            input.tracking_no === undefined
+                ? row.tracking_no
+                : normalizeOptionalText(input.tracking_no);
+        const shippedAt = normalizeDate(input.shipped_at);
 
         db.prepare(
             `
             UPDATE purchase_returns
             SET goods_status = 'shipped',
+                logistics_company_id = @logistics_company_id,
                 logistics_company = @logistics_company,
                 tracking_no = @tracking_no,
                 shipped_at = @shipped_at,
@@ -819,14 +916,22 @@ export const shipPurchaseReturn = (
         `
         ).run({
             id,
-            logistics_company: normalizeOptionalText(input.logistics_company),
-            tracking_no: normalizeOptionalText(input.tracking_no),
-            shipped_at: normalizeDate(input.shipped_at),
+            logistics_company_id: logisticsCompanyId,
+            logistics_company: logisticsCompanyName,
+            tracking_no: trackingNo,
+            shipped_at: shippedAt,
             shipping_fee_cents: shipping.shippingFeeCents,
             shipping_fee_bearer: shipping.shippingFeeBearer,
             self_shipping_fee_cents: shipping.selfShippingFeeCents,
             merchant_shipping_fee_cents: shipping.merchantShippingFeeCents,
             note: normalizeOptionalText(input.note),
+        });
+        syncPurchaseReturnLogisticsRecord(db, {
+            purchaseReturnId: id,
+            logisticsCompanyId,
+            trackingNo,
+            shipping,
+            occurredAt: shippedAt,
         });
 
         return id;
@@ -926,6 +1031,13 @@ export const cancelPurchaseReturn = (
         `
         ).run({ id, cancel_reason: normalizeOptionalText(input.cancel_reason) });
 
+        voidLogisticsRecordForRelated(
+            db,
+            'purchase_return',
+            id,
+            'purchase_return',
+            input.cancel_reason || '采购退货已取消'
+        );
         affectedProductIds.forEach((productId) => recalculateProductStock(db, productId));
         return id;
     });

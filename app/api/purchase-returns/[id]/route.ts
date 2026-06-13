@@ -35,6 +35,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
                 PURCHASE_RETURN_CANCELLED: '已取消的退货记录不能编辑',
                 RETURN_REASON_REQUIRED: '请填写退货原因',
                 INVALID_SHIPPING_FEE: '退货运费不能为负数',
+                LOGISTICS_COMPANY_NOT_FOUND: '物流公司不存在',
             };
             if (messageMap[message]) {
                 return error(

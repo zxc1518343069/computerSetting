@@ -5,6 +5,7 @@ import {
     listPurchaseOrders,
     normalizePurchaseOrderStatus,
 } from '@/lib/db/purchaseOrders';
+import { syncLogisticsRecordForRelated } from '@/lib/db/logistics';
 import { toCents } from '@/lib/db/serializers';
 import { error, success } from '@/lib/request/apiResponse';
 import { NextRequest } from 'next/server';
@@ -84,6 +85,8 @@ export async function POST(request: NextRequest) {
             expected_inbound_at,
             shipping_fee = 0,
             misc_fee = 0,
+            logistics_company_id,
+            tracking_no,
             note,
             items,
         } = await request.json();
@@ -103,6 +106,13 @@ export async function POST(request: NextRequest) {
 
         const supplier = db.prepare('SELECT id FROM suppliers WHERE id = ?').get(supplier_id);
         if (!supplier) return error(400, '进货商家不存在');
+        const logisticsCompanyId = Number(logistics_company_id || 0) || null;
+        if (
+            logisticsCompanyId &&
+            !db.prepare('SELECT id FROM logistics_companies WHERE id = ?').get(logisticsCompanyId)
+        ) {
+            return error(400, '物流公司不存在');
+        }
 
         const productIds = Array.from(
             new Set((items as PurchaseOrderItemInput[]).map((item) => Number(item.product_id)))
@@ -169,6 +179,19 @@ export async function POST(request: NextRequest) {
                     note: item.note || null,
                 });
             }
+
+            syncLogisticsRecordForRelated(db, {
+                type: 'purchase',
+                related_type: 'purchase_order',
+                related_id: purchaseOrderId,
+                company_id: logisticsCompanyId,
+                tracking_no: tracking_no || null,
+                shipping_fee: Number(shipping_fee || 0),
+                self_amount: Number(shipping_fee || 0),
+                occurred_at: ordered_at,
+                shipping_fee_bearer: 'self',
+                note: '进货单物流',
+            });
 
             return purchaseOrderId;
         });

@@ -1,5 +1,6 @@
 import type { SqliteDb } from './index';
 import { listInboundOrders } from './inboundOrders';
+import { getLogisticsRecordByRelated } from './logistics';
 import { listPurchaseReturns } from './purchaseReturns';
 import { ProductRow, serializeProduct, toYuan } from './serializers';
 
@@ -366,6 +367,7 @@ export const serializePurchaseOrder = (
             ? listPurchaseReturns(db, { purchaseOrderId: row.id })
             : undefined,
         refunds: options.includePayments ? getPurchaseOrderRefunds(db, row.id) : undefined,
+        logistics_record: getLogisticsRecordByRelated(db, 'purchase_order', row.id, 'purchase'),
         inbound_orders: options.includeInboundOrders
             ? listInboundOrders(db, { purchaseOrderId: row.id })
             : undefined,

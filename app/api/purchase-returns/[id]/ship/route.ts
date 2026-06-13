@@ -19,6 +19,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                 PURCHASE_RETURN_NOT_FOUND: '采购退货记录不存在',
                 PURCHASE_RETURN_NOT_PENDING: '只有待寄回的退货记录可以确认发货',
                 INVALID_SHIPPING_FEE: '退货运费不能为负数',
+                LOGISTICS_COMPANY_NOT_FOUND: '物流公司不存在',
             };
             if (messageMap[message]) {
                 return error(

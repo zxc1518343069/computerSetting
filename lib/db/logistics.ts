@@ -373,6 +373,49 @@ export const getLogisticsRecordById = (db: SqliteDb, id: number) => {
     return row ? serializeLogisticsRecord(row) : null;
 };
 
+const getLogisticsRecordRowByRelated = (
+    db: SqliteDb,
+    relatedType: LogisticsRelatedType,
+    relatedId: number,
+    type?: LogisticsRecordType
+) => {
+    const params: Record<string, number | string> = {
+        relatedType,
+        relatedId,
+    };
+    const typeCondition = type ? 'AND lr.type = @type' : '';
+    if (type) params.type = type;
+
+    return db
+        .prepare(
+            `
+            SELECT lr.*,
+                   lc.name AS company_name,
+                   lc.contact AS company_contact,
+                   lc.status AS company_status
+            FROM logistics_records lr
+            LEFT JOIN logistics_companies lc ON lc.id = lr.company_id
+            WHERE lr.related_type = @relatedType
+              AND lr.related_id = @relatedId
+              AND lr.payment_status <> 'voided'
+              ${typeCondition}
+            ORDER BY lr.updated_at DESC, lr.id DESC
+            LIMIT 1
+        `
+        )
+        .get(params) as LogisticsRecordRow | undefined;
+};
+
+export const getLogisticsRecordByRelated = (
+    db: SqliteDb,
+    relatedType: LogisticsRelatedType,
+    relatedId: number,
+    type?: LogisticsRecordType
+) => {
+    const row = getLogisticsRecordRowByRelated(db, relatedType, relatedId, type);
+    return row ? serializeLogisticsRecord(row) : null;
+};
+
 const normalizeRecordPayload = (
     db: SqliteDb,
     input: SaveLogisticsRecordInput,
@@ -531,6 +574,84 @@ export const updateLogisticsRecord = (
     return id;
 };
 
+export const syncLogisticsRecordForRelated = (
+    db: SqliteDb,
+    input: SaveLogisticsRecordInput & {
+        type: LogisticsRecordType;
+        related_type: LogisticsRelatedType;
+        related_id: number;
+    }
+) => {
+    const relatedId = Number(input.related_id || 0);
+    if (!relatedId) throw new Error('LOGISTICS_RELATED_ID_REQUIRED');
+
+    const current = getLogisticsRecordRowByRelated(db, input.related_type, relatedId, input.type);
+    const companyId =
+        input.company_id === undefined
+            ? current?.company_id || null
+            : input.company_id
+              ? Number(input.company_id)
+              : null;
+    const shippingFee =
+        input.shipping_fee === undefined
+            ? toYuan(Number(current?.shipping_fee_cents || 0))
+            : Number(input.shipping_fee || 0);
+    const bearer =
+        input.shipping_fee_bearer === undefined
+            ? current?.shipping_fee_bearer || 'self'
+            : normalizeShippingFeeBearer(input.shipping_fee_bearer);
+    const selfAmount =
+        input.self_amount === undefined
+            ? current
+                ? toYuan(Number(current.self_amount_cents || 0))
+                : bearer === 'merchant'
+                  ? 0
+                  : shippingFee
+            : Number(input.self_amount || 0);
+    const hasLogisticsInfo =
+        Boolean(companyId) ||
+        Boolean(normalizeOptionalText(input.tracking_no)) ||
+        shippingFee > 0 ||
+        selfAmount > 0;
+
+    if (!current && !hasLogisticsInfo) return null;
+
+    const settlementTarget =
+        input.settlement_target === undefined
+            ? companyId && selfAmount > 0
+                ? 'logistics_company'
+                : 'none'
+            : normalizeSettlementTarget(input.settlement_target);
+    const paymentStatus =
+        input.payment_status === undefined
+            ? settlementTarget === 'logistics_company' && selfAmount > 0
+                ? current?.settlement_target === 'logistics_company'
+                    ? current.payment_status
+                    : 'unpaid'
+                : 'paid'
+            : normalizePaymentStatus(input.payment_status);
+    const payload: SaveLogisticsRecordInput = {
+        ...input,
+        company_id: companyId,
+        shipping_fee: shippingFee,
+        self_amount: selfAmount,
+        shipping_fee_bearer: bearer,
+        settlement_target: settlementTarget,
+        payment_status: paymentStatus,
+        related_id: relatedId,
+    };
+
+    if (current) {
+        updateLogisticsRecord(db, current.id, payload);
+        return getLogisticsRecordById(db, current.id);
+    }
+
+    if (settlementTarget === 'logistics_company' && !companyId) return null;
+
+    const id = createLogisticsRecord(db, payload);
+    return getLogisticsRecordById(db, id);
+};
+
 export const voidLogisticsRecord = (db: SqliteDb, id: number, note?: string | null) => {
     const result = db
         .prepare(
@@ -545,6 +666,19 @@ export const voidLogisticsRecord = (db: SqliteDb, id: number, note?: string | nu
         .run({ id, note: normalizeOptionalText(note) });
     if (result.changes === 0) throw new Error('LOGISTICS_RECORD_NOT_FOUND');
     return id;
+};
+
+export const voidLogisticsRecordForRelated = (
+    db: SqliteDb,
+    relatedType: LogisticsRelatedType,
+    relatedId: number,
+    type?: LogisticsRecordType,
+    note?: string | null
+) => {
+    const row = getLogisticsRecordRowByRelated(db, relatedType, relatedId, type);
+    if (!row) return null;
+    voidLogisticsRecord(db, row.id, note);
+    return getLogisticsRecordById(db, row.id);
 };
 
 export const payLogisticsRecord = (

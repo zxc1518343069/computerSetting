@@ -1,7 +1,14 @@
 'use client';
 
 import { categoryNameMap } from '@/const/categories';
-import { InboundOrder, Product, PurchaseOrder, PurchaseOrderItem, Supplier } from '@/const/types';
+import {
+    InboundOrder,
+    LogisticsCompany,
+    Product,
+    PurchaseOrder,
+    PurchaseOrderItem,
+    Supplier,
+} from '@/const/types';
 import { formatDate, formatPrice } from '@/utils';
 import {
     DeleteOutlined,
@@ -34,6 +41,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
     fetchDashboardProducts,
     fetchInboundOrders,
+    fetchLogisticsCompanies,
     fetchPurchaseOrders,
     fetchSuppliers,
     receivePurchaseOrder,
@@ -112,6 +120,9 @@ export default function InboundPage() {
     );
     const { data: suppliers = [] } = useRequest(fetchSuppliers);
     const { data: products = [] } = useRequest(fetchDashboardProducts);
+    const { data: logisticsCompanies = [] } = useRequest(() =>
+        fetchLogisticsCompanies({ status: 'active' })
+    );
     const { data: purchaseOrders = [], loading: purchaseOrdersLoading } = useRequest(() =>
         fetchPurchaseOrders({ status: 'all' })
     );
@@ -172,6 +183,15 @@ export default function InboundPage() {
         [products]
     );
 
+    const logisticsCompanyOptions = useMemo(
+        () =>
+            (logisticsCompanies as LogisticsCompany[]).map((company) => ({
+                label: company.name,
+                value: company.id,
+            })),
+        [logisticsCompanies]
+    );
+
     const purchaseOrderOptions = useMemo(
         () =>
             receivablePurchaseOrders.map((order) => ({
@@ -205,6 +225,8 @@ export default function InboundPage() {
                     note: values.note || null,
                     shipping_fee: values.shipping_fee,
                     misc_fee: values.misc_fee,
+                    logistics_company_id: values.logistics_company_id || null,
+                    tracking_no: values.tracking_no || null,
                     payment:
                         Number(values.payment_amount || 0) > 0
                             ? {
@@ -273,7 +295,9 @@ export default function InboundPage() {
         }
     );
 
-    const openCreate = (options: { purchaseOrderId?: number; sourceType?: InboundSourceType } = {}) => {
+    const openCreate = (
+        options: { purchaseOrderId?: number; sourceType?: InboundSourceType } = {}
+    ) => {
         const sourceType = options.sourceType || 'purchase_order';
         form.resetFields();
         form.setFieldsValue({
@@ -281,6 +305,8 @@ export default function InboundPage() {
             inbound_at: dayjs(),
             shipping_fee: 0,
             misc_fee: 0,
+            logistics_company_id: undefined,
+            tracking_no: undefined,
             payment_amount: 0,
             paid_at: dayjs(),
             items:
@@ -351,6 +377,8 @@ export default function InboundPage() {
             source_type: sourceType,
             purchase_order_id: undefined,
             supplier_id: undefined,
+            logistics_company_id: undefined,
+            tracking_no: undefined,
             items:
                 sourceType === 'opening_stock'
                     ? [{ quantity: 1, serial_tracking_enabled: false, warranty_enabled: false }]
@@ -364,6 +392,8 @@ export default function InboundPage() {
             supplier_id: order?.supplier_id,
             shipping_fee: order?.shipping_fee || 0,
             misc_fee: order?.misc_fee || 0,
+            logistics_company_id: order?.logistics_record?.company_id || undefined,
+            tracking_no: order?.logistics_record?.tracking_no || undefined,
             items:
                 order?.items
                     .filter((item) => item.remaining_quantity > 0)
@@ -742,6 +772,17 @@ export default function InboundPage() {
                                         className="w-full"
                                     />
                                 </Form.Item>
+                                <Form.Item name="logistics_company_id" label="物流公司">
+                                    <Select
+                                        allowClear
+                                        showSearch
+                                        options={logisticsCompanyOptions}
+                                        optionFilterProp="label"
+                                    />
+                                </Form.Item>
+                                <Form.Item name="tracking_no" label="物流单号">
+                                    <Input />
+                                </Form.Item>
                                 <Form.Item name="payment_amount" label="本次付款">
                                     <InputNumber
                                         min={0}
@@ -756,7 +797,11 @@ export default function InboundPage() {
                                 <Form.Item name="payment_account" label="付款账号">
                                     <Input />
                                 </Form.Item>
-                                <Form.Item name="payment_note" label="付款备注" className="md:col-span-3">
+                                <Form.Item
+                                    name="payment_note"
+                                    label="付款备注"
+                                    className="md:col-span-3"
+                                >
                                     <Input />
                                 </Form.Item>
                             </div>
@@ -861,7 +906,6 @@ export default function InboundPage() {
                     </div>
                 </Form>
             </Modal>
-
         </div>
     );
 }

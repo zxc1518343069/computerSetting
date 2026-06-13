@@ -3,6 +3,7 @@
 import { categoryNameMap } from '@/const/categories';
 import {
     InboundOrder,
+    LogisticsCompany,
     Product,
     PurchaseOrder,
     PurchaseOrderItem,
@@ -50,6 +51,7 @@ import {
     fetchDashboardProducts,
     fetchInboundOrderReturnableItems,
     fetchInboundOrders,
+    fetchLogisticsCompanies,
     fetchPurchaseOrders,
     fetchPurchaseReturns,
     fetchSuppliers,
@@ -238,6 +240,9 @@ export default function PurchaseOrdersPage() {
     );
     const { data: suppliers = [] } = useRequest(fetchSuppliers);
     const { data: products = [] } = useRequest(fetchDashboardProducts);
+    const { data: logisticsCompanies = [] } = useRequest(() =>
+        fetchLogisticsCompanies({ status: 'active' })
+    );
     const { data: inboundOrders = [], refresh: refreshInboundOrders } = useRequest(() =>
         fetchInboundOrders({ source_type: 'purchase_order' })
     );
@@ -249,11 +254,6 @@ export default function PurchaseOrdersPage() {
     const watchedItems = Form.useWatch('items', form) as PurchaseFormItem[] | undefined;
     const watchedShippingFee = Form.useWatch('shipping_fee', form);
     const watchedMiscFee = Form.useWatch('misc_fee', form);
-    const shipShippingBearer =
-        (Form.useWatch('shipping_fee_bearer', shipForm) as
-            | PurchaseReturn['shipping_fee_bearer']
-            | undefined) || 'self';
-
     const supplierOptions = useMemo(
         () => suppliers.map((supplier: Supplier) => ({ label: supplier.name, value: supplier.id })),
         [suppliers]
@@ -272,6 +272,15 @@ export default function PurchaseOrdersPage() {
                 value: product.id,
             })),
         [products]
+    );
+
+    const logisticsCompanyOptions = useMemo(
+        () =>
+            (logisticsCompanies as LogisticsCompany[]).map((company) => ({
+                label: company.name,
+                value: company.id,
+            })),
+        [logisticsCompanies]
     );
 
     const returnableInboundOptions = useMemo(
@@ -360,6 +369,17 @@ export default function PurchaseOrdersPage() {
         clearReturnCreateAction();
     };
 
+    const setReturnFormDefaults = () => {
+        returnForm.setFieldsValue({
+            shipping_fee: 0,
+            shipping_fee_bearer: 'self',
+            self_shipping_fee: 0,
+            merchant_shipping_fee: 0,
+            logistics_company_id: undefined,
+            tracking_no: undefined,
+        });
+    };
+
     const updateReturnInboundFilter = (inboundOrderId?: number) => {
         setReturnInboundOrderId(inboundOrderId);
         const params = new URLSearchParams(searchParams.toString());
@@ -408,6 +428,7 @@ export default function PurchaseOrdersPage() {
             setReturnVisible(true);
             setReturnableData(null);
             returnForm.resetFields();
+            setReturnFormDefaults();
             if (inboundId) {
                 handleLoadReturnableItems(inboundId).catch((e) => message.error(e.message));
             }
@@ -438,6 +459,8 @@ export default function PurchaseOrdersPage() {
                 expected_inbound_at: values.expected_inbound_at?.toISOString() || null,
                 shipping_fee: values.shipping_fee || 0,
                 misc_fee: values.misc_fee || 0,
+                logistics_company_id: values.logistics_company_id || null,
+                tracking_no: values.tracking_no || null,
                 note: values.note || null,
                 ...(itemsLocked
                     ? {}
@@ -569,6 +592,12 @@ export default function PurchaseOrdersPage() {
                 inbound_order_id: values.inbound_order_id,
                 reason: values.reason,
                 note: values.note || null,
+                shipping_fee: values.shipping_fee || 0,
+                shipping_fee_bearer: values.shipping_fee_bearer || 'self',
+                self_shipping_fee: values.self_shipping_fee || 0,
+                merchant_shipping_fee: values.merchant_shipping_fee || 0,
+                logistics_company_id: values.logistics_company_id || null,
+                tracking_no: values.tracking_no || null,
                 items: selectedItems,
             });
         },
@@ -657,6 +686,8 @@ export default function PurchaseOrdersPage() {
             ordered_at: dayjs(),
             shipping_fee: 0,
             misc_fee: 0,
+            logistics_company_id: undefined,
+            tracking_no: undefined,
             items: [{ ordered_quantity: 1, purchase_price: 0 }],
         });
         setFormVisible(true);
@@ -674,6 +705,8 @@ export default function PurchaseOrdersPage() {
                 : undefined,
             shipping_fee: order.shipping_fee,
             misc_fee: order.misc_fee,
+            logistics_company_id: order.logistics_record?.company_id || undefined,
+            tracking_no: order.logistics_record?.tracking_no || undefined,
             note: order.note,
             items: order.items.map((item) => ({
                 id: item.id,
@@ -708,6 +741,7 @@ export default function PurchaseOrdersPage() {
         setReturnVisible(true);
         setReturnableData(null);
         returnForm.resetFields();
+        setReturnFormDefaults();
         if (inboundOrderId) {
             await handleLoadReturnableItems(inboundOrderId);
         }
@@ -723,7 +757,8 @@ export default function PurchaseOrdersPage() {
             shipping_fee_bearer: record.shipping_fee_bearer,
             self_shipping_fee: record.self_shipping_fee,
             merchant_shipping_fee: record.merchant_shipping_fee,
-            logistics_company: record.logistics_company,
+            logistics_company_id:
+                record.logistics_company_id || record.logistics_record?.company_id || undefined,
             tracking_no: record.tracking_no,
         });
         syncReturnShippingSplit(editReturnForm);
@@ -734,7 +769,8 @@ export default function PurchaseOrdersPage() {
         setShippingReturn(record);
         shipForm.resetFields();
         shipForm.setFieldsValue({
-            logistics_company: record.logistics_company,
+            logistics_company_id:
+                record.logistics_company_id || record.logistics_record?.company_id || undefined,
             tracking_no: record.tracking_no,
             shipped_at: dayjs(),
             shipping_fee: record.shipping_fee,
@@ -1316,6 +1352,17 @@ export default function PurchaseOrdersPage() {
                         <Form.Item name="misc_fee" label="杂费">
                             <InputNumber min={0} precision={2} prefix="¥" className="w-full" />
                         </Form.Item>
+                        <Form.Item name="logistics_company_id" label="物流公司">
+                            <Select
+                                allowClear
+                                showSearch
+                                options={logisticsCompanyOptions}
+                                optionFilterProp="label"
+                            />
+                        </Form.Item>
+                        <Form.Item name="tracking_no" label="物流单号">
+                            <Input />
+                        </Form.Item>
                     </div>
                     <Form.Item name="note" label="备注">
                         <Input.TextArea rows={2} />
@@ -1492,6 +1539,10 @@ export default function PurchaseOrdersPage() {
                     <Form.Item name="note" label="备注">
                         <Input.TextArea rows={2} />
                     </Form.Item>
+                    <ReturnLogisticsFields
+                        form={returnForm}
+                        logisticsCompanyOptions={logisticsCompanyOptions}
+                    />
 
                     {returnableData && (
                         <div className="mb-4 rounded-2xl border border-red-100 bg-red-50/70 p-4 dark:border-red-900/40 dark:bg-red-900/10">
@@ -1559,7 +1610,10 @@ export default function PurchaseOrdersPage() {
                 destroyOnHidden
                 width={720}
             >
-                <ReturnBaseForm form={editReturnForm} />
+                <ReturnBaseForm
+                    form={editReturnForm}
+                    logisticsCompanyOptions={logisticsCompanyOptions}
+                />
             </Modal>
 
             <Modal
@@ -1572,60 +1626,11 @@ export default function PurchaseOrdersPage() {
                 width={720}
             >
                 <Form form={shipForm} layout="vertical" className="pt-4">
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <Form.Item name="logistics_company" label="物流公司">
-                            <Input />
-                        </Form.Item>
-                        <Form.Item name="tracking_no" label="物流单号">
-                            <Input />
-                        </Form.Item>
-                        <Form.Item
-                            name="shipped_at"
-                            label="发货时间"
-                            rules={[{ required: true, message: '请选择发货时间' }]}
-                        >
-                            <DatePicker showTime className="w-full" />
-                        </Form.Item>
-                        <Form.Item name="shipping_fee" label="退货运费">
-                            <InputNumber
-                                min={0}
-                                precision={2}
-                                prefix="¥"
-                                className="w-full"
-                                onChange={(value) =>
-                                    syncReturnShippingSplit(shipForm, undefined, value)
-                                }
-                            />
-                        </Form.Item>
-                        <Form.Item name="shipping_fee_bearer" label="运费承担方">
-                            <Select
-                                options={[
-                                    { label: '我方', value: 'self' },
-                                    { label: '商家', value: 'merchant' },
-                                    { label: '平摊', value: 'shared' },
-                                ]}
-                                onChange={(value) => syncReturnShippingSplit(shipForm, value)}
-                            />
-                        </Form.Item>
-                        <Form.Item name="self_shipping_fee" label="我方承担">
-                            <InputNumber
-                                min={0}
-                                precision={2}
-                                prefix="¥"
-                                className="w-full"
-                                disabled={shipShippingBearer !== 'shared'}
-                            />
-                        </Form.Item>
-                        <Form.Item name="merchant_shipping_fee" label="商家承担">
-                            <InputNumber
-                                min={0}
-                                precision={2}
-                                prefix="¥"
-                                className="w-full"
-                                disabled={shipShippingBearer !== 'shared'}
-                            />
-                        </Form.Item>
-                    </div>
+                    <ReturnLogisticsFields
+                        form={shipForm}
+                        logisticsCompanyOptions={logisticsCompanyOptions}
+                        includeShippedAt
+                    />
                     <Form.Item name="note" label="备注">
                         <Input.TextArea rows={2} />
                     </Form.Item>
@@ -1843,12 +1848,13 @@ function ReturnItemSelector({ fieldName, group }: { fieldName: number; group?: R
     );
 }
 
-function ReturnBaseForm({ form }: { form: ReturnType<typeof Form.useForm>[0] }) {
-    const shippingFeeBearer =
-        (Form.useWatch('shipping_fee_bearer', form) as
-            | PurchaseReturn['shipping_fee_bearer']
-            | undefined) || 'self';
-
+function ReturnBaseForm({
+    form,
+    logisticsCompanyOptions,
+}: {
+    form: ReturnType<typeof Form.useForm>[0];
+    logisticsCompanyOptions: { label: string; value: number }[];
+}) {
     return (
         <Form form={form} layout="vertical" className="pt-4">
             <Form.Item
@@ -1858,51 +1864,7 @@ function ReturnBaseForm({ form }: { form: ReturnType<typeof Form.useForm>[0] }) 
             >
                 <Input />
             </Form.Item>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <Form.Item name="shipping_fee" label="退货运费">
-                    <InputNumber
-                        min={0}
-                        precision={2}
-                        prefix="¥"
-                        className="w-full"
-                        onChange={(value) => syncReturnShippingSplit(form, undefined, value)}
-                    />
-                </Form.Item>
-                <Form.Item name="shipping_fee_bearer" label="运费承担方">
-                    <Select
-                        options={[
-                            { label: '我方', value: 'self' },
-                            { label: '商家', value: 'merchant' },
-                            { label: '平摊', value: 'shared' },
-                        ]}
-                        onChange={(value) => syncReturnShippingSplit(form, value)}
-                    />
-                </Form.Item>
-                <Form.Item name="self_shipping_fee" label="我方承担">
-                    <InputNumber
-                        min={0}
-                        precision={2}
-                        prefix="¥"
-                        className="w-full"
-                        disabled={shippingFeeBearer !== 'shared'}
-                    />
-                </Form.Item>
-                <Form.Item name="merchant_shipping_fee" label="商家承担">
-                    <InputNumber
-                        min={0}
-                        precision={2}
-                        prefix="¥"
-                        className="w-full"
-                        disabled={shippingFeeBearer !== 'shared'}
-                    />
-                </Form.Item>
-                <Form.Item name="logistics_company" label="物流公司">
-                    <Input />
-                </Form.Item>
-                <Form.Item name="tracking_no" label="物流单号">
-                    <Input />
-                </Form.Item>
-            </div>
+            <ReturnLogisticsFields form={form} logisticsCompanyOptions={logisticsCompanyOptions} />
             <Form.Item name="note" label="备注">
                 <Input.TextArea rows={3} />
             </Form.Item>
@@ -1910,6 +1872,82 @@ function ReturnBaseForm({ form }: { form: ReturnType<typeof Form.useForm>[0] }) 
     );
 }
 
+function ReturnLogisticsFields({
+    form,
+    logisticsCompanyOptions,
+    includeShippedAt = false,
+}: {
+    form: ReturnType<typeof Form.useForm>[0];
+    logisticsCompanyOptions: { label: string; value: number }[];
+    includeShippedAt?: boolean;
+}) {
+    const shippingFeeBearer =
+        (Form.useWatch('shipping_fee_bearer', form) as
+            | PurchaseReturn['shipping_fee_bearer']
+            | undefined) || 'self';
+
+    return (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <Form.Item name="logistics_company_id" label="物流公司">
+                <Select
+                    allowClear
+                    showSearch
+                    options={logisticsCompanyOptions}
+                    optionFilterProp="label"
+                />
+            </Form.Item>
+            <Form.Item name="tracking_no" label="物流单号">
+                <Input />
+            </Form.Item>
+            {includeShippedAt && (
+                <Form.Item
+                    name="shipped_at"
+                    label="发货时间"
+                    rules={[{ required: true, message: '请选择发货时间' }]}
+                >
+                    <DatePicker showTime className="w-full" />
+                </Form.Item>
+            )}
+            <Form.Item name="shipping_fee" label="退货运费">
+                <InputNumber
+                    min={0}
+                    precision={2}
+                    prefix="¥"
+                    className="w-full"
+                    onChange={(value) => syncReturnShippingSplit(form, undefined, value)}
+                />
+            </Form.Item>
+            <Form.Item name="shipping_fee_bearer" label="运费承担方">
+                <Select
+                    options={[
+                        { label: '我方', value: 'self' },
+                        { label: '商家', value: 'merchant' },
+                        { label: '平摊', value: 'shared' },
+                    ]}
+                    onChange={(value) => syncReturnShippingSplit(form, value)}
+                />
+            </Form.Item>
+            <Form.Item name="self_shipping_fee" label="我方承担">
+                <InputNumber
+                    min={0}
+                    precision={2}
+                    prefix="¥"
+                    className="w-full"
+                    disabled={shippingFeeBearer !== 'shared'}
+                />
+            </Form.Item>
+            <Form.Item name="merchant_shipping_fee" label="商家承担">
+                <InputNumber
+                    min={0}
+                    precision={2}
+                    prefix="¥"
+                    className="w-full"
+                    disabled={shippingFeeBearer !== 'shared'}
+                />
+            </Form.Item>
+        </div>
+    );
+}
 function PurchaseOrderDetails({
     order,
     onPayment,
@@ -1926,6 +1964,14 @@ function PurchaseOrderDetails({
             <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
                 <ReadonlyCell label="已入库商品" value={formatPrice(order.summary.goods_amount)} />
                 <ReadonlyCell label="运费" value={formatPrice(order.shipping_fee)} />
+                <ReadonlyCell
+                    label="物流"
+                    value={
+                        [order.logistics_record?.company?.name, order.logistics_record?.tracking_no]
+                            .filter(Boolean)
+                            .join(' / ') || '-'
+                    }
+                />
                 <ReadonlyCell label="杂费" value={formatPrice(order.misc_fee)} />
                 <ReadonlyCell
                     label="商家应付款"
@@ -2054,7 +2100,10 @@ function PurchaseReturnDetails({ record }: { record: PurchaseReturn }) {
                 <ReadonlyCell
                     label="物流"
                     value={
-                        [record.logistics_company, record.tracking_no]
+                        [
+                            record.logistics_record?.company?.name || record.logistics_company,
+                            record.logistics_record?.tracking_no || record.tracking_no,
+                        ]
                             .filter(Boolean)
                             .join(' / ') || '-'
                     }
