@@ -2,9 +2,147 @@ export interface DataExchangeTable {
     table: string;
     sheet: string;
     columns: string[];
+    columnLabels: Record<string, string>;
 }
 
-export const dataExchangeTables: DataExchangeTable[] = [
+type DataExchangeTableDefinition = Omit<DataExchangeTable, 'columnLabels'> & {
+    columnLabels?: Record<string, string>;
+};
+
+const commonColumnLabels: Record<string, string> = {
+    id: 'ID',
+    unified_pricing: '统一溢价开关',
+    unified_rate: '统一溢价比例',
+    rounding_type: '取整方式',
+    cpu_rate: 'CPU 溢价比例',
+    motherboard_rate: '主板溢价比例',
+    ram_rate: '内存溢价比例',
+    gpu_rate: '显卡溢价比例',
+    storage_rate: '硬盘溢价比例',
+    psu_rate: '电源溢价比例',
+    case_rate: '机箱溢价比例',
+    cooling_rate: '散热溢价比例',
+    monitor_rate: '显示器溢价比例',
+    created_at: '创建时间',
+    updated_at: '更新时间',
+    code: '编码',
+    name: '名称',
+    label: '显示名称',
+    tag_color: '标签颜色',
+    sort_order: '排序',
+    is_active: '是否启用',
+    category_id: '类目ID',
+    rate: '溢价比例',
+    contact_name: '联系人',
+    phone: '电话',
+    address: '地址',
+    note: '备注',
+    category: '类目',
+    barcode: '条形码',
+    price_cents: '价格(分)',
+    stock_quantity: '库存数量',
+    selling_price_cents: '销售价(分)',
+    is_use_premium: '是否使用溢价',
+    supplier_id: '供应商ID',
+    status: '状态',
+    ordered_at: '下单时间',
+    expected_inbound_at: '预计入库时间',
+    shipping_fee_cents: '运费(分)',
+    misc_fee_cents: '杂费(分)',
+    purchase_order_id: '进货单ID',
+    product_id: '产品ID',
+    ordered_quantity: '订购数量',
+    received_quantity: '已收数量',
+    purchase_price_cents: '采购价(分)',
+    amount_cents: '金额(分)',
+    payment_account: '付款账户',
+    paid_at: '付款时间',
+    voided_at: '作废时间',
+    void_reason: '作废原因',
+    is_paid: '是否已付款',
+    source_type: '来源类型',
+    inbound_at: '入库时间',
+    inbound_order_id: '入库单ID',
+    quantity: '数量',
+    purchase_order_item_id: '进货明细ID',
+    serial_tracking_enabled: '是否启用序列号追踪',
+    warranty_enabled: '是否启用保修',
+    warranty_until: '保修截止时间',
+    inbound_order_item_id: '入库明细ID',
+    cost_price_cents: '成本价(分)',
+    serial_number: '序列号',
+    purchase_return_id: '采购退货ID',
+    type: '类型',
+    reason: '原因',
+    goods_status: '货物状态',
+    shipping_fee_bearer: '运费承担方',
+    self_shipping_fee_cents: '我方运费(分)',
+    merchant_shipping_fee_cents: '商家运费(分)',
+    logistics_company: '物流公司',
+    tracking_no: '物流单号',
+    shipped_at: '发货时间',
+    merchant_received_at: '商家收货时间',
+    cancelled_at: '取消时间',
+    cancel_reason: '取消原因',
+    refund_account: '退款账户',
+    refunded_at: '退款时间',
+    description: '描述',
+    total_price_cents: '总价(分)',
+    package_id: '套餐ID',
+    order_no: '订单号',
+    customer_name: '客户姓名',
+    customer_phone: '客户电话',
+    original_amount_cents: '原始金额(分)',
+    final_amount_cents: '最终金额(分)',
+    discount_amount_cents: '优惠金额(分)',
+    cost_amount_cents: '成本金额(分)',
+    profit_amount_cents: '利润金额(分)',
+    source: '来源',
+    created_by_user_id: '创建人ID',
+    created_by_username: '创建人账号',
+    latest_adjustment_id: '最新改单ID',
+    sold_at: '销售时间',
+    order_id: '订单ID',
+    product_name: '产品名称',
+    product_category: '产品类目',
+    sale_price_cents: '销售单价(分)',
+    previous_adjustment_id: '上一次改单ID',
+    previous_adjusted_amount_cents: '上次调整后金额(分)',
+    adjusted_amount_cents: '调整金额(分)',
+    previous_final_amount_cents: '上次最终金额(分)',
+    adjustment_note: '改单备注',
+    adjustment_id: '改单ID',
+    source_order_item_id: '来源订单明细ID',
+    order_item_id: '订单明细ID',
+    adjustment_item_id: '改单明细ID',
+    inventory_item_id: '库存单件ID',
+    cost_date: '成本日期',
+};
+
+const createColumnLabels = (
+    table: string,
+    columns: string[],
+    overrides: Record<string, string> = {}
+) => {
+    const labels = columns.reduce<Record<string, string>>((acc, column) => {
+        const label = overrides[column] || commonColumnLabels[column];
+        if (!label) {
+            throw new Error(`Missing data exchange column label: ${table}.${column}`);
+        }
+
+        acc[column] = label;
+        return acc;
+    }, {});
+
+    return labels;
+};
+
+const createDataExchangeTable = (definition: DataExchangeTableDefinition): DataExchangeTable => ({
+    ...definition,
+    columnLabels: createColumnLabels(definition.table, definition.columns, definition.columnLabels),
+});
+
+const dataExchangeTableDefinitions: DataExchangeTableDefinition[] = [
     {
         table: 'pricing_config',
         sheet: '溢价配置',
@@ -350,27 +488,9 @@ export const dataExchangeTables: DataExchangeTable[] = [
     },
 ];
 
-export const dataExchangeDeleteOrder = [
-    'order_inventory_items',
-    'sales_order_adjustment_items',
-    'sales_order_adjustments',
-    'sales_order_items',
-    'sales_orders',
-    'purchase_refunds',
-    'purchase_return_items',
-    'purchase_returns',
-    'inventory_items',
-    'inbound_order_items',
-    'inbound_orders',
-    'purchase_payments',
-    'purchase_order_items',
-    'purchase_orders',
-    'package_items',
-    'packages',
-    'operating_costs',
-    'products',
-    'suppliers',
-    'category_pricing_rates',
-    'product_categories',
-    'pricing_config',
-];
+export const dataExchangeTables: DataExchangeTable[] =
+    dataExchangeTableDefinitions.map(createDataExchangeTable);
+
+export const dataExchangeTableMap = new Map(
+    dataExchangeTables.map((table) => [table.table, table])
+);

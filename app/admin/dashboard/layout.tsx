@@ -3,7 +3,7 @@ import { authService } from '@/app/services';
 import {
     AppstoreOutlined,
     AuditOutlined,
-    CloudUploadOutlined,
+    CloudDownloadOutlined,
     DatabaseOutlined,
     DollarOutlined,
     DownOutlined,
@@ -148,7 +148,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {
                     title: '数据交换',
                     path: '/admin/dashboard/data/exchange',
-                    icon: <CloudUploadOutlined />,
+                    icon: <CloudDownloadOutlined />,
                 },
             ],
         },
