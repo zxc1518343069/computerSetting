@@ -70,14 +70,22 @@ export interface QuoteExportData {
     products: Product[];
     totalPrice: number;
     discountedPrice?: number;
-    getItemMetrics: (item: EditablePartRow) => {
-        unitCost: number;
-        unitSellPrice: number;
-        totalCost: number;
-        totalSellPrice: number;
-        totalProfit: number;
-        profitRate: number;
-    };
+    title?: string;
+    subtitle?: string;
+    totalLabel?: string;
+    itemOrder?: 'category' | 'input';
+    includeCustomItems?: boolean;
+    getCategoryLabel?: (category: string) => string;
+    getItemMetrics: (item: EditablePartRow) => QuoteItemMetrics;
+}
+
+export interface QuoteItemMetrics {
+    unitCost: number;
+    unitSellPrice: number;
+    totalCost: number;
+    totalSellPrice: number;
+    totalProfit: number;
+    profitRate: number;
 }
 
 /**
@@ -140,12 +148,18 @@ function drawText(
 /**
  * 绘制分类标签
  */
-function drawCategoryTag(ctx: CanvasRenderingContext2D, category: string, x: number, y: number) {
+function drawCategoryTag(
+    ctx: CanvasRenderingContext2D,
+    category: string,
+    x: number,
+    y: number,
+    getCategoryLabel?: (category: string) => string
+) {
     const config = CATEGORY_CONFIG[category];
     const color = COLORS.categoryColors[category] || COLORS.textMuted;
-    const name = config?.name || category;
+    const name = getCategoryLabel?.(category) || config?.name || category;
 
-    const tagWidth = 50;
+    const tagWidth = 60;
     const tagHeight = 22;
     const tagRadius = 4;
 
@@ -161,17 +175,22 @@ function drawCategoryTag(ctx: CanvasRenderingContext2D, category: string, x: num
     ctx.stroke();
 
     // 文字
-    ctx.font = FONTS.small;
-    ctx.fillStyle = color;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(name, x + tagWidth / 2, y);
+    drawText(ctx, name, x + tagWidth / 2, y, tagWidth - 8, {
+        align: 'center',
+        color,
+        font: FONTS.small,
+    });
 }
 
 /**
  * 绘制表头
  */
-function drawHeader(ctx: CanvasRenderingContext2D, width: number): number {
+function drawHeader(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    title = '明远装机报价单',
+    subtitle = '专业电脑配置方案'
+): number {
     const y = SIZES.padding;
 
     // Logo 区域背景
@@ -197,12 +216,12 @@ function drawHeader(ctx: CanvasRenderingContext2D, width: number): number {
     ctx.font = FONTS.title;
     ctx.fillStyle = COLORS.textPrimary;
     ctx.textAlign = 'left';
-    ctx.fillText('明远装机报价单', logoX + 55, logoY + 12);
+    ctx.fillText(title, logoX + 55, logoY + 12);
 
     // 副标题
     ctx.font = FONTS.subtitle;
     ctx.fillStyle = COLORS.textMuted;
-    ctx.fillText('专业电脑配置方案', logoX + 55, logoY + 35);
+    ctx.fillText(subtitle, logoX + 55, logoY + 35);
 
     // 日期
     const dateX = width - SIZES.padding - 20;
@@ -258,7 +277,8 @@ function drawDataRow(
     unitPrice: number,
     subtotal: number,
     y: number,
-    width: number
+    width: number,
+    getCategoryLabel?: (category: string) => string
 ): number {
     const colX = {
         category: SIZES.padding + 20,
@@ -269,7 +289,7 @@ function drawDataRow(
     };
 
     // 分类标签
-    drawCategoryTag(ctx, item.category, colX.category, y);
+    drawCategoryTag(ctx, item.category, colX.category, y, getCategoryLabel);
 
     // 产品名称
     drawText(ctx, productName, colX.name, y, 280, {
@@ -303,7 +323,8 @@ function drawFooter(
     totalPrice: number,
     discountedPrice: number | undefined,
     y: number,
-    width: number
+    width: number,
+    totalLabel = '配置总价'
 ): number {
     // 分隔线
     ctx.strokeStyle = COLORS.border;
@@ -331,7 +352,7 @@ function drawFooter(
     ctx.font = FONTS.bodyBold;
     ctx.fillStyle = COLORS.textSecondary;
     ctx.textAlign = 'left';
-    ctx.fillText('配置总价', SIZES.padding + 40, footerY + 15);
+    ctx.fillText(totalLabel, SIZES.padding + 40, footerY + 15);
 
     // 总计金额
     ctx.font = FONTS.price;
@@ -378,10 +399,36 @@ function drawBottomInfo(ctx: CanvasRenderingContext2D, y: number, width: number)
  * 主函数：生成报价单图片
  */
 export function generateQuoteImage(data: QuoteExportData): string {
-    const { items, products, totalPrice, discountedPrice, getItemMetrics } = data;
+    const {
+        items,
+        products,
+        totalPrice,
+        discountedPrice,
+        title,
+        subtitle,
+        totalLabel,
+        itemOrder = 'category',
+        includeCustomItems = true,
+        getCategoryLabel,
+        getItemMetrics,
+    } = data;
 
     // 过滤有效项目
-    const validItems = items.filter((item) => item.product_id && item.product_id > 0);
+    const validItems = items.filter(
+        (item) =>
+            (item.product_id && item.product_id > 0) ||
+            (includeCustomItems && item.custom_name && Number(item.custom_price || 0) > 0)
+    );
+    const knownCategoryKeys = new Set(PACKAGE_CATEGORIES_LIST.map((cat) => cat.key));
+    const orderedItems =
+        itemOrder === 'input'
+            ? validItems
+            : [
+                  ...PACKAGE_CATEGORIES_LIST.flatMap((cat) =>
+                      validItems.filter((item) => item.category === cat.key)
+                  ),
+                  ...validItems.filter((item) => !knownCategoryKeys.has(item.category)),
+              ];
 
     // 计算画布高度
     const contentHeight = validItems.length * SIZES.rowHeight;
@@ -403,34 +450,31 @@ export function generateQuoteImage(data: QuoteExportData): string {
     ctx.fillRect(0, 0, SIZES.width, totalHeight);
 
     // 绘制表头
-    let currentY = drawHeader(ctx, SIZES.width);
+    let currentY = drawHeader(ctx, SIZES.width, title, subtitle);
 
     // 绘制数据行
-    PACKAGE_CATEGORIES_LIST.forEach((cat) => {
-        const categoryItems = validItems.filter((item) => item.category === cat.key);
+    orderedItems.forEach((item) => {
+        const product = products.find((p) => p.id === item.product_id);
+        const metrics = getItemMetrics(item);
 
-        categoryItems.forEach((item) => {
-            const product = products.find((p) => p.id === item.product_id);
-            const metrics = getItemMetrics(item);
+        const productName = product?.name || item.custom_name || '未知产品';
+        const unitPrice = metrics.unitSellPrice;
+        const subtotal = metrics.totalSellPrice;
 
-            const productName = product?.name || item.custom_name || '未知产品';
-            const unitPrice = metrics.unitSellPrice;
-            const subtotal = metrics.totalSellPrice;
-
-            currentY = drawDataRow(
-                ctx,
-                item,
-                productName,
-                unitPrice,
-                subtotal,
-                currentY,
-                SIZES.width
-            );
-        });
+        currentY = drawDataRow(
+            ctx,
+            item,
+            productName,
+            unitPrice,
+            subtotal,
+            currentY,
+            SIZES.width,
+            getCategoryLabel
+        );
     });
 
     // 绘制页脚
-    currentY = drawFooter(ctx, totalPrice, discountedPrice, currentY + 20, SIZES.width);
+    currentY = drawFooter(ctx, totalPrice, discountedPrice, currentY + 20, SIZES.width, totalLabel);
 
     // 绘制底部信息
     drawBottomInfo(ctx, currentY + 20, SIZES.width);

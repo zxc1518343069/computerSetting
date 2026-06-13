@@ -6,9 +6,11 @@ import { authService } from '@/app/services/auth';
 import {
     AppstoreOutlined,
     DashboardOutlined,
-    DollarOutlined,
+    DownOutlined,
     LogoutOutlined,
+    ShoppingOutlined,
     ThunderboltFilled,
+    ToolOutlined,
     TrophyOutlined,
     UserOutlined,
 } from '@ant-design/icons';
@@ -59,9 +61,9 @@ export default function SiteHeader() {
     };
 
     const navItems = [
-        { label: '装机配置', path: '/', icon: <AppstoreOutlined /> },
-        { label: '游戏榜单', path: '/gamesList', icon: <TrophyOutlined /> },
-        { label: '价格方案', path: '/pricing', icon: <DollarOutlined /> },
+        { label: '产品零售', path: '/retail', icon: <ShoppingOutlined /> },
+        { label: '二手', path: '/second-hand', icon: <ToolOutlined /> },
+        { label: '租赁', path: '/rental', icon: <AppstoreOutlined /> },
         // ...(isLoggedIn
         //     ? [
         //           {
@@ -72,6 +74,15 @@ export default function SiteHeader() {
         //           },
         //       ]
         //     : []),
+    ];
+
+    const diyActive = pathname === '/' || pathname.startsWith('/gamesList');
+    const diyMenuItems = [
+        {
+            key: 'gamesList',
+            label: <Link href="/gamesList">游戏榜单</Link>,
+            icon: <TrophyOutlined />,
+        },
     ];
 
     const userMenuItems = [
@@ -119,12 +130,39 @@ export default function SiteHeader() {
 
                 {/* Navigation */}
                 <nav className="hidden md:flex items-center gap-8 h-full">
-                    {mounted &&
-                        navItems.map((item) => (
-                            <Link
-                                key={item.path}
-                                href={item.path}
-                                className={`
+                    {mounted && (
+                        <>
+                            <Dropdown menu={{ items: diyMenuItems }} trigger={['hover']}>
+                                <Link
+                                    href="/"
+                                    className={`
+                                    relative h-full flex items-center gap-2 text-sm font-bold transition-colors duration-300
+                                    ${
+                                        diyActive
+                                            ? 'text-blue-600'
+                                            : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+                                    }
+                                `}
+                                >
+                                    <span className="text-lg">
+                                        <AppstoreOutlined />
+                                    </span>
+                                    <span>DIY整机</span>
+                                    <DownOutlined className="text-[10px] opacity-70" />
+                                    <span
+                                        className={`
+                                    absolute bottom-0 left-0 w-full h-[3px] bg-blue-600 rounded-t-full transition-all duration-300
+                                    ${diyActive ? 'opacity-100 scale-x-100' : 'opacity-0 scale-x-0'}
+                                `}
+                                    />
+                                </Link>
+                            </Dropdown>
+
+                            {navItems.map((item) => (
+                                <Link
+                                    key={item.path}
+                                    href={item.path}
+                                    className={`
                                 relative h-full flex items-center gap-2 text-sm font-bold transition-colors duration-300
                                 ${
                                     isActive(item.path)
@@ -132,18 +170,20 @@ export default function SiteHeader() {
                                         : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
                                 }
                             `}
-                            >
-                                <span className="text-lg">{item.icon}</span>
-                                <span>{item.label}</span>
-                                {/* Active Indicator Line */}
-                                <span
-                                    className={`
+                                >
+                                    <span className="text-lg">{item.icon}</span>
+                                    <span>{item.label}</span>
+                                    {/* Active Indicator Line */}
+                                    <span
+                                        className={`
                                 absolute bottom-0 left-0 w-full h-[3px] bg-blue-600 rounded-t-full transition-all duration-300
                                 ${isActive(item.path) ? 'opacity-100 scale-x-100' : 'opacity-0 scale-x-0'}
                             `}
-                                />
-                            </Link>
-                        ))}
+                                    />
+                                </Link>
+                            ))}
+                        </>
+                    )}
                 </nav>
             </div>
 

@@ -18,9 +18,14 @@ import React, { useState } from 'react';
 interface ExportButtonProps {
     data: QuoteExportData;
     disabled?: boolean;
+    filenamePrefix?: string;
 }
 
-export const ExportButton: React.FC<ExportButtonProps> = ({ data, disabled }) => {
+export const ExportButton: React.FC<ExportButtonProps> = ({
+    data,
+    disabled,
+    filenamePrefix = '明远装机报价单',
+}) => {
     const { message: messageApi } = App.useApp();
     const [loading, setLoading] = useState(false);
     const [copyLoading, setCopyLoading] = useState(false);
@@ -32,7 +37,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({ data, disabled }) =>
         try {
             // 生成文件名
             const timestamp = new Date().toISOString().slice(0, 10);
-            const filename = `明远装机报价单_${timestamp}.png`;
+            const filename = `${filenamePrefix}_${timestamp}.png`;
 
             downloadQuoteImage(data, filename);
             messageApi.success('报价单已下载');
