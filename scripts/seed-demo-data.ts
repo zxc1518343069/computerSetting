@@ -359,10 +359,12 @@ const seedPurchaseOrders = (
     const returnInsert = db.prepare(
         `
         INSERT INTO purchase_returns (
-            purchase_order_id, inbound_order_id, type, reason, status, updated_at
+            purchase_order_id, inbound_order_id, type, reason, status,
+            goods_status, updated_at
         )
         VALUES (
-            @purchase_order_id, @inbound_order_id, 'return', @reason, 'completed', CURRENT_TIMESTAMP
+            @purchase_order_id, @inbound_order_id, 'return', @reason, 'completed',
+            'merchant_received', CURRENT_TIMESTAMP
         )
     `
     );
@@ -419,7 +421,7 @@ const seedPurchaseOrders = (
         });
         const purchaseOrderId = Number(orderResult.lastInsertRowid);
         const lineCount = 3 + (orderIndex % 4);
-        let goodsAmountCents = 0;
+        let receivedGoodsAmountCents = 0;
         let totalOrderedQuantity = 0;
         let totalReceivedQuantity = 0;
         let inboundOrderId: number | null = null;
@@ -452,7 +454,6 @@ const seedPurchaseOrders = (
             });
             const purchaseOrderItemId = Number(purchaseItemResult.lastInsertRowid);
 
-            goodsAmountCents += quantity * purchasePriceCents;
             totalOrderedQuantity += quantity;
 
             if (initialStatus === 'draft' || initialStatus === 'cancelled') continue;
@@ -485,6 +486,7 @@ const seedPurchaseOrders = (
             });
             const inboundOrderItemId = Number(itemResult.lastInsertRowid);
             totalReceivedQuantity += receiveQuantity;
+            receivedGoodsAmountCents += receiveQuantity * purchasePriceCents;
             updateReceivedQuantity.run({ id: purchaseOrderItemId, quantity: receiveQuantity });
 
             for (let unitIndex = 0; unitIndex < receiveQuantity; unitIndex += 1) {
@@ -515,7 +517,7 @@ const seedPurchaseOrders = (
         let nextStatus = initialStatus;
         if (initialStatus !== 'draft' && initialStatus !== 'cancelled') {
             if (totalReceivedQuantity >= totalOrderedQuantity) {
-                nextStatus = 'completed';
+                nextStatus = 'inbound';
             } else if (totalReceivedQuantity > 0) {
                 nextStatus = 'partial_inbound';
             } else {
@@ -524,7 +526,10 @@ const seedPurchaseOrders = (
             updatePurchaseOrderStatus.run({ id: purchaseOrderId, status: nextStatus });
         }
 
-        const payableAmountCents = goodsAmountCents + shippingFeeCents + miscFeeCents;
+        const payableAmountCents =
+            receivedGoodsAmountCents > 0
+                ? receivedGoodsAmountCents + shippingFeeCents + miscFeeCents
+                : 0;
         let paymentAmountCents = 0;
         if (initialStatus !== 'draft' && initialStatus !== 'cancelled') {
             if (orderIndex % 5 === 0) {
@@ -549,7 +554,7 @@ const seedPurchaseOrders = (
             });
         }
 
-        if (nextStatus === 'completed' && createdInventory.length > 2 && orderIndex % 8 === 3) {
+        if (nextStatus === 'inbound' && createdInventory.length > 2 && orderIndex % 8 === 3) {
             const returnItems = createdInventory.slice(0, 2);
             const inboundOrderItem = db
                 .prepare('SELECT inbound_order_id FROM inbound_order_items WHERE id = ?')
@@ -864,24 +869,13 @@ const main = () => {
                       AND (
                           SELECT MAX(
                               COALESCE((
-                                  SELECT SUM(ordered_quantity * purchase_price_cents)
+                                  SELECT SUM(received_quantity * purchase_price_cents)
                                   FROM purchase_order_items
                                   WHERE purchase_order_id = po.id
                               ), 0) + po.shipping_fee_cents + po.misc_fee_cents
                               - COALESCE((
-                                  SELECT SUM(pri.purchase_price_cents)
-                                  FROM purchase_return_items pri
-                                  JOIN purchase_returns pr ON pr.id = pri.purchase_return_id
-                                  WHERE pr.purchase_order_id = po.id AND pr.status = 'completed'
-                              ), 0)
-                              - COALESCE((
                                   SELECT SUM(amount_cents)
                                   FROM purchase_payments
-                                  WHERE purchase_order_id = po.id AND status = 'active'
-                              ), 0)
-                              + COALESCE((
-                                  SELECT SUM(amount_cents)
-                                  FROM purchase_refunds
                                   WHERE purchase_order_id = po.id AND status = 'active'
                               ), 0),
                               0

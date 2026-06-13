@@ -3,6 +3,7 @@ import {
     getPurchaseOrderById,
     isPurchaseOrderStatus,
     listPurchaseOrders,
+    normalizePurchaseOrderStatus,
 } from '@/lib/db/purchaseOrders';
 import { toCents } from '@/lib/db/serializers';
 import { error, success } from '@/lib/request/apiResponse';
@@ -47,12 +48,26 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const search = searchParams.get('search');
         const status = searchParams.get('status');
+        const goodsStatus = searchParams.get('goods_status');
+        const paymentStatus = searchParams.get('payment_status');
+        const statusFilter = goodsStatus || status;
 
-        if (status && status !== 'all' && !isPurchaseOrderStatus(status)) {
+        if (statusFilter && statusFilter !== 'all' && !normalizePurchaseOrderStatus(statusFilter)) {
             return error(400, '进货单状态不正确');
         }
 
-        return success(listPurchaseOrders(db, { search, status }), '获取进货单成功');
+        if (
+            paymentStatus &&
+            paymentStatus !== 'all' &&
+            !['unpaid', 'partial_paid', 'settled'].includes(paymentStatus)
+        ) {
+            return error(400, '进货单资金状态不正确');
+        }
+
+        return success(
+            listPurchaseOrders(db, { search, status, goodsStatus, paymentStatus }),
+            '获取进货单成功'
+        );
     } catch (e) {
         console.error('Get purchase orders error:', e);
         return error(500, '获取进货单失败');
@@ -64,16 +79,12 @@ export async function POST(request: NextRequest) {
         const db = getDb();
         const {
             supplier_id,
-            status = 'ordered',
+            status = 'draft',
             ordered_at,
             expected_inbound_at,
             shipping_fee = 0,
             misc_fee = 0,
             note,
-            initial_payment_amount = 0,
-            initial_payment_account,
-            initial_paid_at,
-            initial_payment_note,
             items,
         } = await request.json();
 
@@ -81,7 +92,8 @@ export async function POST(request: NextRequest) {
         if (
             !isPurchaseOrderStatus(status) ||
             status === 'partial_inbound' ||
-            status === 'completed'
+            status === 'inbound' ||
+            status === 'cancelled'
         ) {
             return error(400, '进货单初始状态不正确');
         }
@@ -108,8 +120,6 @@ export async function POST(request: NextRequest) {
         const createPurchaseOrder = db.transaction(() => {
             const shippingFeeCents = toCents(Number(shipping_fee || 0));
             const miscFeeCents = toCents(Number(misc_fee || 0));
-            const paymentAmountCents = toCents(Number(initial_payment_amount || 0));
-            let goodsAmountCents = 0;
 
             const orderResult = db
                 .prepare(
@@ -151,7 +161,6 @@ export async function POST(request: NextRequest) {
             for (const item of items as PurchaseOrderItemInput[]) {
                 const quantity = Number(item.ordered_quantity);
                 const purchasePriceCents = toCents(Number(item.purchase_price || 0));
-                goodsAmountCents += quantity * purchasePriceCents;
                 insertItem.run({
                     purchase_order_id: purchaseOrderId,
                     product_id: item.product_id,
@@ -161,44 +170,11 @@ export async function POST(request: NextRequest) {
                 });
             }
 
-            const payableAmountCents = goodsAmountCents + shippingFeeCents + miscFeeCents;
-            if (paymentAmountCents > payableAmountCents) {
-                throw new Error('INITIAL_PAYMENT_EXCEEDS_PAYABLE');
-            }
-
-            if (paymentAmountCents > 0) {
-                db.prepare(
-                    `
-                    INSERT INTO purchase_payments (
-                        purchase_order_id, amount_cents, payment_account,
-                        paid_at, status, note, updated_at
-                    )
-                    VALUES (
-                        @purchase_order_id, @amount_cents, @payment_account,
-                        @paid_at, 'active', @note, CURRENT_TIMESTAMP
-                    )
-                `
-                ).run({
-                    purchase_order_id: purchaseOrderId,
-                    amount_cents: paymentAmountCents,
-                    payment_account: initial_payment_account || null,
-                    paid_at: normalizeDate(initial_paid_at),
-                    note: initial_payment_note || null,
-                });
-            }
-
             return purchaseOrderId;
         });
 
-        try {
-            const purchaseOrderId = createPurchaseOrder();
-            return success(getPurchaseOrderById(db, purchaseOrderId), '进货单创建成功');
-        } catch (e) {
-            if (e instanceof Error && e.message === 'INITIAL_PAYMENT_EXCEEDS_PAYABLE') {
-                return error(400, '初始付款金额不能大于应付款');
-            }
-            throw e;
-        }
+        const purchaseOrderId = createPurchaseOrder();
+        return success(getPurchaseOrderById(db, purchaseOrderId), '进货单创建成功');
     } catch (e) {
         console.error('Create purchase order error:', e);
         return error(500, '创建进货单失败');

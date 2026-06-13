@@ -47,6 +47,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                 shipping_fee_cents: Number(order.shipping_fee_cents || 0),
                 misc_fee_cents: Number(order.misc_fee_cents || 0),
             });
+            if (summary.totalReceivedQuantity <= 0) throw new Error('NO_RECEIVED_AMOUNT');
             if (summary.netPaidCents + amountCents > summary.payableAmountCents) {
                 throw new Error('PAYMENT_EXCEEDS_PAYABLE');
             }
@@ -80,6 +81,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             const message = e instanceof Error ? e.message : '';
             if (message === 'PURCHASE_ORDER_NOT_FOUND') return error(404, '进货单不存在');
             if (message === 'PURCHASE_ORDER_CANCELLED') return error(400, '已取消进货单不能付款');
+            if (message === 'NO_RECEIVED_AMOUNT') return error(400, '已有入库成本后才能付款');
             if (message === 'PAYMENT_EXCEEDS_PAYABLE')
                 return error(400, '本次付款会超过当前应付款');
             throw e;

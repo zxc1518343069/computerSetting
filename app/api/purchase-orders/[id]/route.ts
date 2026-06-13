@@ -3,6 +3,7 @@ import {
     getPurchaseOrderById,
     getPurchaseOrderSummaryCents,
     isPurchaseOrderStatus,
+    normalizePurchaseOrderStatus,
     recalculatePurchaseOrderStatus,
 } from '@/lib/db/purchaseOrders';
 import { toCents } from '@/lib/db/serializers';
@@ -84,7 +85,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
                     !isPurchaseOrderStatus(payload.status) ||
                     payload.status === 'cancelled' ||
                     payload.status === 'partial_inbound' ||
-                    payload.status === 'completed'
+                    payload.status === 'inbound'
                 ) {
                     throw new Error('INVALID_STATUS');
                 }
@@ -114,7 +115,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             ).run({
                 id,
                 supplier_id: nextSupplierId,
-                status: payload.status || order.status,
+                status:
+                    payload.status ||
+                    normalizePurchaseOrderStatus(order.status) ||
+                    order.status,
                 ordered_at: normalizeRequiredDate(payload.ordered_at, order.ordered_at),
                 expected_inbound_at:
                     payload.expected_inbound_at === undefined
@@ -132,7 +136,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             });
 
             if (payload.items !== undefined) {
-                if (order.status === 'completed') throw new Error('COMPLETED_ITEMS_LOCKED');
+                const normalizedOrderStatus = normalizePurchaseOrderStatus(order.status);
+                if (
+                    normalizedOrderStatus === 'partial_inbound' ||
+                    normalizedOrderStatus === 'inbound'
+                ) {
+                    throw new Error('INBOUND_ITEMS_LOCKED');
+                }
                 if (!Array.isArray(payload.items) || payload.items.length === 0) {
                     throw new Error('EMPTY_ITEMS');
                 }
@@ -262,7 +272,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
                 INVALID_STATUS: '进货单状态不正确',
                 STATUS_LOCKED: '已有入库记录的进货单不能手动修改状态',
                 SUPPLIER_NOT_FOUND: '进货商家不存在',
-                COMPLETED_ITEMS_LOCKED: '已完成进货单不能修改明细',
+                INBOUND_ITEMS_LOCKED: '已有入库记录的进货单不能修改明细',
                 EMPTY_ITEMS: '请至少添加一条进货明细',
                 INVALID_ITEMS: '进货明细中的物品、数量和采购单价不能为空',
                 PRODUCT_NOT_FOUND: '进货明细存在无效物品',

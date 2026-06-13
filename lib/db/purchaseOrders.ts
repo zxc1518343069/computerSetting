@@ -1,4 +1,5 @@
 import type { SqliteDb } from './index';
+import { listInboundOrders } from './inboundOrders';
 import { listPurchaseReturns } from './purchaseReturns';
 import { ProductRow, serializeProduct, toYuan } from './serializers';
 
@@ -6,16 +7,21 @@ export type PurchaseOrderStatus =
     | 'draft'
     | 'ordered'
     | 'partial_inbound'
-    | 'completed'
+    | 'inbound'
     | 'cancelled';
 
 export const purchaseOrderStatuses: PurchaseOrderStatus[] = [
     'draft',
     'ordered',
     'partial_inbound',
-    'completed',
+    'inbound',
     'cancelled',
 ];
+
+export const normalizePurchaseOrderStatus = (value: unknown): PurchaseOrderStatus | null => {
+    if (value === 'completed') return 'inbound';
+    return isPurchaseOrderStatus(value) ? value : null;
+};
 
 export const isPurchaseOrderStatus = (value: unknown): value is PurchaseOrderStatus =>
     typeof value === 'string' && purchaseOrderStatuses.includes(value as PurchaseOrderStatus);
@@ -102,7 +108,7 @@ interface SummaryCents {
     netPaidCents: number;
     pendingPaymentCents: number;
     pendingRefundCents: number;
-    paymentStatus: 'unpaid' | 'partial_paid' | 'settled' | 'refund_due';
+    paymentStatus: 'unpaid' | 'partial_paid' | 'settled';
 }
 
 export const getPurchaseOrderSummaryCents = (
@@ -124,23 +130,12 @@ export const getPurchaseOrderSummaryCents = (
             SELECT COUNT(*) AS line_count,
                    COALESCE(SUM(ordered_quantity), 0) AS total_ordered_quantity,
                    COALESCE(SUM(received_quantity), 0) AS total_received_quantity,
-                   COALESCE(SUM(ordered_quantity * purchase_price_cents), 0) AS goods_amount_cents
+                   COALESCE(SUM(received_quantity * purchase_price_cents), 0) AS goods_amount_cents
             FROM purchase_order_items
             WHERE purchase_order_id = ?
         `
         )
         .get(purchaseOrderId) as Record<string, number>;
-
-    const returnSummary = db
-        .prepare(
-            `
-            SELECT COALESCE(SUM(pri.purchase_price_cents), 0) AS return_amount_cents
-            FROM purchase_return_items pri
-            JOIN purchase_returns pr ON pr.id = pri.purchase_return_id
-            WHERE pr.purchase_order_id = ? AND pr.status = 'completed'
-        `
-        )
-        .get(purchaseOrderId) as { return_amount_cents: number };
 
     const paymentSummary = db
         .prepare(
@@ -152,35 +147,22 @@ export const getPurchaseOrderSummaryCents = (
         )
         .get(purchaseOrderId) as { paid_amount_cents: number };
 
-    const refundSummary = db
-        .prepare(
-            `
-            SELECT COALESCE(SUM(amount_cents), 0) AS refunded_amount_cents
-            FROM purchase_refunds
-            WHERE purchase_order_id = ? AND status = 'active'
-        `
-        )
-        .get(purchaseOrderId) as { refunded_amount_cents: number };
-
     const goodsAmountCents = Number(itemSummary.goods_amount_cents || 0);
-    const returnAmountCents = Number(returnSummary.return_amount_cents || 0);
     const payableAmountCents = Math.max(
         goodsAmountCents +
             Number(orderFees?.shipping_fee_cents || 0) +
-            Number(orderFees?.misc_fee_cents || 0) -
-            returnAmountCents,
+            Number(orderFees?.misc_fee_cents || 0),
         0
     );
     const paidAmountCents = Number(paymentSummary.paid_amount_cents || 0);
-    const refundedAmountCents = Number(refundSummary.refunded_amount_cents || 0);
-    const netPaidCents = paidAmountCents - refundedAmountCents;
+    const returnAmountCents = 0;
+    const refundedAmountCents = 0;
+    const netPaidCents = paidAmountCents;
     const pendingPaymentCents = Math.max(payableAmountCents - netPaidCents, 0);
-    const pendingRefundCents = Math.max(netPaidCents - payableAmountCents, 0);
+    const pendingRefundCents = 0;
 
     let paymentStatus: SummaryCents['paymentStatus'] = 'unpaid';
-    if (pendingRefundCents > 0) {
-        paymentStatus = 'refund_due';
-    } else if (payableAmountCents === 0 || netPaidCents >= payableAmountCents) {
+    if (payableAmountCents === 0 || netPaidCents >= payableAmountCents) {
         paymentStatus = 'settled';
     } else if (netPaidCents > 0) {
         paymentStatus = 'partial_paid';
@@ -223,7 +205,7 @@ export const recalculatePurchaseOrderStatus = (
         summary.totalOrderedQuantity > 0 &&
         summary.totalReceivedQuantity >= summary.totalOrderedQuantity
     ) {
-        nextStatus = 'completed';
+        nextStatus = 'inbound';
     } else if (summary.totalReceivedQuantity > 0) {
         nextStatus = 'partial_inbound';
     }
@@ -355,8 +337,9 @@ const getPurchaseOrderItems = (db: SqliteDb, purchaseOrderId: number) => {
 export const serializePurchaseOrder = (
     db: SqliteDb,
     row: PurchaseOrderRow,
-    options: { includePayments?: boolean } = {}
+    options: { includePayments?: boolean; includeInboundOrders?: boolean } = {}
 ) => {
+    const status = normalizePurchaseOrderStatus(row.status) || 'ordered';
     const summary = getPurchaseOrderSummaryCents(db, row.id, {
         shipping_fee_cents: row.shipping_fee_cents,
         misc_fee_cents: row.misc_fee_cents,
@@ -365,7 +348,7 @@ export const serializePurchaseOrder = (
     return {
         id: row.id,
         supplier_id: row.supplier_id,
-        status: row.status,
+        status,
         ordered_at: row.ordered_at,
         expected_inbound_at: row.expected_inbound_at,
         shipping_fee: toYuan(row.shipping_fee_cents),
@@ -390,6 +373,9 @@ export const serializePurchaseOrder = (
             ? listPurchaseReturns(db, { purchaseOrderId: row.id })
             : undefined,
         refunds: options.includePayments ? getPurchaseOrderRefunds(db, row.id) : undefined,
+        inbound_orders: options.includeInboundOrders
+            ? listInboundOrders(db, { purchaseOrderId: row.id })
+            : undefined,
     };
 };
 
@@ -411,19 +397,26 @@ export const getPurchaseOrderById = (
         .get(id) as PurchaseOrderRow | undefined;
 
     if (!row) return null;
-    return serializePurchaseOrder(db, row, options);
+    return serializePurchaseOrder(db, row, { ...options, includeInboundOrders: true });
 };
 
 export const listPurchaseOrders = (
     db: SqliteDb,
-    filters: { search?: string | null; status?: string | null } = {}
+    filters: {
+        search?: string | null;
+        status?: string | null;
+        goodsStatus?: string | null;
+        paymentStatus?: string | null;
+    } = {}
 ) => {
     const conditions: string[] = [];
     const params: Record<string, string> = {};
+    const goodsStatus = filters.goodsStatus || filters.status;
+    const normalizedGoodsStatus = normalizePurchaseOrderStatus(goodsStatus);
 
-    if (filters.status && filters.status !== 'all') {
+    if (goodsStatus && goodsStatus !== 'all' && normalizedGoodsStatus) {
         conditions.push('po.status = @status');
-        params.status = filters.status;
+        params.status = normalizedGoodsStatus;
     }
 
     if (filters.search) {
@@ -457,5 +450,12 @@ export const listPurchaseOrders = (
         )
         .all(params) as PurchaseOrderRow[];
 
-    return rows.map((row) => serializePurchaseOrder(db, row, { includePayments: true }));
+    const orders = rows.map((row) =>
+        serializePurchaseOrder(db, row, { includePayments: true, includeInboundOrders: true })
+    );
+    if (filters.paymentStatus && filters.paymentStatus !== 'all') {
+        return orders.filter((order) => order.summary.payment_status === filters.paymentStatus);
+    }
+
+    return orders;
 };

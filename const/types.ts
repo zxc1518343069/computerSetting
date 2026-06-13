@@ -146,6 +146,15 @@ export interface InboundOrder {
     updated_at?: string;
     supplier?: Supplier;
     items?: InboundOrderItem[];
+    summary: {
+        inbound_quantity: number;
+        sold_quantity: number;
+        in_stock_quantity: number;
+        returned_quantity: number;
+        returnable_quantity: number;
+        goods_amount: number;
+        record_status: 'inbound' | 'partial_returned' | 'returned';
+    };
 }
 
 export interface InboundOrderItem {
@@ -168,7 +177,7 @@ export type PurchaseOrderStatus =
     | 'draft'
     | 'ordered'
     | 'partial_inbound'
-    | 'completed'
+    | 'inbound'
     | 'cancelled';
 
 export type PurchasePaymentStatus = 'active' | 'voided';
@@ -205,12 +214,30 @@ export interface PurchaseReturn {
     inbound_order_id: number;
     type: 'return' | 'exchange';
     reason: string;
-    status: 'completed';
+    status: 'completed' | 'cancelled';
+    goods_status: 'pending_shipment' | 'shipped' | 'merchant_received' | 'cancelled';
+    shipping_fee: number;
+    shipping_fee_bearer: 'self' | 'merchant' | 'shared';
+    self_shipping_fee: number;
+    merchant_shipping_fee: number;
+    logistics_company?: string | null;
+    tracking_no?: string | null;
+    shipped_at?: string | null;
+    merchant_received_at?: string | null;
+    cancelled_at?: string | null;
+    cancel_reason?: string | null;
+    note?: string | null;
     amount: number;
+    receivable_amount: number;
+    refunded_amount: number;
+    pending_refund: number;
+    refund_status: 'unrefunded' | 'partial_refunded' | 'refunded';
     item_count: number;
     created_at?: string;
     updated_at?: string;
+    supplier?: Supplier;
     items?: PurchaseReturnItem[];
+    refunds?: PurchaseRefund[];
 }
 
 export interface PurchaseRefund {
@@ -241,7 +268,7 @@ export interface PurchaseOrderSummary {
     net_paid: number;
     pending_payment: number;
     pending_refund: number;
-    payment_status: 'unpaid' | 'partial_paid' | 'settled' | 'refund_due';
+    payment_status: 'unpaid' | 'partial_paid' | 'settled';
 }
 
 export interface PurchaseOrderItem {
@@ -274,6 +301,7 @@ export interface PurchaseOrder {
     payments?: PurchasePayment[];
     returns?: PurchaseReturn[];
     refunds?: PurchaseRefund[];
+    inbound_orders?: InboundOrder[];
     summary: PurchaseOrderSummary;
 }
 

@@ -1,15 +1,8 @@
 import { getDb } from '@/lib/db';
-import {
-    getPurchaseOrderById,
-    getPurchaseOrderRefunds,
-    getPurchaseOrderSummaryCents,
-} from '@/lib/db/purchaseOrders';
-import { toCents } from '@/lib/db/serializers';
+import { getPurchaseOrderById, getPurchaseOrderRefunds } from '@/lib/db/purchaseOrders';
+import { createPurchaseReturnRefund, getPurchaseReturnById } from '@/lib/db/purchaseReturns';
 import { error, success } from '@/lib/request/apiResponse';
 import { NextRequest } from 'next/server';
-
-const normalizeDate = (value: unknown) =>
-    value ? new Date(String(value)).toISOString() : new Date().toISOString();
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -34,53 +27,28 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         const { amount, refund_account, refunded_at, purchase_return_id, note } =
             await request.json();
 
-        const amountCents = toCents(Number(amount || 0));
-        if (amountCents <= 0) return error(400, '本次退款金额必须大于 0');
+        if (!purchase_return_id) {
+            return error(400, '供应商退款需要关联采购退货记录，请从退货单登记收款');
+        }
 
-        const createRefund = db.transaction(() => {
-            const order = db.prepare('SELECT * FROM purchase_orders WHERE id = ?').get(id) as
-                | Record<string, unknown>
-                | undefined;
+        const createRefund = () => {
+            const order = db.prepare('SELECT id FROM purchase_orders WHERE id = ?').get(id);
             if (!order) throw new Error('PURCHASE_ORDER_NOT_FOUND');
 
-            if (purchase_return_id) {
-                const purchaseReturn = db
-                    .prepare(
-                        'SELECT id FROM purchase_returns WHERE id = ? AND purchase_order_id = ?'
-                    )
-                    .get(purchase_return_id, id);
-                if (!purchaseReturn) throw new Error('PURCHASE_RETURN_NOT_FOUND');
+            const purchaseReturn = getPurchaseReturnById(db, Number(purchase_return_id));
+            if (!purchaseReturn || purchaseReturn.purchase_order_id !== id) {
+                throw new Error('PURCHASE_RETURN_NOT_FOUND');
             }
 
-            const summary = getPurchaseOrderSummaryCents(db, id, {
-                shipping_fee_cents: Number(order.shipping_fee_cents || 0),
-                misc_fee_cents: Number(order.misc_fee_cents || 0),
-            });
-            if (summary.pendingRefundCents <= 0) throw new Error('NO_PENDING_REFUND');
-            if (amountCents > summary.pendingRefundCents) throw new Error('REFUND_EXCEEDS_PENDING');
-
-            db.prepare(
-                `
-                INSERT INTO purchase_refunds (
-                    purchase_order_id, purchase_return_id, amount_cents,
-                    refund_account, refunded_at, status, note, updated_at
-                )
-                VALUES (
-                    @purchase_order_id, @purchase_return_id, @amount_cents,
-                    @refund_account, @refunded_at, 'active', @note, CURRENT_TIMESTAMP
-                )
-            `
-            ).run({
-                purchase_order_id: id,
-                purchase_return_id: purchase_return_id || null,
-                amount_cents: amountCents,
-                refund_account: refund_account || null,
-                refunded_at: normalizeDate(refunded_at),
-                note: note || null,
+            createPurchaseReturnRefund(db, Number(purchase_return_id), {
+                amount,
+                refund_account,
+                refunded_at,
+                note,
             });
 
             return id;
-        });
+        };
 
         try {
             const purchaseOrderId = createRefund();
@@ -90,8 +58,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             const messageMap: Record<string, string> = {
                 PURCHASE_ORDER_NOT_FOUND: '进货单不存在',
                 PURCHASE_RETURN_NOT_FOUND: '退货记录不存在',
-                NO_PENDING_REFUND: '当前进货单没有待退款金额',
-                REFUND_EXCEEDS_PENDING: '本次退款不能超过待退款金额',
+                INVALID_REFUND_AMOUNT: '本次退款金额必须大于 0',
+                PURCHASE_RETURN_CANCELLED: '已取消的退货记录不能收款',
+                NO_PENDING_REFUND: '当前退货记录没有待收款金额',
+                REFUND_EXCEEDS_PENDING: '本次退款不能超过待收款金额',
             };
             if (messageMap[message]) {
                 return error(

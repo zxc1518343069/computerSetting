@@ -81,7 +81,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     icon: <ShopOutlined />,
                 },
                 {
-                    title: '进货订单',
+                    title: '进货/退货',
                     path: '/admin/dashboard/warehouse/purchase-orders',
                     icon: <AuditOutlined />,
                 },

@@ -1,9 +1,6 @@
 'use client';
 
-import {
-    CATEGORY_TAG_COLORS,
-    getCategoryTagClass,
-} from '@/app/hooks/useProductCategories';
+import { CATEGORY_TAG_COLORS } from '@/app/hooks/useProductCategories';
 import {
     createProductCategory,
     deleteProductCategory,
@@ -23,13 +20,13 @@ import {
     Button,
     Form,
     Input,
-    InputNumber,
     Modal,
     Popconfirm,
     Select,
     Switch,
     Table,
     Tag,
+    Tooltip,
     message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -55,17 +52,11 @@ export default function ProductCategoriesPage() {
                 name: category.name,
                 label: category.label,
                 tag_color: category.tag_color,
-                sort_order: category.sort_order,
                 is_active: category.is_active,
             });
         } else {
-            const maxSort = categories.reduce(
-                (max, item) => Math.max(max, Number(item.sort_order || 0)),
-                0
-            );
             form.setFieldsValue({
                 is_active: true,
-                sort_order: maxSort + 10,
             });
         }
         setVisible(true);
@@ -80,11 +71,19 @@ export default function ProductCategoriesPage() {
     const { runAsync: submitCategory, loading: submitting } = useRequest(
         async () => {
             const values = await form.validateFields();
+            const maxSort = categories.reduce(
+                (max, item) => Math.max(max, Number(item.sort_order || 0)),
+                0
+            );
+            const payload = {
+                ...values,
+                sort_order: editingCategory?.sort_order ?? maxSort + 10,
+            };
             if (editingCategory) {
-                await updateProductCategory(editingCategory.id, values);
+                await updateProductCategory(editingCategory.id, payload);
                 return;
             }
-            await createProductCategory(values);
+            await createProductCategory(payload);
         },
         {
             manual: true,
@@ -134,28 +133,24 @@ export default function ProductCategoriesPage() {
 
     const columns: ColumnsType<ProductCategory> = [
         {
-            title: '排序',
-            dataIndex: 'sort_order',
-            width: 90,
-            sorter: (a, b) => a.sort_order - b.sort_order,
-            render: (value) => <span className="font-mono text-gray-400">{value}</span>,
-        },
-        {
             title: '类目',
             dataIndex: 'name',
             render: (_, record) => (
                 <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-2">
-                        <Tag
-                            bordered={false}
-                            className={`mr-0 font-bold ${getCategoryTagClass(record.tag_color)}`}
-                        >
+                        <Tag color={record.tag_color || 'blue'} className="mr-0 font-bold">
                             {record.label || record.name}
                         </Tag>
                     </div>
                     <span className="text-xs text-gray-400 font-mono">{record.code}</span>
                 </div>
             ),
+        },
+        {
+            title: 'Tag 颜色',
+            dataIndex: 'tag_color',
+            width: 130,
+            render: (color) => <ColorTag color={color} />,
         },
         {
             title: '产品数',
@@ -188,34 +183,43 @@ export default function ProductCategoriesPage() {
             title: '操作',
             width: 140,
             align: 'center',
-            render: (_, record) => (
-                <div className="flex items-center justify-center gap-2">
+            render: (_, record) => {
+                const hasProducts = Number(record.product_count || 0) > 0;
+                const deleteButton = (
                     <Button
                         type="text"
-                        icon={<EditOutlined />}
-                        onClick={() => openModal(record)}
+                        danger
+                        icon={<DeleteOutlined />}
+                        disabled={hasProducts}
                     />
-                    <Popconfirm
-                        title="删除此类目?"
-                        description={
-                            Number(record.product_count || 0) > 0
-                                ? '已有产品的类目不能删除，请停用'
-                                : '删除后对应溢价规则也会删除'
-                        }
-                        onConfirm={() => removeCategory(record.id)}
-                        okButtonProps={{ danger: true, loading: deleting }}
-                        okText="删除"
-                        cancelText="取消"
-                    >
+                );
+
+                return (
+                    <div className="flex items-center justify-center gap-2">
                         <Button
                             type="text"
-                            danger
-                            icon={<DeleteOutlined />}
-                            disabled={Number(record.product_count || 0) > 0}
+                            icon={<EditOutlined />}
+                            onClick={() => openModal(record)}
                         />
-                    </Popconfirm>
-                </div>
-            ),
+                        {hasProducts ? (
+                            <Tooltip title="该类目下已有商品，无法删除；可以先停用，或迁移商品后再删除。">
+                                <span>{deleteButton}</span>
+                            </Tooltip>
+                        ) : (
+                            <Popconfirm
+                                title="删除此类目?"
+                                description="删除后对应溢价规则也会删除"
+                                onConfirm={() => removeCategory(record.id)}
+                                okButtonProps={{ danger: true, loading: deleting }}
+                                okText="删除"
+                                cancelText="取消"
+                            >
+                                {deleteButton}
+                            </Popconfirm>
+                        )}
+                    </div>
+                );
+            },
         },
     ];
 
@@ -293,32 +297,25 @@ export default function ProductCategoriesPage() {
                             allowClear
                             placeholder="不选则自动分配"
                             options={CATEGORY_TAG_COLORS.map((color) => ({
-                                label: color,
+                                label: <ColorTag color={color} />,
                                 value: color,
                             }))}
-                            optionRender={(option) => (
-                                <Tag
-                                    bordered={false}
-                                    className={`mr-0 ${getCategoryTagClass(
-                                        String(option.value)
-                                    )}`}
-                                >
-                                    {option.label}
-                                </Tag>
-                            )}
                         />
                     </Form.Item>
-                    <div className="grid grid-cols-2 gap-4">
-                        <Form.Item name="sort_order" label="排序">
-                            <InputNumber min={0} precision={0} className="w-full" />
-                        </Form.Item>
-                        <Form.Item name="is_active" label="是否启用" valuePropName="checked">
-                            <Switch />
-                        </Form.Item>
-                    </div>
+                    <Form.Item name="is_active" label="是否启用" valuePropName="checked">
+                        <Switch />
+                    </Form.Item>
                 </Form>
             </Modal>
         </div>
+    );
+}
+
+function ColorTag({ color }: { color?: string | null }) {
+    return (
+        <Tag color={color || 'blue'} className="mr-0 font-bold">
+            {color || 'blue'}
+        </Tag>
     );
 }
 

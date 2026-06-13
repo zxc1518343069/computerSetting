@@ -10,6 +10,7 @@ import {
     ReloadOutlined,
     RollbackOutlined,
     SaveOutlined,
+    SearchOutlined,
 } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
 import {
@@ -28,14 +29,14 @@ import {
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
-import React, { useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     fetchDashboardProducts,
     fetchInboundOrders,
     fetchPurchaseOrders,
     fetchSuppliers,
     receivePurchaseOrder,
-    returnInboundOrder,
     saveInboundOrder,
     updateInboundOrder,
 } from '../../services';
@@ -62,6 +63,12 @@ const inventoryStatusMap = {
     returned: { label: '已退货', color: 'red' },
 } as const;
 
+const recordStatusMap = {
+    inbound: { label: '已入库', color: 'green' },
+    partial_returned: { label: '部分退货', color: 'orange' },
+    returned: { label: '已退货', color: 'red' },
+} as const;
+
 const normalizeSerialNumbers = (serialNumbers?: string[]) =>
     (serialNumbers || []).map((serialNumber) => serialNumber?.trim()).filter(Boolean);
 
@@ -72,19 +79,42 @@ const calculateOrderGoodsAmount = (order: InboundOrder) =>
     );
 
 export default function InboundPage() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
     const [visible, setVisible] = useState(false);
     const [editVisible, setEditVisible] = useState(false);
-    const [returnVisible, setReturnVisible] = useState(false);
     const [editingOrder, setEditingOrder] = useState<InboundOrder | null>(null);
-    const [returningOrder, setReturningOrder] = useState<InboundOrder | null>(null);
+    const [search, setSearch] = useState('');
+    const [recordStatus, setRecordStatus] = useState('all');
+    const [sourceTypeFilter, setSourceTypeFilter] = useState('all');
+    const [purchaseOrderFilter, setPurchaseOrderFilter] = useState<number | undefined>(
+        Number(searchParams.get('purchaseOrderId') || 0) || undefined
+    );
     const [form] = Form.useForm();
     const [editForm] = Form.useForm();
-    const [returnForm] = Form.useForm();
 
-    const { data: inboundOrders = [], loading, refresh } = useRequest(fetchInboundOrders);
+    const {
+        data: inboundOrders = [],
+        loading,
+        refresh,
+    } = useRequest(
+        () =>
+            fetchInboundOrders({
+                purchase_order_id: purchaseOrderFilter,
+                search,
+                record_status: recordStatus,
+                source_type: sourceTypeFilter,
+            }),
+        {
+            refreshDeps: [purchaseOrderFilter, search, recordStatus, sourceTypeFilter],
+            debounceWait: 300,
+        }
+    );
     const { data: suppliers = [] } = useRequest(fetchSuppliers);
     const { data: products = [] } = useRequest(fetchDashboardProducts);
-    const { data: purchaseOrders = [] } = useRequest(() => fetchPurchaseOrders({ status: 'all' }));
+    const { data: purchaseOrders = [], loading: purchaseOrdersLoading } = useRequest(() =>
+        fetchPurchaseOrders({ status: 'all' })
+    );
 
     const watchedSourceType = Form.useWatch('source_type', form) as InboundSourceType | undefined;
     const watchedPurchaseOrderId = Form.useWatch('purchase_order_id', form) as number | undefined;
@@ -173,6 +203,17 @@ export default function InboundPage() {
                 await receivePurchaseOrder(values.purchase_order_id, {
                     inbound_at: values.inbound_at?.toISOString(),
                     note: values.note || null,
+                    shipping_fee: values.shipping_fee,
+                    misc_fee: values.misc_fee,
+                    payment:
+                        Number(values.payment_amount || 0) > 0
+                            ? {
+                                  amount: values.payment_amount,
+                                  payment_account: values.payment_account || null,
+                                  paid_at: values.paid_at?.toISOString(),
+                                  note: values.payment_note || null,
+                              }
+                            : undefined,
                     items: items.map((item: InboundFormItem) => ({
                         purchase_order_item_id: item.purchase_order_item_id,
                         quantity: item.quantity,
@@ -207,8 +248,7 @@ export default function InboundPage() {
             manual: true,
             onSuccess: () => {
                 message.success('入库单已提交');
-                setVisible(false);
-                form.resetFields();
+                closeCreateModal();
                 refresh();
             },
             onError: (e) => message.error(e.message),
@@ -233,35 +273,57 @@ export default function InboundPage() {
         }
     );
 
-    const { runAsync: submitReturn, loading: returning } = useRequest(
-        async () => {
-            if (!returningOrder) return;
-            const values = await returnForm.validateFields();
-            await returnInboundOrder(returningOrder.id, {
-                reason: values.reason,
-            });
-        },
-        {
-            manual: true,
-            onSuccess: () => {
-                message.success('采购退货已处理');
-                setReturnVisible(false);
-                setReturningOrder(null);
-                returnForm.resetFields();
-                refresh();
-            },
-            onError: (e) => message.error(e.message),
-        }
-    );
-
-    const openCreate = () => {
+    const openCreate = (options: { purchaseOrderId?: number; sourceType?: InboundSourceType } = {}) => {
+        const sourceType = options.sourceType || 'purchase_order';
         form.resetFields();
         form.setFieldsValue({
-            source_type: 'purchase_order',
+            source_type: sourceType,
             inbound_at: dayjs(),
-            items: [],
+            shipping_fee: 0,
+            misc_fee: 0,
+            payment_amount: 0,
+            paid_at: dayjs(),
+            items:
+                sourceType === 'opening_stock'
+                    ? [{ quantity: 1, serial_tracking_enabled: false, warranty_enabled: false }]
+                    : [],
         });
+        if (sourceType === 'purchase_order' && options.purchaseOrderId) {
+            form.setFieldsValue({ purchase_order_id: options.purchaseOrderId });
+            handlePurchaseOrderChange(options.purchaseOrderId);
+        }
         setVisible(true);
+    };
+
+    const replaceInboundUrl = (params: URLSearchParams) => {
+        const query = params.toString();
+        router.replace(`/admin/dashboard/warehouse/inbound${query ? `?${query}` : ''}`);
+    };
+
+    const clearCreateAction = () => {
+        if (searchParams.get('action') !== 'create') return;
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete('action');
+        params.delete('sourceType');
+        replaceInboundUrl(params);
+    };
+
+    const closeCreateModal = () => {
+        setVisible(false);
+        form.resetFields();
+        clearCreateAction();
+    };
+
+    const updatePurchaseOrderFilter = (purchaseOrderId?: number) => {
+        setPurchaseOrderFilter(purchaseOrderId);
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete('action');
+        if (purchaseOrderId) {
+            params.set('purchaseOrderId', String(purchaseOrderId));
+        } else {
+            params.delete('purchaseOrderId');
+        }
+        replaceInboundUrl(params);
     };
 
     const openEdit = (order: InboundOrder) => {
@@ -273,9 +335,15 @@ export default function InboundPage() {
     };
 
     const openReturn = (order: InboundOrder) => {
-        setReturningOrder(order);
-        returnForm.resetFields();
-        setReturnVisible(true);
+        router.push(
+            `/admin/dashboard/warehouse/purchase-orders?tab=returns&action=create&inboundOrderId=${order.id}`
+        );
+    };
+
+    const openReturnRecords = (order: InboundOrder) => {
+        router.push(
+            `/admin/dashboard/warehouse/purchase-orders?tab=returns&inboundOrderId=${order.id}`
+        );
     };
 
     const handleSourceChange = (sourceType: InboundSourceType) => {
@@ -294,6 +362,8 @@ export default function InboundPage() {
         const order = receivablePurchaseOrders.find((item) => item.id === purchaseOrderId);
         form.setFieldsValue({
             supplier_id: order?.supplier_id,
+            shipping_fee: order?.shipping_fee || 0,
+            misc_fee: order?.misc_fee || 0,
             items:
                 order?.items
                     .filter((item) => item.remaining_quantity > 0)
@@ -308,6 +378,39 @@ export default function InboundPage() {
         });
     };
 
+    useEffect(() => {
+        const purchaseOrderId = Number(searchParams.get('purchaseOrderId') || 0) || undefined;
+        const sourceType: InboundSourceType =
+            searchParams.get('sourceType') === 'opening_stock' ? 'opening_stock' : 'purchase_order';
+        setPurchaseOrderFilter(purchaseOrderId);
+
+        if (searchParams.get('action') === 'create' && sourceType === 'opening_stock') {
+            if (!visible) openCreate({ sourceType });
+            clearCreateAction();
+            return;
+        }
+
+        if (searchParams.get('action') === 'create' && !purchaseOrderId) {
+            if (!visible) openCreate({ sourceType: 'purchase_order' });
+            clearCreateAction();
+            return;
+        }
+
+        if (purchaseOrderId && searchParams.get('action') === 'create' && !purchaseOrdersLoading) {
+            const canReceiveTarget = receivablePurchaseOrders.some(
+                (order) => Number(order.id) === purchaseOrderId
+            );
+            if (canReceiveTarget && !visible) {
+                openCreate({ purchaseOrderId });
+            }
+            if (!canReceiveTarget) {
+                message.error('该进货单暂无可入库明细');
+            }
+            clearCreateAction();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchParams, purchaseOrdersLoading, receivablePurchaseOrders.length]);
+
     const columns: ColumnsType<InboundOrder> = [
         {
             title: '入库单',
@@ -316,14 +419,23 @@ export default function InboundPage() {
             render: (id) => <span className="font-mono text-gray-400">RK-{id}</span>,
         },
         {
-            title: '来源',
+            title: '关联进货单',
             width: 130,
             render: (_, record) =>
-                record.source_type === 'purchase_order' ? (
+                record.purchase_order_id ? (
                     <Tag color="blue">JH-{record.purchase_order_id}</Tag>
                 ) : (
-                    <Tag color="default">历史库存</Tag>
+                    <span className="text-gray-300">-</span>
                 ),
+        },
+        {
+            title: '入库来源',
+            width: 120,
+            render: (_, record) => (
+                <Tag color={record.source_type === 'purchase_order' ? 'blue' : 'default'}>
+                    {record.source_type === 'purchase_order' ? '进货单' : '历史库存'}
+                </Tag>
+            ),
         },
         {
             title: '商家',
@@ -350,14 +462,52 @@ export default function InboundPage() {
             ),
         },
         {
+            title: '入库数量',
+            width: 100,
+            align: 'right',
+            render: (_, record) => `${record.summary.inbound_quantity} 件`,
+        },
+        {
+            title: '已售',
+            width: 90,
+            align: 'right',
+            render: (_, record) => `${record.summary.sold_quantity} 件`,
+        },
+        {
+            title: '在库',
+            width: 90,
+            align: 'right',
+            render: (_, record) => `${record.summary.in_stock_quantity} 件`,
+        },
+        {
+            title: '已退',
+            width: 90,
+            align: 'right',
+            render: (_, record) => `${record.summary.returned_quantity} 件`,
+        },
+        {
+            title: '可退',
+            width: 90,
+            align: 'right',
+            render: (_, record) => `${record.summary.returnable_quantity} 件`,
+        },
+        {
             title: '入库成本',
-            width: 140,
+            width: 130,
             align: 'right',
             render: (_, record) => (
                 <span className="font-mono font-black text-gray-900 dark:text-gray-100">
-                    {formatPrice(calculateOrderGoodsAmount(record))}
+                    {formatPrice(record.summary.goods_amount)}
                 </span>
             ),
+        },
+        {
+            title: '记录状态',
+            width: 120,
+            render: (_, record) => {
+                const status = recordStatusMap[record.summary.record_status];
+                return <Tag color={status.color}>{status.label}</Tag>;
+            },
         },
         {
             title: '入库时间',
@@ -367,21 +517,28 @@ export default function InboundPage() {
         },
         {
             title: '操作',
-            width: 180,
+            width: 240,
             align: 'center',
             render: (_, record) => (
-                <div className="flex items-center justify-center gap-2">
+                <div className="flex flex-wrap items-center justify-center gap-2">
                     <Button type="link" onClick={() => openEdit(record)}>
                         详情
                     </Button>
-                    <Button
-                        danger
-                        type="link"
-                        icon={<RollbackOutlined />}
-                        onClick={() => openReturn(record)}
-                    >
-                        退货
-                    </Button>
+                    {record.purchase_order_id && record.summary.returnable_quantity > 0 && (
+                        <Button
+                            danger
+                            type="link"
+                            icon={<RollbackOutlined />}
+                            onClick={() => openReturn(record)}
+                        >
+                            退货
+                        </Button>
+                    )}
+                    {record.purchase_order_id && record.summary.returned_quantity > 0 && (
+                        <Button type="link" onClick={() => openReturnRecords(record)}>
+                            查看退货记录
+                        </Button>
+                    )}
                 </div>
             ),
         },
@@ -411,11 +568,53 @@ export default function InboundPage() {
                             type="primary"
                             size="large"
                             icon={<PlusOutlined />}
-                            onClick={openCreate}
+                            onClick={() => openCreate()}
                             className="h-12 px-6 rounded-xl bg-blue-600 border-none shadow-lg shadow-blue-600/20"
                         >
                             新增入库单
                         </Button>
+                    </div>
+                </div>
+
+                <div className="bg-white/80 dark:bg-[#1f1f1f]/80 backdrop-blur-xl rounded-2xl border border-white dark:border-white/10 p-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <Input
+                        allowClear
+                        prefix={<SearchOutlined className="text-gray-400" />}
+                        placeholder="搜索入库单、进货单、商家或商品..."
+                        value={search}
+                        onChange={(event) => setSearch(event.target.value)}
+                        className="max-w-lg h-10 rounded-xl border-none bg-gray-100/60 dark:bg-[#141414]"
+                    />
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                        <Select
+                            allowClear
+                            placeholder="进货单筛选"
+                            value={purchaseOrderFilter}
+                            onChange={updatePurchaseOrderFilter}
+                            options={(purchaseOrders as PurchaseOrder[]).map((order) => ({
+                                label: `JH-${order.id} / ${order.supplier?.name || '-'}`,
+                                value: order.id,
+                            }))}
+                        />
+                        <Select
+                            value={sourceTypeFilter}
+                            onChange={setSourceTypeFilter}
+                            options={[
+                                { label: '全部来源', value: 'all' },
+                                { label: '进货单', value: 'purchase_order' },
+                                { label: '历史库存', value: 'opening_stock' },
+                            ]}
+                        />
+                        <Select
+                            value={recordStatus}
+                            onChange={setRecordStatus}
+                            options={[
+                                { label: '全部记录状态', value: 'all' },
+                                { label: '已入库', value: 'inbound' },
+                                { label: '部分退货', value: 'partial_returned' },
+                                { label: '已退货', value: 'returned' },
+                            ]}
+                        />
                     </div>
                 </div>
 
@@ -426,7 +625,7 @@ export default function InboundPage() {
                         columns={columns}
                         dataSource={inboundOrders}
                         pagination={{ pageSize: 10 }}
-                        scroll={{ x: 1100 }}
+                        scroll={{ x: 1600 }}
                     />
                 </div>
             </div>
@@ -434,7 +633,7 @@ export default function InboundPage() {
             <Modal
                 title="新增入库单"
                 open={visible}
-                onCancel={() => setVisible(false)}
+                onCancel={closeCreateModal}
                 footer={null}
                 destroyOnHidden
                 width={1240}
@@ -521,6 +720,49 @@ export default function InboundPage() {
                         </div>
                     )}
 
+                    {watchedSourceType === 'purchase_order' && (
+                        <div className="mb-4 rounded-2xl border border-gray-100 bg-gray-50/70 p-4 dark:border-gray-800 dark:bg-black/20">
+                            <div className="mb-3 font-bold text-gray-900 dark:text-gray-100">
+                                费用与同步付款
+                            </div>
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                                <Form.Item name="shipping_fee" label="实际运费">
+                                    <InputNumber
+                                        min={0}
+                                        precision={2}
+                                        prefix="¥"
+                                        className="w-full"
+                                    />
+                                </Form.Item>
+                                <Form.Item name="misc_fee" label="杂费">
+                                    <InputNumber
+                                        min={0}
+                                        precision={2}
+                                        prefix="¥"
+                                        className="w-full"
+                                    />
+                                </Form.Item>
+                                <Form.Item name="payment_amount" label="本次付款">
+                                    <InputNumber
+                                        min={0}
+                                        precision={2}
+                                        prefix="¥"
+                                        className="w-full"
+                                    />
+                                </Form.Item>
+                                <Form.Item name="paid_at" label="付款时间">
+                                    <DatePicker showTime className="w-full" />
+                                </Form.Item>
+                                <Form.Item name="payment_account" label="付款账号">
+                                    <Input />
+                                </Form.Item>
+                                <Form.Item name="payment_note" label="付款备注" className="md:col-span-3">
+                                    <Input />
+                                </Form.Item>
+                            </div>
+                        </div>
+                    )}
+
                     <Form.Item name="note" label="备注">
                         <Input.TextArea rows={2} />
                     </Form.Item>
@@ -587,7 +829,7 @@ export default function InboundPage() {
                     <InboundSummary summary={inboundSummary} />
 
                     <div className="flex justify-end gap-3 mt-8">
-                        <Button onClick={() => setVisible(false)}>取消</Button>
+                        <Button onClick={closeCreateModal}>取消</Button>
                         <Button
                             type="primary"
                             icon={<SaveOutlined />}
@@ -620,31 +862,6 @@ export default function InboundPage() {
                 </Form>
             </Modal>
 
-            <Modal
-                title={returningOrder ? `采购退货 RK-${returningOrder.id}` : '采购退货'}
-                open={returnVisible}
-                onCancel={() => setReturnVisible(false)}
-                onOk={submitReturn}
-                confirmLoading={returning}
-                okButtonProps={{ danger: true }}
-                okText="确认退货"
-                cancelText="取消"
-                destroyOnHidden
-                width={620}
-            >
-                <Form form={returnForm} layout="vertical" className="pt-4">
-                    <div className="mb-4 rounded-2xl border border-red-100 bg-red-50/70 p-4 text-sm text-red-600 dark:border-red-900/40 dark:bg-red-900/10">
-                        仅退还该入库单中仍在库的库存件，已售出或已退货库存不会被处理。
-                    </div>
-                    <Form.Item
-                        name="reason"
-                        label="退货原因"
-                        rules={[{ required: true, message: '请填写退货原因' }]}
-                    >
-                        <Input.TextArea rows={3} />
-                    </Form.Item>
-                </Form>
-            </Modal>
         </div>
     );
 }
@@ -958,6 +1175,9 @@ function InboundOrderReadonlyDetails({ order }: { order: InboundOrder }) {
                 <ReadonlyCell label="入库时间" value={formatDate(order.inbound_at)} />
                 <ReadonlyCell label="明细数" value={`${order.items?.length || 0} 条`} />
                 <ReadonlyCell label="库存件数" value={`${totalQuantity} 件`} />
+                <ReadonlyCell label="在库" value={`${order.summary.in_stock_quantity} 件`} />
+                <ReadonlyCell label="已退" value={`${order.summary.returned_quantity} 件`} />
+                <ReadonlyCell label="可退" value={`${order.summary.returnable_quantity} 件`} />
                 <ReadonlyCell label="入库成本" value={formatPrice(goodsAmount)} strong />
             </div>
 

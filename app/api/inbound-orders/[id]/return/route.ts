@@ -33,6 +33,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                 INVENTORY_NOT_AVAILABLE: '选择的库存件不存在或已不在库',
                 NO_AVAILABLE_INVENTORY: '该入库单没有可退货库存',
                 NO_PURCHASE_ORDER_ITEM: '入库明细未关联进货明细，不能登记采购退货',
+                RETURN_ITEM_REQUIRED: '请选择要退货的入库明细',
             };
             if (messageMap[message]) {
                 return error(message === 'ORDER_NOT_FOUND' ? 404 : 400, messageMap[message]);

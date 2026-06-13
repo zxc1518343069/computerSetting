@@ -1,5 +1,6 @@
 import { getDb } from '@/lib/db';
-import { ProductRow, serializeProduct, toCents, toYuan } from '@/lib/db/serializers';
+import { getInboundOrderById, listInboundOrders } from '@/lib/db/inboundOrders';
+import { toCents } from '@/lib/db/serializers';
 import { error, success } from '@/lib/request/apiResponse';
 import { NextRequest } from 'next/server';
 
@@ -51,93 +52,28 @@ const ensureSerialNumbersAvailable = (db: ReturnType<typeof getDb>, serialNumber
     return existing.length === 0;
 };
 
-const getInboundOrders = () => {
-    const db = getDb();
-    const orders = db
-        .prepare(
-            `
-            SELECT io.*, s.name AS supplier_name, s.contact_name, s.phone, s.address, s.note AS supplier_note
-            FROM inbound_orders io
-            LEFT JOIN suppliers s ON s.id = io.supplier_id
-            ORDER BY io.created_at DESC
-        `
-        )
-        .all() as Array<Record<string, unknown>>;
-
-    const itemStmt = db.prepare(
-        `
-        SELECT ioi.*, p.id AS p_id, p.category, p.name, p.barcode, p.price_cents, p.stock_quantity,
-               p.selling_price_cents, p.is_use_premium, p.created_at AS product_created_at,
-               p.updated_at AS product_updated_at
-        FROM inbound_order_items ioi
-        JOIN products p ON p.id = ioi.product_id
-        WHERE ioi.inbound_order_id = ?
-        ORDER BY ioi.id ASC
-    `
-    );
-
-    const inventoryStmt = db.prepare(
-        'SELECT * FROM inventory_items WHERE inbound_order_item_id = ?'
-    );
-
-    return orders.map((order) => {
-        const items = itemStmt.all(order.id) as Array<Record<string, unknown>>;
-        return {
-            id: order.id,
-            supplier_id: order.supplier_id,
-            shipping_fee: toYuan(order.shipping_fee_cents as number),
-            misc_fee: toYuan(order.misc_fee_cents as number),
-            is_paid: Boolean(order.is_paid),
-            source_type: order.source_type || 'opening_stock',
-            purchase_order_id: order.purchase_order_id,
-            status: order.status || 'completed',
-            inbound_at: order.inbound_at,
-            note: order.note,
-            created_at: order.created_at,
-            updated_at: order.updated_at,
-            supplier: order.supplier_name
-                ? {
-                      id: order.supplier_id,
-                      name: order.supplier_name,
-                      contact_name: order.contact_name,
-                      phone: order.phone,
-                      address: order.address,
-                      note: order.supplier_note,
-                  }
-                : undefined,
-            items: items.map((item) => ({
-                id: item.id,
-                inbound_order_id: item.inbound_order_id,
-                product_id: item.product_id,
-                purchase_order_item_id: item.purchase_order_item_id,
-                quantity: item.quantity,
-                purchase_price: toYuan(item.purchase_price_cents as number),
-                serial_tracking_enabled: Boolean(item.serial_tracking_enabled),
-                warranty_enabled: Boolean(item.warranty_enabled),
-                warranty_until: item.warranty_until,
-                note: item.note,
-                created_at: item.created_at,
-                product: serializeProduct({
-                    id: item.p_id,
-                    category: item.category,
-                    name: item.name,
-                    barcode: item.barcode,
-                    price_cents: item.price_cents,
-                    stock_quantity: item.stock_quantity,
-                    selling_price_cents: item.selling_price_cents,
-                    is_use_premium: item.is_use_premium,
-                    created_at: item.product_created_at,
-                    updated_at: item.product_updated_at,
-                } as ProductRow),
-                inventory_items: inventoryStmt.all(item.id),
-            })),
-        };
-    });
-};
-
-export async function GET() {
+export async function GET(request: NextRequest) {
     try {
-        return success(getInboundOrders(), '获取入库单成功');
+        const db = getDb();
+        const { searchParams } = new URL(request.url);
+        const purchaseOrderId = Number(searchParams.get('purchase_order_id') || 0) || undefined;
+        const inboundOrderId = Number(searchParams.get('inbound_order_id') || 0) || undefined;
+        const supplierId = Number(searchParams.get('supplier_id') || 0) || undefined;
+        const search = searchParams.get('search');
+        const recordStatus = searchParams.get('record_status');
+        const sourceType = searchParams.get('source_type');
+
+        return success(
+            listInboundOrders(db, {
+                purchaseOrderId,
+                inboundOrderId,
+                supplierId,
+                search,
+                recordStatus,
+                sourceType,
+            }),
+            '获取入库单成功'
+        );
     } catch (e) {
         console.error('Get inbound orders error:', e);
         return error(500, '获取入库单失败');
@@ -301,7 +237,7 @@ export async function POST(request: NextRequest) {
         });
 
         const orderId = createInboundOrder();
-        const order = getInboundOrders().find((item) => item.id === orderId);
+        const order = getInboundOrderById(db, orderId);
 
         return success(order, '入库单提交成功');
     } catch (e) {

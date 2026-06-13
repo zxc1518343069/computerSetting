@@ -10,6 +10,41 @@ const normalizeCellValue = (value: unknown) => {
     return value;
 };
 
+const normalizeImportPayload = (
+    table: string,
+    columns: string[],
+    row: Record<string, unknown>
+) => {
+    const payload = columns.reduce(
+        (acc, column) => ({
+            ...acc,
+            [column]: normalizeCellValue(row[column]),
+        }),
+        {} as Record<string, unknown>
+    );
+
+    if (table === 'purchase_orders' && payload.status === 'completed') {
+        payload.status = 'inbound';
+    }
+
+    if (table === 'purchase_returns') {
+        if (!payload.goods_status) {
+            payload.goods_status =
+                payload.status === 'completed'
+                    ? 'merchant_received'
+                    : payload.status === 'cancelled'
+                      ? 'cancelled'
+                      : 'pending_shipment';
+        }
+        payload.shipping_fee_cents = Number(payload.shipping_fee_cents || 0);
+        payload.shipping_fee_bearer = payload.shipping_fee_bearer || 'self';
+        payload.self_shipping_fee_cents = Number(payload.self_shipping_fee_cents || 0);
+        payload.merchant_shipping_fee_cents = Number(payload.merchant_shipping_fee_cents || 0);
+    }
+
+    return payload;
+};
+
 const isBarcodeConflict = (e: unknown) =>
     e instanceof Error && e.message.includes('UNIQUE constraint failed: products.barcode');
 
@@ -162,13 +197,7 @@ export async function POST(request: NextRequest) {
                 );
 
                 rows.forEach((row: Record<string, unknown>) => {
-                    const payload = table.columns.reduce(
-                        (acc, column) => ({
-                            ...acc,
-                            [column]: normalizeCellValue(row[column]),
-                        }),
-                        {} as Record<string, unknown>
-                    );
+                    const payload = normalizeImportPayload(table.table, table.columns, row);
                     insert.run(payload);
                 });
             });
@@ -176,6 +205,19 @@ export async function POST(request: NextRequest) {
             ensureDefaultPricingConfig(db);
             ensureProductCategoriesReady(db);
             migrateLegacyPricingRates(db);
+            db.exec(`
+                UPDATE purchase_orders
+                SET status = 'inbound',
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE status = 'completed';
+
+                UPDATE purchase_returns
+                SET goods_status = 'merchant_received',
+                    merchant_received_at = COALESCE(merchant_received_at, updated_at, created_at),
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE status = 'completed'
+                  AND (goods_status IS NULL OR goods_status = 'pending_shipment');
+            `);
             recalculateAllProductStock(db);
             assertForeignKeysValid(db);
         });

@@ -97,8 +97,19 @@ export const deleteSupplier = (id: number) => {
     return api.delete<any, void>(`/suppliers/${id}`);
 };
 
-export const fetchInboundOrders = () => {
-    return api.get<any, InboundOrder[]>('/inbound-orders');
+export const fetchInboundOrders = (params?: {
+    purchase_order_id?: number;
+    inbound_order_id?: number;
+    supplier_id?: number;
+    search?: string;
+    record_status?: string;
+    source_type?: string;
+}) => {
+    return api.get<any, InboundOrder[]>('/inbound-orders', { params });
+};
+
+export const fetchInboundOrder = (id: number) => {
+    return api.get<any, InboundOrder>(`/inbound-orders/${id}`);
 };
 
 export const saveInboundOrder = (data: any) => {
@@ -113,14 +124,16 @@ export const fetchInboundOrderReturns = (id: number) => {
     return api.get<any, PurchaseReturn[]>(`/inbound-orders/${id}/returns`);
 };
 
-export const returnInboundOrder = (
-    id: number,
-    data: { reason: string; inventory_item_ids?: number[] }
-) => {
-    return api.post<any, PurchaseReturn>(`/inbound-orders/${id}/returns`, data);
+export const fetchInboundOrderReturnableItems = (id: number) => {
+    return api.get<any, any>(`/inbound-orders/${id}/returnable-items`);
 };
 
-export const fetchPurchaseOrders = (params?: { search?: string; status?: string }) => {
+export const fetchPurchaseOrders = (params?: {
+    search?: string;
+    status?: string;
+    goods_status?: string;
+    payment_status?: string;
+}) => {
     return api.get<any, PurchaseOrder[]>('/purchase-orders', { params });
 };
 
@@ -137,6 +150,10 @@ export const savePurchaseOrder = (data: any, id?: number) => {
 
 export const cancelPurchaseOrder = (id: number) => {
     return api.post<any, PurchaseOrder>(`/purchase-orders/${id}/cancel`);
+};
+
+export const confirmPurchaseOrder = (id: number) => {
+    return api.post<any, PurchaseOrder>(`/purchase-orders/${id}/confirm`);
 };
 
 export const receivePurchaseOrder = (id: number, data: any) => {
@@ -156,12 +173,43 @@ export const voidPurchasePayment = (id: number, paymentId: number, void_reason: 
     });
 };
 
-export const createPurchaseRefund = (id: number, data: any) => {
-    return api.post<any, PurchaseOrder>(`/purchase-orders/${id}/refunds`, data);
+export const fetchPurchaseReturns = (params?: {
+    search?: string;
+    purchase_order_id?: number;
+    inbound_order_id?: number;
+    supplier_id?: number;
+    goods_status?: string;
+    refund_status?: string;
+}) => {
+    return api.get<any, PurchaseReturn[]>('/purchase-returns', { params });
 };
 
-export const voidPurchaseRefund = (id: number, refundId: number, void_reason: string) => {
-    return api.post<any, PurchaseOrder>(`/purchase-orders/${id}/refunds/${refundId}/void`, {
+export const createPurchaseReturn = (data: any) => {
+    return api.post<any, PurchaseReturn>('/purchase-returns', data);
+};
+
+export const updatePurchaseReturn = (id: number, data: any) => {
+    return api.put<any, PurchaseReturn>(`/purchase-returns/${id}`, data);
+};
+
+export const shipPurchaseReturn = (id: number, data: any) => {
+    return api.post<any, PurchaseReturn>(`/purchase-returns/${id}/ship`, data);
+};
+
+export const receivePurchaseReturnByMerchant = (id: number, data: any) => {
+    return api.post<any, PurchaseReturn>(`/purchase-returns/${id}/merchant-receive`, data);
+};
+
+export const cancelPurchaseReturn = (id: number, data: any) => {
+    return api.post<any, PurchaseReturn>(`/purchase-returns/${id}/cancel`, data);
+};
+
+export const createPurchaseReturnRefund = (id: number, data: any) => {
+    return api.post<any, PurchaseReturn>(`/purchase-returns/${id}/refunds`, data);
+};
+
+export const voidPurchaseReturnRefund = (id: number, refundId: number, void_reason: string) => {
+    return api.post<any, PurchaseReturn>(`/purchase-returns/${id}/refunds/${refundId}/void`, {
         void_reason,
     });
 };
@@ -217,6 +265,28 @@ export interface AccountPayableDetail {
     created_at?: string;
 }
 
+export interface AccountPurchaseReturnRefundDetail {
+    id: number;
+    purchase_order_id: number;
+    inbound_order_id: number;
+    supplier_id?: number;
+    supplier_name: string;
+    contact_name?: string | null;
+    phone?: string | null;
+    item_count: number;
+    amount: number;
+    return_amount: number;
+    shipping_fee: number;
+    merchant_shipping_fee: number;
+    receivable_amount: number;
+    refunded_amount: number;
+    pending_refund: number;
+    goods_status: PurchaseReturn['goods_status'];
+    refund_status: PurchaseReturn['refund_status'];
+    reason: string;
+    created_at?: string;
+}
+
 export interface AccountReceivableDetail {
     id: number;
     customer_id?: number | null;
@@ -245,7 +315,9 @@ export interface AccountsOverview {
         pending_payment: number;
         pending_refund: number;
         latest_ordered_at?: string;
+        latest_return_at?: string;
         orders: AccountPayableDetail[];
+        returns: AccountPurchaseReturnRefundDetail[];
     }>;
     customer_accounts: Array<{
         customer_key: string;
@@ -260,6 +332,7 @@ export interface AccountsOverview {
         orders: AccountReceivableDetail[];
     }>;
     payables: AccountPayableDetail[];
+    purchase_return_refunds: AccountPurchaseReturnRefundDetail[];
     receivables: AccountReceivableDetail[];
     summary: {
         payable_count: number;
@@ -275,7 +348,11 @@ export const fetchAccountsOverview = () => {
     return api.get<any, AccountsOverview>('/accounts');
 };
 
-export const updateAccountPayment = (type: 'payable' | 'receivable', id: number, isPaid = true) => {
+export const updateAccountPayment = (
+    type: 'payable' | 'purchase-return-refund' | 'receivable',
+    id: number,
+    isPaid = true
+) => {
     return api.put<any, void>(`/accounts/${type}/${id}`, { is_paid: isPaid });
 };
 

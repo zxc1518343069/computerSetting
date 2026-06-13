@@ -1,9 +1,11 @@
 import { getDb } from '@/lib/db';
 import { listPurchaseOrders } from '@/lib/db/purchaseOrders';
+import { listPurchaseReturns } from '@/lib/db/purchaseReturns';
 import { toYuan } from '@/lib/db/serializers';
 import { error, success } from '@/lib/request/apiResponse';
 
 type PayableDetail = ReturnType<typeof buildPayableDetail>;
+type PurchaseReturnRefundDetail = ReturnType<typeof buildPurchaseReturnRefundDetail>;
 type ReceivableDetail = ReturnType<typeof buildReceivableDetail>;
 
 interface SupplierAccount {
@@ -19,7 +21,9 @@ interface SupplierAccount {
     pending_payment: number;
     pending_refund: number;
     latest_ordered_at?: string;
+    latest_return_at?: string;
     orders: PayableDetail[];
+    returns: PurchaseReturnRefundDetail[];
 }
 
 interface CustomerAccount {
@@ -54,12 +58,34 @@ const buildPayableDetail = (order: ReturnType<typeof listPurchaseOrders>[number]
     refunded_amount: order.summary.refunded_amount,
     net_paid: order.summary.net_paid,
     pending_payment: order.summary.pending_payment,
-    pending_refund: order.summary.pending_refund,
+    pending_refund: 0,
     amount: order.summary.pending_payment,
     payment_status: order.summary.payment_status,
     ordered_at: order.ordered_at,
     note: order.note,
     created_at: order.created_at,
+});
+
+const buildPurchaseReturnRefundDetail = (item: ReturnType<typeof listPurchaseReturns>[number]) => ({
+    id: item.id,
+    purchase_order_id: item.purchase_order_id,
+    inbound_order_id: item.inbound_order_id,
+    supplier_id: item.supplier?.id,
+    supplier_name: item.supplier?.name || '未命名商家',
+    contact_name: item.supplier?.contact_name || null,
+    phone: item.supplier?.phone || null,
+    item_count: item.item_count,
+    amount: item.pending_refund,
+    return_amount: item.amount,
+    shipping_fee: item.shipping_fee,
+    merchant_shipping_fee: item.merchant_shipping_fee,
+    receivable_amount: item.receivable_amount,
+    refunded_amount: item.refunded_amount,
+    pending_refund: item.pending_refund,
+    goods_status: item.goods_status,
+    refund_status: item.refund_status,
+    reason: item.reason,
+    created_at: item.created_at,
 });
 
 const buildReceivableDetail = (row: Record<string, unknown>) => {
@@ -88,6 +114,7 @@ export async function GET() {
     try {
         const db = getDb();
         const purchaseOrders = listPurchaseOrders(db, { status: 'all' });
+        const purchaseReturns = listPurchaseReturns(db);
 
         const receivableRows = db
             .prepare(
@@ -115,51 +142,87 @@ export async function GET() {
             .filter(
                 (order) =>
                     order.status !== 'cancelled' &&
-                    (order.summary.pending_payment > 0 || order.summary.pending_refund > 0)
+                    order.summary.total_received_quantity > 0 &&
+                    order.summary.pending_payment > 0
             )
             .map(buildPayableDetail);
+        const purchaseReturnRefunds = purchaseReturns
+            .filter((item) => item.goods_status !== 'cancelled' && item.pending_refund > 0)
+            .map(buildPurchaseReturnRefundDetail);
 
         const receivables = receivableRows.map(buildReceivableDetail);
-        const supplierAccounts = Array.from(
-            payables
-                .reduce((map, order) => {
-                    const key = String(order.supplier_id || order.supplier_name);
-                    const current =
-                        map.get(key) ||
-                        ({
-                            supplier_id: order.supplier_id,
-                            supplier_name: order.supplier_name,
-                            contact_name: order.contact_name,
-                            phone: order.phone,
-                            order_count: 0,
-                            line_count: 0,
-                            payable_amount: 0,
-                            paid_amount: 0,
-                            refunded_amount: 0,
-                            pending_payment: 0,
-                            pending_refund: 0,
-                            latest_ordered_at: order.ordered_at,
-                            orders: [],
-                        } as SupplierAccount);
+        const supplierAccountMap = payables.reduce((map, order) => {
+            const key = String(order.supplier_id || order.supplier_name);
+            const current =
+                map.get(key) ||
+                ({
+                    supplier_id: order.supplier_id,
+                    supplier_name: order.supplier_name,
+                    contact_name: order.contact_name,
+                    phone: order.phone,
+                    order_count: 0,
+                    line_count: 0,
+                    payable_amount: 0,
+                    paid_amount: 0,
+                    refunded_amount: 0,
+                    pending_payment: 0,
+                    pending_refund: 0,
+                    latest_ordered_at: order.ordered_at,
+                    latest_return_at: undefined,
+                    orders: [],
+                    returns: [],
+                } as SupplierAccount);
 
-                    current.order_count += 1;
-                    current.line_count += order.line_count;
-                    current.payable_amount += order.payable_amount;
-                    current.paid_amount += order.paid_amount;
-                    current.refunded_amount += order.refunded_amount;
-                    current.pending_payment += order.pending_payment;
-                    current.pending_refund += order.pending_refund;
-                    current.latest_ordered_at =
-                        !current.latest_ordered_at ||
-                        (order.ordered_at && order.ordered_at > current.latest_ordered_at)
-                            ? order.ordered_at
-                            : current.latest_ordered_at;
-                    current.orders.push(order);
-                    map.set(key, current);
-                    return map;
-                }, new Map<string, SupplierAccount>())
-                .values()
-        ).sort(
+            current.order_count += 1;
+            current.line_count += order.line_count;
+            current.payable_amount += order.payable_amount;
+            current.paid_amount += order.paid_amount;
+            current.refunded_amount += order.refunded_amount;
+            current.pending_payment += order.pending_payment;
+            current.latest_ordered_at =
+                !current.latest_ordered_at ||
+                (order.ordered_at && order.ordered_at > current.latest_ordered_at)
+                    ? order.ordered_at
+                    : current.latest_ordered_at;
+            current.orders.push(order);
+            map.set(key, current);
+            return map;
+        }, new Map<string, SupplierAccount>());
+
+        purchaseReturnRefunds.forEach((item) => {
+            const key = String(item.supplier_id || item.supplier_name);
+            const current =
+                supplierAccountMap.get(key) ||
+                ({
+                    supplier_id: item.supplier_id,
+                    supplier_name: item.supplier_name,
+                    contact_name: item.contact_name,
+                    phone: item.phone,
+                    order_count: 0,
+                    line_count: 0,
+                    payable_amount: 0,
+                    paid_amount: 0,
+                    refunded_amount: 0,
+                    pending_payment: 0,
+                    pending_refund: 0,
+                    latest_ordered_at: undefined,
+                    latest_return_at: item.created_at,
+                    orders: [],
+                    returns: [],
+                } as SupplierAccount);
+
+            current.pending_refund += item.pending_refund;
+            current.refunded_amount += item.refunded_amount;
+            current.latest_return_at =
+                !current.latest_return_at ||
+                (item.created_at && item.created_at > current.latest_return_at)
+                    ? item.created_at
+                    : current.latest_return_at;
+            current.returns.push(item);
+            supplierAccountMap.set(key, current);
+        });
+
+        const supplierAccounts = Array.from(supplierAccountMap.values()).sort(
             (a, b) =>
                 b.pending_payment +
                 b.pending_refund -
@@ -204,13 +267,17 @@ export async function GET() {
                 supplier_accounts: supplierAccounts,
                 customer_accounts: customerAccounts,
                 payables,
+                purchase_return_refunds: purchaseReturnRefunds,
                 receivables,
                 summary: {
                     payable_count: payables.filter((item) => item.pending_payment > 0).length,
-                    refund_count: payables.filter((item) => item.pending_refund > 0).length,
+                    refund_count: purchaseReturnRefunds.length,
                     receivable_count: receivables.length,
                     payable_amount: payables.reduce((sum, item) => sum + item.pending_payment, 0),
-                    refund_amount: payables.reduce((sum, item) => sum + item.pending_refund, 0),
+                    refund_amount: purchaseReturnRefunds.reduce(
+                        (sum, item) => sum + item.pending_refund,
+                        0
+                    ),
                     receivable_amount: receivables.reduce((sum, item) => sum + item.amount, 0),
                 },
             },

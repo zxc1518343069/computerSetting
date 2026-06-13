@@ -1,5 +1,9 @@
 import { getDb } from '@/lib/db';
 import { getPurchaseOrderById } from '@/lib/db/purchaseOrders';
+import {
+    getPurchaseReturnById,
+    voidPurchaseReturnRefund,
+} from '@/lib/db/purchaseReturns';
 import { error, success } from '@/lib/request/apiResponse';
 import { NextRequest } from 'next/server';
 
@@ -14,9 +18,7 @@ export async function POST(
         const db = getDb();
         const { void_reason } = await request.json();
 
-        if (!String(void_reason || '').trim()) return error(400, '请填写作废原因');
-
-        const voidRefund = db.transaction(() => {
+        const voidRefund = () => {
             const order = db
                 .prepare('SELECT id FROM purchase_orders WHERE id = ?')
                 .get(purchaseOrderId);
@@ -26,25 +28,19 @@ export async function POST(
                 .prepare('SELECT * FROM purchase_refunds WHERE id = ? AND purchase_order_id = ?')
                 .get(refundId, purchaseOrderId) as Record<string, unknown> | undefined;
             if (!refund) throw new Error('REFUND_NOT_FOUND');
-            if (refund.status === 'voided') return purchaseOrderId;
+            if (!refund.purchase_return_id) throw new Error('PURCHASE_RETURN_NOT_FOUND');
 
-            db.prepare(
-                `
-                UPDATE purchase_refunds
-                SET status = 'voided',
-                    voided_at = CURRENT_TIMESTAMP,
-                    void_reason = @void_reason,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = @id AND purchase_order_id = @purchase_order_id
-            `
-            ).run({
-                id: refundId,
-                purchase_order_id: purchaseOrderId,
-                void_reason: String(void_reason).trim(),
+            const purchaseReturn = getPurchaseReturnById(db, Number(refund.purchase_return_id));
+            if (!purchaseReturn || purchaseReturn.purchase_order_id !== purchaseOrderId) {
+                throw new Error('PURCHASE_RETURN_NOT_FOUND');
+            }
+
+            voidPurchaseReturnRefund(db, Number(refund.purchase_return_id), refundId, {
+                void_reason,
             });
 
             return purchaseOrderId;
-        });
+        };
 
         try {
             const id = voidRefund();
@@ -53,6 +49,8 @@ export async function POST(
             const message = e instanceof Error ? e.message : '';
             if (message === 'PURCHASE_ORDER_NOT_FOUND') return error(404, '进货单不存在');
             if (message === 'REFUND_NOT_FOUND') return error(404, '退款记录不存在');
+            if (message === 'PURCHASE_RETURN_NOT_FOUND') return error(404, '退货记录不存在');
+            if (message === 'VOID_REASON_REQUIRED') return error(400, '请填写作废原因');
             throw e;
         }
     } catch (e) {

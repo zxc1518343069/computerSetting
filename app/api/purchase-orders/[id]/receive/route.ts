@@ -1,5 +1,10 @@
 import { getDb } from '@/lib/db';
-import { getPurchaseOrderById, recalculatePurchaseOrderStatus } from '@/lib/db/purchaseOrders';
+import {
+    getPurchaseOrderById,
+    getPurchaseOrderSummaryCents,
+    recalculatePurchaseOrderStatus,
+} from '@/lib/db/purchaseOrders';
+import { toCents } from '@/lib/db/serializers';
 import { error, success } from '@/lib/request/apiResponse';
 import { NextRequest } from 'next/server';
 
@@ -47,7 +52,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         const { id: idParam } = await params;
         const purchaseOrderId = Number(idParam);
         const db = getDb();
-        const { inbound_at, note, items } = await request.json();
+        const { inbound_at, note, shipping_fee, misc_fee, payment, items } = await request.json();
 
         const receivePurchaseOrder = db.transaction(() => {
             const order = db
@@ -55,6 +60,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                 .get(purchaseOrderId) as Record<string, unknown> | undefined;
             if (!order) throw new Error('PURCHASE_ORDER_NOT_FOUND');
             if (order.status === 'cancelled') throw new Error('PURCHASE_ORDER_CANCELLED');
+            if (order.status === 'draft') throw new Error('PURCHASE_ORDER_NOT_CONFIRMED');
 
             const orderItems = db
                 .prepare('SELECT * FROM purchase_order_items WHERE purchase_order_id = ?')
@@ -127,6 +133,31 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             }
 
             const inboundAt = normalizeDate(inbound_at);
+            const nextShippingFeeCents =
+                shipping_fee === undefined
+                    ? Number(order.shipping_fee_cents || 0)
+                    : toCents(Number(shipping_fee || 0));
+            const nextMiscFeeCents =
+                misc_fee === undefined
+                    ? Number(order.misc_fee_cents || 0)
+                    : toCents(Number(misc_fee || 0));
+
+            if (shipping_fee !== undefined || misc_fee !== undefined) {
+                db.prepare(
+                    `
+                    UPDATE purchase_orders
+                    SET shipping_fee_cents = @shipping_fee_cents,
+                        misc_fee_cents = @misc_fee_cents,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = @id
+                `
+                ).run({
+                    id: purchaseOrderId,
+                    shipping_fee_cents: nextShippingFeeCents,
+                    misc_fee_cents: nextMiscFeeCents,
+                });
+            }
+
             const inboundOrderResult = db
                 .prepare(
                     `
@@ -227,6 +258,36 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             affectedProductIds.forEach((productId) => recalculateProductStock(db, productId));
             recalculatePurchaseOrderStatus(db, purchaseOrderId);
 
+            const paymentAmountCents = toCents(Number(payment?.amount || 0));
+            if (paymentAmountCents > 0) {
+                const summary = getPurchaseOrderSummaryCents(db, purchaseOrderId, {
+                    shipping_fee_cents: nextShippingFeeCents,
+                    misc_fee_cents: nextMiscFeeCents,
+                });
+                if (paymentAmountCents > summary.pendingPaymentCents) {
+                    throw new Error('PAYMENT_EXCEEDS_PAYABLE');
+                }
+
+                db.prepare(
+                    `
+                    INSERT INTO purchase_payments (
+                        purchase_order_id, amount_cents, payment_account,
+                        paid_at, status, note, updated_at
+                    )
+                    VALUES (
+                        @purchase_order_id, @amount_cents, @payment_account,
+                        @paid_at, 'active', @note, CURRENT_TIMESTAMP
+                    )
+                `
+                ).run({
+                    purchase_order_id: purchaseOrderId,
+                    amount_cents: paymentAmountCents,
+                    payment_account: payment?.payment_account || null,
+                    paid_at: normalizeDate(payment?.paid_at),
+                    note: payment?.note || null,
+                });
+            }
+
             return inboundOrderId;
         });
 
@@ -244,6 +305,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             const messageMap: Record<string, string> = {
                 PURCHASE_ORDER_NOT_FOUND: '进货单不存在',
                 PURCHASE_ORDER_CANCELLED: '已取消进货单不能入库',
+                PURCHASE_ORDER_NOT_CONFIRMED: '预下单需要先确认下单后才能入库',
                 NO_REMAINING_ITEMS: '该进货单没有剩余可入库物品',
                 ITEM_NOT_FOUND: '入库明细不属于该进货单',
                 DUPLICATE_RECEIVE_ITEM: '同一进货明细不能重复入库',
@@ -253,6 +315,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                 SERIAL_COUNT_EXCEEDS_QUANTITY: '序列号数量不能超过入库数量',
                 DUPLICATE_SERIAL: '同一张入库单内序列号不能重复',
                 SERIAL_EXISTS: '序列号已存在',
+                PAYMENT_EXCEEDS_PAYABLE: '本次付款会超过当前应付款',
             };
             if (messageMap[message])
                 return error(

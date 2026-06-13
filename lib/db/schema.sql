@@ -293,7 +293,7 @@ CREATE TABLE IF NOT EXISTS purchase_orders
 (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     supplier_id INTEGER NOT NULL REFERENCES suppliers (id),
-    status TEXT NOT NULL DEFAULT 'ordered',
+    status TEXT NOT NULL DEFAULT 'draft',
     ordered_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     expected_inbound_at TEXT,
     shipping_fee_cents INTEGER NOT NULL DEFAULT 0,
@@ -352,12 +352,26 @@ CREATE TABLE IF NOT EXISTS purchase_returns
     type TEXT NOT NULL DEFAULT 'return',
     reason TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'completed',
+    goods_status TEXT NOT NULL DEFAULT 'pending_shipment',
+    shipping_fee_cents INTEGER NOT NULL DEFAULT 0,
+    shipping_fee_bearer TEXT NOT NULL DEFAULT 'self',
+    self_shipping_fee_cents INTEGER NOT NULL DEFAULT 0,
+    merchant_shipping_fee_cents INTEGER NOT NULL DEFAULT 0,
+    logistics_company TEXT,
+    tracking_no TEXT,
+    shipped_at TEXT,
+    merchant_received_at TEXT,
+    cancelled_at TEXT,
+    cancel_reason TEXT,
+    note TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_purchase_returns_order_id
     ON purchase_returns(purchase_order_id);
+CREATE INDEX IF NOT EXISTS idx_purchase_returns_inbound_id
+    ON purchase_returns(inbound_order_id);
 
 CREATE TABLE IF NOT EXISTS purchase_return_items
 (
@@ -393,6 +407,8 @@ CREATE TABLE IF NOT EXISTS purchase_refunds
 
 CREATE INDEX IF NOT EXISTS idx_purchase_refunds_order_status
     ON purchase_refunds(purchase_order_id, status);
+CREATE INDEX IF NOT EXISTS idx_purchase_refunds_return_status
+    ON purchase_refunds(purchase_return_id, status);
 
 CREATE TABLE IF NOT EXISTS inbound_orders
 (

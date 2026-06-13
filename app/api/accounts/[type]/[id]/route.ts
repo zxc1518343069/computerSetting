@@ -1,5 +1,6 @@
 import { getDb } from '@/lib/db';
 import { getPurchaseOrderSummaryCents } from '@/lib/db/purchaseOrders';
+import { createPurchaseReturnRefund, getPurchaseReturnById } from '@/lib/db/purchaseReturns';
 import { error, success } from '@/lib/request/apiResponse';
 import { NextRequest } from 'next/server';
 
@@ -22,11 +23,13 @@ export async function PUT(
                 | Record<string, unknown>
                 | undefined;
             if (!order) return error(404, '进货单不存在');
+            if (order.status === 'cancelled') return error(400, '已取消进货单不能付款');
 
             const summary = getPurchaseOrderSummaryCents(db, id, {
                 shipping_fee_cents: Number(order.shipping_fee_cents || 0),
                 misc_fee_cents: Number(order.misc_fee_cents || 0),
             });
+            if (summary.totalReceivedQuantity <= 0) return error(400, '已有入库成本后才能付款');
             if (summary.pendingPaymentCents <= 0) return error(400, '该进货单没有待付款金额');
 
             db.prepare(
@@ -62,6 +65,21 @@ export async function PUT(
 
             if (result.changes === 0) return error(404, '订单不存在');
             return success(null, is_paid ? '已标记收款' : '已标记未收款');
+        }
+
+        if (type === 'purchase-return-refund') {
+            if (!is_paid) return error(400, '退货收款记录不能通过账款页撤销，请作废收款记录');
+
+            const purchaseReturn = getPurchaseReturnById(db, id);
+            if (!purchaseReturn) return error(404, '采购退货记录不存在');
+            if (purchaseReturn.pending_refund <= 0) return error(400, '该退货记录没有待收退款');
+
+            createPurchaseReturnRefund(db, id, {
+                amount: purchaseReturn.pending_refund,
+                note: '账款页一键确认收款',
+            });
+
+            return success(null, '已登记退货收款');
         }
 
         return error(400, '未知账款类型');

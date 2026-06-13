@@ -31,12 +31,13 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
     AccountsOverview,
     createPurchasePayment,
-    createPurchaseRefund,
+    createPurchaseReturnRefund,
     fetchAccountsOverview,
     updateAccountPayment,
 } from '../../services';
 
 type Payable = AccountsOverview['payables'][number];
+type ReturnRefund = AccountsOverview['purchase_return_refunds'][number];
 type Receivable = AccountsOverview['receivables'][number];
 type SupplierAccount = AccountsOverview['supplier_accounts'][number];
 type CustomerAccount = AccountsOverview['customer_accounts'][number];
@@ -44,12 +45,14 @@ type CustomerAccount = AccountsOverview['customer_accounts'][number];
 export default function AccountsPage() {
     const [view, setView] = useState<'summary' | 'detail'>('summary');
     const [summaryType, setSummaryType] = useState<'supplier' | 'customer'>('supplier');
-    const [detailType, setDetailType] = useState<'payables' | 'receivables'>('payables');
+    const [detailType, setDetailType] = useState<
+        'payables' | 'return_refunds' | 'receivables'
+    >('payables');
     const [supplierFilter, setSupplierFilter] = useState<number | null>(null);
     const [customerFilter, setCustomerFilter] = useState<number | null>(null);
     const [customerKeyFilter, setCustomerKeyFilter] = useState<string | null>(null);
     const [paymentTarget, setPaymentTarget] = useState<Payable | null>(null);
-    const [refundTarget, setRefundTarget] = useState<Payable | null>(null);
+    const [refundTarget, setRefundTarget] = useState<ReturnRefund | null>(null);
     const [paymentForm] = Form.useForm();
     const [refundForm] = Form.useForm();
 
@@ -58,6 +61,7 @@ export default function AccountsPage() {
             supplier_accounts: [],
             customer_accounts: [],
             payables: [],
+            purchase_return_refunds: [],
             receivables: [],
             summary: emptySummary,
         },
@@ -125,7 +129,7 @@ export default function AccountsPage() {
         async () => {
             if (!refundTarget) return;
             const values = await refundForm.validateFields();
-            await createPurchaseRefund(refundTarget.id, {
+            await createPurchaseReturnRefund(refundTarget.id, {
                 amount: values.amount,
                 refund_account: values.refund_account || null,
                 refunded_at: values.refunded_at?.toISOString(),
@@ -135,7 +139,7 @@ export default function AccountsPage() {
         {
             manual: true,
             onSuccess: () => {
-                message.success('退款记录已添加');
+                message.success('退货收款记录已添加');
                 setRefundTarget(null);
                 refundForm.resetFields();
                 refresh();
@@ -153,7 +157,7 @@ export default function AccountsPage() {
         });
     };
 
-    const openRefund = (record: Payable) => {
+    const openReturnRefund = (record: ReturnRefund) => {
         setRefundTarget(record);
         refundForm.resetFields();
         refundForm.setFieldsValue({
@@ -188,6 +192,16 @@ export default function AccountsPage() {
         [data.payables, supplierFilter]
     );
 
+    const filteredReturnRefunds = useMemo(
+        () =>
+            supplierFilter
+                ? data.purchase_return_refunds.filter(
+                      (item) => item.supplier_id === supplierFilter
+                  )
+                : data.purchase_return_refunds,
+        [data.purchase_return_refunds, supplierFilter]
+    );
+
     const filteredReceivables = useMemo(
         () =>
             customerFilter
@@ -213,19 +227,19 @@ export default function AccountsPage() {
             ),
         },
         {
-            title: '未结进货单',
+            title: '未结单据',
             dataIndex: 'order_count',
             width: 130,
-            render: (count) => `${count || 0} 单`,
+            render: (_, record) =>
+                `${record.order_count || 0} 进货 / ${(record.returns || []).length} 退货`,
         },
         {
-            title: '应付/已付',
+            title: '采购应付',
             width: 220,
             render: (_, record) => (
                 <div className="text-xs text-gray-500 dark:text-gray-400">
                     <div>应付 {formatPrice(record.payable_amount)}</div>
                     <div>已付 {formatPrice(record.paid_amount)}</div>
-                    <div>已退款 {formatPrice(record.refunded_amount)}</div>
                 </div>
             ),
         },
@@ -240,17 +254,23 @@ export default function AccountsPage() {
                     )}
                     {record.pending_refund > 0 && (
                         <div className="text-orange-500">
-                            退 {formatPrice(record.pending_refund)}
+                            收 {formatPrice(record.pending_refund)}
                         </div>
                     )}
                 </div>
             ),
         },
         {
-            title: '最近下单',
+            title: '最近业务',
             dataIndex: 'latest_ordered_at',
             width: 180,
-            render: (text) => formatDate(text),
+            render: (_, record) =>
+                formatDate(
+                    [record.latest_ordered_at, record.latest_return_at]
+                        .filter(Boolean)
+                        .sort()
+                        .pop()
+                ),
         },
         {
             title: '操作',
@@ -379,27 +399,18 @@ export default function AccountsPage() {
                 <div className="text-xs text-gray-500 dark:text-gray-400">
                     <div>应付 {formatPrice(record.payable_amount)}</div>
                     <div>已付 {formatPrice(record.paid_amount)}</div>
-                    <div>
-                        退货扣减 {formatPrice(record.return_amount)} / 已退款{' '}
-                        {formatPrice(record.refunded_amount)}
-                    </div>
                 </div>
             ),
         },
         {
-            title: '待处理金额',
+            title: '待付款',
             width: 150,
             align: 'right',
-            render: (_, record) =>
-                record.pending_refund > 0 ? (
-                    <span className="font-mono font-black text-orange-500">
-                        退 {formatPrice(record.pending_refund)}
-                    </span>
-                ) : (
-                    <span className="font-mono font-black text-red-500">
-                        付 {formatPrice(record.pending_payment)}
-                    </span>
-                ),
+            render: (_, record) => (
+                <span className="font-mono font-black text-red-500">
+                    {formatPrice(record.pending_payment)}
+                </span>
+            ),
         },
         {
             title: '下单时间',
@@ -410,27 +421,90 @@ export default function AccountsPage() {
         {
             title: '状态',
             width: 100,
-            render: (_, record) =>
-                record.pending_refund > 0 ? (
-                    <Tag color="red">待退款</Tag>
-                ) : (
-                    <Tag color="orange">待付款</Tag>
-                ),
+            render: () => <Tag color="orange">待付款</Tag>,
         },
         {
             title: '操作',
             width: 150,
             align: 'center',
-            render: (_, record) =>
-                record.pending_refund > 0 ? (
-                    <Button type="link" onClick={() => openRefund(record)}>
-                        登记退款
-                    </Button>
-                ) : (
-                    <Button type="link" onClick={() => openPayment(record)}>
-                        登记付款
-                    </Button>
-                ),
+            render: (_, record) => (
+                <Button type="link" onClick={() => openPayment(record)}>
+                    登记付款
+                </Button>
+            ),
+        },
+    ];
+
+    const returnRefundColumns: ColumnsType<ReturnRefund> = [
+        {
+            title: '退货单',
+            dataIndex: 'id',
+            width: 100,
+            render: (id) => <span className="font-mono text-gray-400">TH-{id}</span>,
+        },
+        {
+            title: '关联单号',
+            width: 150,
+            render: (_, record) => (
+                <div className="space-y-1">
+                    <Tag color="blue">JH-{record.purchase_order_id}</Tag>
+                    <Tag color="purple">RK-{record.inbound_order_id}</Tag>
+                </div>
+            ),
+        },
+        {
+            title: '商家',
+            dataIndex: 'supplier_name',
+            render: (text) => (
+                <span className="font-bold text-gray-900 dark:text-gray-100">{text}</span>
+            ),
+        },
+        {
+            title: '退货/应收',
+            width: 220,
+            render: (_, record) => (
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                    <div>商品 {formatPrice(record.return_amount)}</div>
+                    <div>商家运费 {formatPrice(record.merchant_shipping_fee)}</div>
+                    <div>应收 {formatPrice(record.receivable_amount)}</div>
+                </div>
+            ),
+        },
+        {
+            title: '已收/待收',
+            width: 170,
+            align: 'right',
+            render: (_, record) => (
+                <div className="space-y-1 font-mono font-black">
+                    <div className="text-gray-500">{formatPrice(record.refunded_amount)}</div>
+                    <div className="text-orange-500">{formatPrice(record.pending_refund)}</div>
+                </div>
+            ),
+        },
+        {
+            title: '状态',
+            width: 140,
+            render: (_, record) => (
+                <Tag color={record.refund_status === 'partial_refunded' ? 'blue' : 'orange'}>
+                    {record.refund_status === 'partial_refunded' ? '部分退款' : '未退款'}
+                </Tag>
+            ),
+        },
+        {
+            title: '创建时间',
+            dataIndex: 'created_at',
+            width: 180,
+            render: (text) => formatDate(text),
+        },
+        {
+            title: '操作',
+            width: 170,
+            align: 'center',
+            render: (_, record) => (
+                <Button type="link" onClick={() => openReturnRefund(record)}>
+                    登记收款
+                </Button>
+            ),
         },
     ];
 
@@ -529,7 +603,7 @@ export default function AccountsPage() {
                             账款管理
                         </h1>
                         <p className="text-gray-500 dark:text-gray-400 mt-2">
-                            汇总进货待付款、供应商待退款和订单未收款。
+                            汇总采购待付款、退货待收退款和销售未收款。
                         </p>
                     </div>
                     <Button icon={<ReloadOutlined />} onClick={refresh} />
@@ -544,7 +618,7 @@ export default function AccountsPage() {
                     />
                     <SummaryCard
                         icon={<WalletOutlined />}
-                        label={`待退款 ${data.summary.refund_count} 笔`}
+                        label={`退货待收 ${data.summary.refund_count} 笔`}
                         amount={data.summary.refund_amount}
                         tone="orange"
                     />
@@ -616,14 +690,34 @@ export default function AccountsPage() {
                                             scroll={{ x: 1100 }}
                                             expandable={{
                                                 expandedRowRender: (record) => (
-                                                    <Table
-                                                        rowKey="id"
-                                                        columns={payableColumns}
-                                                        dataSource={record.orders}
-                                                        pagination={false}
-                                                        size="small"
-                                                        scroll={{ x: 1100 }}
-                                                    />
+                                                    <div className="space-y-4">
+                                                        <div>
+                                                            <div className="mb-2 text-sm font-bold text-gray-900 dark:text-gray-100">
+                                                                采购应付
+                                                            </div>
+                                                            <Table
+                                                                rowKey="id"
+                                                                columns={payableColumns}
+                                                                dataSource={record.orders}
+                                                                pagination={false}
+                                                                size="small"
+                                                                scroll={{ x: 1100 }}
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <div className="mb-2 text-sm font-bold text-gray-900 dark:text-gray-100">
+                                                                退货待收
+                                                            </div>
+                                                            <Table
+                                                                rowKey="id"
+                                                                columns={returnRefundColumns}
+                                                                dataSource={record.returns}
+                                                                pagination={false}
+                                                                size="small"
+                                                                scroll={{ x: 1200 }}
+                                                            />
+                                                        </div>
+                                                    </div>
                                                 ),
                                             }}
                                         />
@@ -660,11 +754,15 @@ export default function AccountsPage() {
                     ) : (
                         <Tabs
                             activeKey={detailType}
-                            onChange={(key) => setDetailType(key as 'payables' | 'receivables')}
+                            onChange={(key) =>
+                                setDetailType(
+                                    key as 'payables' | 'return_refunds' | 'receivables'
+                                )
+                            }
                             items={[
                                 {
                                     key: 'payables',
-                                    label: `进货应付/退款 ${filteredPayables.length}`,
+                                    label: `采购应付 ${filteredPayables.length}`,
                                     children: (
                                         <Table
                                             rowKey="id"
@@ -673,6 +771,20 @@ export default function AccountsPage() {
                                             dataSource={filteredPayables}
                                             pagination={{ pageSize: 10 }}
                                             scroll={{ x: 1100 }}
+                                        />
+                                    ),
+                                },
+                                {
+                                    key: 'return_refunds',
+                                    label: `退货待收 ${filteredReturnRefunds.length}`,
+                                    children: (
+                                        <Table
+                                            rowKey="id"
+                                            loading={loading}
+                                            columns={returnRefundColumns}
+                                            dataSource={filteredReturnRefunds}
+                                            pagination={{ pageSize: 10 }}
+                                            scroll={{ x: 1200 }}
                                         />
                                     ),
                                 },
@@ -752,7 +864,7 @@ export default function AccountsPage() {
             </Modal>
 
             <Modal
-                title={refundTarget ? `登记 JH-${refundTarget.id} 退款` : '登记退款'}
+                title={refundTarget ? `登记 TH-${refundTarget.id} 收款` : '登记退货收款'}
                 open={Boolean(refundTarget)}
                 onCancel={() => setRefundTarget(null)}
                 onOk={submitPurchaseRefund}
@@ -765,9 +877,13 @@ export default function AccountsPage() {
                         <div className="mb-4 rounded-2xl border border-gray-100 bg-gray-50/70 p-4 dark:border-gray-800 dark:bg-black/20">
                             <div className="grid grid-cols-2 gap-3">
                                 <ReadonlyCell
-                                    label="净付款"
-                                    value={formatPrice(refundTarget.net_paid)}
+                                    label="应收退款"
+                                    value={formatPrice(refundTarget.receivable_amount)}
                                     strong
+                                />
+                                <ReadonlyCell
+                                    label="已收退款"
+                                    value={formatPrice(refundTarget.refunded_amount)}
                                 />
                                 <ReadonlyCell
                                     label="待退款"
@@ -779,8 +895,8 @@ export default function AccountsPage() {
                     )}
                     <Form.Item
                         name="amount"
-                        label="本次退款金额"
-                        rules={[{ required: true, message: '请输入本次退款金额' }]}
+                        label="本次收款金额"
+                        rules={[{ required: true, message: '请输入本次收款金额' }]}
                     >
                         <InputNumber
                             min={0.01}
@@ -790,13 +906,13 @@ export default function AccountsPage() {
                             className="w-full"
                         />
                     </Form.Item>
-                    <Form.Item name="refund_account" label="退款账号">
+                    <Form.Item name="refund_account" label="收款账号">
                         <Input />
                     </Form.Item>
                     <Form.Item
                         name="refunded_at"
-                        label="退款时间"
-                        rules={[{ required: true, message: '请选择退款时间' }]}
+                        label="收款时间"
+                        rules={[{ required: true, message: '请选择收款时间' }]}
                     >
                         <DatePicker showTime className="w-full" />
                     </Form.Item>
