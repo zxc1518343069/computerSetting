@@ -103,6 +103,54 @@ export interface Supplier {
     updated_at?: string;
 }
 
+export type LogisticsCompanyStatus = 'active' | 'disabled';
+export type LogisticsRecordType = 'purchase' | 'purchase_return' | 'manual';
+export type LogisticsShippingFeeBearer = 'self' | 'merchant' | 'shared';
+export type LogisticsSettlementTarget = 'logistics_company' | 'none';
+export type LogisticsPaymentStatus = 'unpaid' | 'paid' | 'voided';
+export type LogisticsRelatedType =
+    | 'purchase_order'
+    | 'inbound_order'
+    | 'purchase_return'
+    | 'manual';
+
+export interface LogisticsCompany {
+    id: number;
+    name: string;
+    contact?: string | null;
+    note?: string | null;
+    status: LogisticsCompanyStatus;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface LogisticsRecord {
+    id: number;
+    type: LogisticsRecordType;
+    company_id?: number | null;
+    company?: {
+        id: number;
+        name: string;
+        contact?: string | null;
+        status: LogisticsCompanyStatus;
+    } | null;
+    tracking_no?: string | null;
+    shipping_fee: number;
+    self_amount: number;
+    occurred_at: string;
+    related_type?: LogisticsRelatedType | null;
+    related_id?: number | null;
+    shipping_fee_bearer: LogisticsShippingFeeBearer;
+    settlement_target: LogisticsSettlementTarget;
+    payment_status: LogisticsPaymentStatus;
+    paid_at?: string | null;
+    payment_account?: string | null;
+    note?: string | null;
+    payable_amount: number;
+    created_at?: string;
+    updated_at?: string;
+}
+
 export interface Customer {
     id: number;
     name: string;

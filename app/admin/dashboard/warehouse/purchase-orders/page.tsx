@@ -109,20 +109,24 @@ const paymentStatusMap: Record<
     settled: { label: '已结清', color: 'green' },
 };
 
-const returnGoodsStatusMap: Record<PurchaseReturn['goods_status'], { label: string; color: string }> =
-    {
-        pending_shipment: { label: '待寄回', color: 'orange' },
-        shipped: { label: '已寄回', color: 'blue' },
-        merchant_received: { label: '商家已收货', color: 'green' },
-        cancelled: { label: '已取消', color: 'red' },
-    };
+const returnGoodsStatusMap: Record<
+    PurchaseReturn['goods_status'],
+    { label: string; color: string }
+> = {
+    pending_shipment: { label: '待寄回', color: 'orange' },
+    shipped: { label: '已寄回', color: 'blue' },
+    merchant_received: { label: '商家已收货', color: 'green' },
+    cancelled: { label: '已取消', color: 'red' },
+};
 
-const returnRefundStatusMap: Record<PurchaseReturn['refund_status'], { label: string; color: string }> =
-    {
-        unrefunded: { label: '未退款', color: 'orange' },
-        partial_refunded: { label: '部分退款', color: 'blue' },
-        refunded: { label: '已退款', color: 'green' },
-    };
+const returnRefundStatusMap: Record<
+    PurchaseReturn['refund_status'],
+    { label: string; color: string }
+> = {
+    unrefunded: { label: '未退款', color: 'orange' },
+    partial_refunded: { label: '部分退款', color: 'blue' },
+    refunded: { label: '已退款', color: 'green' },
+};
 
 const shippingBearerMap: Record<PurchaseReturn['shipping_fee_bearer'], string> = {
     self: '我方',
@@ -308,7 +312,7 @@ export default function PurchaseOrdersPage() {
             goodsAmount,
             shippingFee,
             miscFee,
-            payableAmount: goodsAmount + shippingFee + miscFee,
+            payableAmount: goodsAmount + miscFee,
         };
     }, [watchedItems, watchedShippingFee, watchedMiscFee]);
 
@@ -1158,7 +1162,9 @@ export default function PurchaseOrdersPage() {
                                                         onVoidPayment={(payment) =>
                                                             openVoidPayment(record, payment)
                                                         }
-                                                        onViewInbound={() => goInbound(record, false)}
+                                                        onViewInbound={() =>
+                                                            goInbound(record, false)
+                                                        }
                                                     />
                                                 ),
                                             }}
@@ -1386,7 +1392,7 @@ export default function PurchaseOrdersPage() {
                         <div className="mb-4 rounded-2xl border border-gray-100 bg-gray-50/70 p-4 text-sm dark:border-gray-800 dark:bg-black/20">
                             <div className="grid grid-cols-2 gap-3">
                                 <ReadonlyCell
-                                    label="应付款"
+                                    label="商家应付款"
                                     value={formatPrice(paymentOrder.summary.payable_amount)}
                                     strong
                                 />
@@ -1447,7 +1453,7 @@ export default function PurchaseOrdersPage() {
                 </Form>
             </Modal>
 
-                <Modal
+            <Modal
                 title="新增采购退货"
                 open={returnVisible}
                 onCancel={closeReturnModal}
@@ -1918,14 +1924,11 @@ function PurchaseOrderDetails({
     return (
         <div className="space-y-5 bg-gray-50/70 p-4 dark:bg-black/20">
             <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
-                <ReadonlyCell
-                    label="已入库商品"
-                    value={formatPrice(order.summary.goods_amount)}
-                />
+                <ReadonlyCell label="已入库商品" value={formatPrice(order.summary.goods_amount)} />
                 <ReadonlyCell label="运费" value={formatPrice(order.shipping_fee)} />
                 <ReadonlyCell label="杂费" value={formatPrice(order.misc_fee)} />
                 <ReadonlyCell
-                    label="应付款"
+                    label="商家应付款"
                     value={formatPrice(order.summary.payable_amount)}
                     strong
                 />
@@ -2050,7 +2053,11 @@ function PurchaseReturnDetails({ record }: { record: PurchaseReturn }) {
                 <ReadonlyCell label="待收退款" value={formatPrice(record.pending_refund)} strong />
                 <ReadonlyCell
                     label="物流"
-                    value={[record.logistics_company, record.tracking_no].filter(Boolean).join(' / ') || '-'}
+                    value={
+                        [record.logistics_company, record.tracking_no]
+                            .filter(Boolean)
+                            .join(' / ') || '-'
+                    }
                 />
             </div>
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
@@ -2241,7 +2248,7 @@ function PurchaseFormSummary({
                 <SummaryCell label="商品小计" value={formatPrice(summary.goodsAmount)} />
                 <SummaryCell label="运费" value={formatPrice(summary.shippingFee)} />
                 <SummaryCell label="杂费" value={formatPrice(summary.miscFee)} />
-                <SummaryCell label="预估应付" value={formatPrice(summary.payableAmount)} strong />
+                <SummaryCell label="商家应付" value={formatPrice(summary.payableAmount)} strong />
             </div>
         </div>
     );

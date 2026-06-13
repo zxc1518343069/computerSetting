@@ -289,6 +289,48 @@ CREATE TABLE IF NOT EXISTS suppliers
     CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS logistics_companies
+(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    contact TEXT,
+    note TEXT,
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_logistics_companies_status
+    ON logistics_companies(status);
+
+CREATE TABLE IF NOT EXISTS logistics_records
+(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type TEXT NOT NULL DEFAULT 'manual',
+    company_id INTEGER REFERENCES logistics_companies (id),
+    tracking_no TEXT,
+    shipping_fee_cents INTEGER NOT NULL DEFAULT 0,
+    self_amount_cents INTEGER NOT NULL DEFAULT 0,
+    occurred_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    related_type TEXT,
+    related_id INTEGER,
+    shipping_fee_bearer TEXT NOT NULL DEFAULT 'self',
+    settlement_target TEXT NOT NULL DEFAULT 'logistics_company',
+    payment_status TEXT NOT NULL DEFAULT 'unpaid',
+    paid_at TEXT,
+    payment_account TEXT,
+    note TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_logistics_records_company_status
+    ON logistics_records(company_id, payment_status);
+CREATE INDEX IF NOT EXISTS idx_logistics_records_type_time
+    ON logistics_records(type, occurred_at);
+CREATE INDEX IF NOT EXISTS idx_logistics_records_related
+    ON logistics_records(related_type, related_id);
+
 CREATE TABLE IF NOT EXISTS purchase_orders
 (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

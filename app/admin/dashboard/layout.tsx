@@ -3,6 +3,7 @@ import { authService } from '@/app/services';
 import {
     AppstoreOutlined,
     AuditOutlined,
+    CarOutlined,
     CloudDownloadOutlined,
     DatabaseOutlined,
     DollarOutlined,
@@ -82,6 +83,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     title: '入库单',
                     path: '/admin/dashboard/warehouse/inbound',
                     icon: <InboxOutlined />,
+                },
+                {
+                    title: '物流管理',
+                    path: '/admin/dashboard/warehouse/logistics',
+                    icon: <CarOutlined />,
                 },
             ],
         },

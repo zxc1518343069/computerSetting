@@ -1,4 +1,5 @@
 import { getDb } from '@/lib/db';
+import { listLogisticsPayableAccounts, listLogisticsPayableRecords } from '@/lib/db/logistics';
 import { listPurchaseOrders } from '@/lib/db/purchaseOrders';
 import { listPurchaseReturns } from '@/lib/db/purchaseReturns';
 import { toYuan } from '@/lib/db/serializers';
@@ -115,6 +116,8 @@ export async function GET() {
         const db = getDb();
         const purchaseOrders = listPurchaseOrders(db, { status: 'all' });
         const purchaseReturns = listPurchaseReturns(db);
+        const logisticsPayables = listLogisticsPayableRecords(db);
+        const logisticsAccounts = listLogisticsPayableAccounts(db);
 
         const receivableRows = db
             .prepare(
@@ -223,10 +226,7 @@ export async function GET() {
         });
 
         const supplierAccounts = Array.from(supplierAccountMap.values()).sort(
-            (a, b) =>
-                b.pending_payment +
-                b.pending_refund -
-                (a.pending_payment + a.pending_refund)
+            (a, b) => b.pending_payment + b.pending_refund - (a.pending_payment + a.pending_refund)
         );
         const customerAccounts = Array.from(
             receivables
@@ -265,11 +265,24 @@ export async function GET() {
         return success(
             {
                 supplier_accounts: supplierAccounts,
+                logistics_accounts: logisticsAccounts,
                 customer_accounts: customerAccounts,
                 payables,
+                logistics_payables: logisticsPayables,
                 purchase_return_refunds: purchaseReturnRefunds,
                 receivables,
                 summary: {
+                    merchant_payable_count: payables.filter((item) => item.pending_payment > 0)
+                        .length,
+                    merchant_payable_amount: payables.reduce(
+                        (sum, item) => sum + item.pending_payment,
+                        0
+                    ),
+                    logistics_payable_count: logisticsPayables.length,
+                    logistics_payable_amount: logisticsPayables.reduce(
+                        (sum, item) => sum + item.payable_amount,
+                        0
+                    ),
                     payable_count: payables.filter((item) => item.pending_payment > 0).length,
                     refund_count: purchaseReturnRefunds.length,
                     receivable_count: receivables.length,

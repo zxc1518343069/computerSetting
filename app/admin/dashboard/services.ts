@@ -7,6 +7,8 @@ import {
     Product,
     PurchaseOrder,
     PurchaseReturn,
+    LogisticsCompany,
+    LogisticsRecord,
     SalesOrder,
     Supplier,
     Customer,
@@ -95,6 +97,50 @@ export const saveSupplier = (data: Partial<Supplier>, id?: number) => {
 
 export const deleteSupplier = (id: number) => {
     return api.delete<any, void>(`/suppliers/${id}`);
+};
+
+export const fetchLogisticsCompanies = (params?: { search?: string; status?: string }) => {
+    return api.get<any, LogisticsCompany[]>('/logistics/companies', { params });
+};
+
+export const saveLogisticsCompany = (data: Partial<LogisticsCompany>, id?: number) => {
+    if (id) {
+        return api.put<any, LogisticsCompany>(`/logistics/companies/${id}`, data);
+    }
+    return api.post<any, LogisticsCompany>('/logistics/companies', data);
+};
+
+export const disableLogisticsCompany = (id: number) => {
+    return api.delete<any, void>(`/logistics/companies/${id}`);
+};
+
+export const fetchLogisticsRecords = (params?: {
+    search?: string;
+    type?: string;
+    company_id?: number;
+    payment_status?: string;
+    settlement_target?: string;
+    related_type?: string;
+    related_id?: number;
+    date_from?: string;
+    date_to?: string;
+}) => {
+    return api.get<any, LogisticsRecord[]>('/logistics/records', { params });
+};
+
+export const saveLogisticsRecord = (data: Partial<LogisticsRecord>, id?: number) => {
+    if (id) {
+        return api.put<any, LogisticsRecord>(`/logistics/records/${id}`, data);
+    }
+    return api.post<any, LogisticsRecord>('/logistics/records', data);
+};
+
+export const voidLogisticsRecord = (id: number, note?: string | null) => {
+    return api.post<any, LogisticsRecord>(`/logistics/records/${id}/void`, { note });
+};
+
+export const payLogisticsRecord = (id: number, data: any) => {
+    return api.post<any, LogisticsRecord>(`/logistics/records/${id}/pay`, data);
 };
 
 export const fetchInboundOrders = (params?: {
@@ -301,6 +347,8 @@ export interface AccountReceivableDetail {
     created_at?: string;
 }
 
+export type AccountLogisticsPayableDetail = LogisticsRecord;
+
 export interface AccountsOverview {
     supplier_accounts: Array<{
         supplier_id?: number;
@@ -319,6 +367,15 @@ export interface AccountsOverview {
         orders: AccountPayableDetail[];
         returns: AccountPurchaseReturnRefundDetail[];
     }>;
+    logistics_accounts: Array<{
+        company_id?: number | null;
+        company_name: string;
+        contact?: string | null;
+        record_count: number;
+        payable_amount: number;
+        latest_occurred_at?: string;
+        records: AccountLogisticsPayableDetail[];
+    }>;
     customer_accounts: Array<{
         customer_key: string;
         customer_id?: number | null;
@@ -332,9 +389,14 @@ export interface AccountsOverview {
         orders: AccountReceivableDetail[];
     }>;
     payables: AccountPayableDetail[];
+    logistics_payables: AccountLogisticsPayableDetail[];
     purchase_return_refunds: AccountPurchaseReturnRefundDetail[];
     receivables: AccountReceivableDetail[];
     summary: {
+        merchant_payable_count: number;
+        merchant_payable_amount: number;
+        logistics_payable_count: number;
+        logistics_payable_amount: number;
         payable_count: number;
         refund_count: number;
         receivable_count: number;

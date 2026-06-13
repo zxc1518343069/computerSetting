@@ -2,6 +2,7 @@
 
 import { formatDate, formatPrice } from '@/utils';
 import {
+    CarOutlined,
     CheckCircleOutlined,
     ReloadOutlined,
     ShoppingCartOutlined,
@@ -33,34 +34,52 @@ import {
     createPurchasePayment,
     createPurchaseReturnRefund,
     fetchAccountsOverview,
+    payLogisticsRecord,
     updateAccountPayment,
 } from '../../services';
+
+const logisticsTypeMap: Record<string, string> = {
+    purchase: '进货物流',
+    purchase_return: '采购退货物流',
+    manual: '手工记录',
+};
 
 type Payable = AccountsOverview['payables'][number];
 type ReturnRefund = AccountsOverview['purchase_return_refunds'][number];
 type Receivable = AccountsOverview['receivables'][number];
+type LogisticsPayable = AccountsOverview['logistics_payables'][number];
 type SupplierAccount = AccountsOverview['supplier_accounts'][number];
+type LogisticsAccount = AccountsOverview['logistics_accounts'][number];
 type CustomerAccount = AccountsOverview['customer_accounts'][number];
 
 export default function AccountsPage() {
     const [view, setView] = useState<'summary' | 'detail'>('summary');
-    const [summaryType, setSummaryType] = useState<'supplier' | 'customer'>('supplier');
+    const [summaryType, setSummaryType] = useState<'supplier' | 'logistics' | 'customer'>(
+        'supplier'
+    );
     const [detailType, setDetailType] = useState<
-        'payables' | 'return_refunds' | 'receivables'
+        'payables' | 'logistics_payables' | 'return_refunds' | 'receivables'
     >('payables');
     const [supplierFilter, setSupplierFilter] = useState<number | null>(null);
+    const [logisticsCompanyFilter, setLogisticsCompanyFilter] = useState<number | null>(null);
     const [customerFilter, setCustomerFilter] = useState<number | null>(null);
     const [customerKeyFilter, setCustomerKeyFilter] = useState<string | null>(null);
     const [paymentTarget, setPaymentTarget] = useState<Payable | null>(null);
+    const [logisticsPaymentTarget, setLogisticsPaymentTarget] = useState<LogisticsPayable | null>(
+        null
+    );
     const [refundTarget, setRefundTarget] = useState<ReturnRefund | null>(null);
     const [paymentForm] = Form.useForm();
+    const [logisticsPaymentForm] = Form.useForm();
     const [refundForm] = Form.useForm();
 
     const {
         data = {
             supplier_accounts: [],
+            logistics_accounts: [],
             customer_accounts: [],
             payables: [],
+            logistics_payables: [],
             purchase_return_refunds: [],
             receivables: [],
             summary: emptySummary,
@@ -85,6 +104,10 @@ export default function AccountsPage() {
         if (nextType === 'supplier') {
             setSummaryType('supplier');
             setDetailType('payables');
+        }
+        if (nextType === 'logistics') {
+            setSummaryType('logistics');
+            setDetailType('logistics_payables');
         }
         if (supplierId) setSupplierFilter(supplierId);
         if (customerId) {
@@ -125,6 +148,28 @@ export default function AccountsPage() {
         }
     );
 
+    const { runAsync: submitLogisticsPayment, loading: payingLogistics } = useRequest(
+        async () => {
+            if (!logisticsPaymentTarget) return;
+            const values = await logisticsPaymentForm.validateFields();
+            await payLogisticsRecord(logisticsPaymentTarget.id, {
+                paid_at: values.paid_at?.toISOString(),
+                payment_account: values.payment_account || null,
+                note: values.note || null,
+            });
+        },
+        {
+            manual: true,
+            onSuccess: () => {
+                message.success('物流付款已登记');
+                setLogisticsPaymentTarget(null);
+                logisticsPaymentForm.resetFields();
+                refresh();
+            },
+            onError: (e) => message.error(e.message),
+        }
+    );
+
     const { runAsync: submitPurchaseRefund, loading: refunding } = useRequest(
         async () => {
             if (!refundTarget) return;
@@ -157,6 +202,14 @@ export default function AccountsPage() {
         });
     };
 
+    const openLogisticsPayment = (record: LogisticsPayable) => {
+        setLogisticsPaymentTarget(record);
+        logisticsPaymentForm.resetFields();
+        logisticsPaymentForm.setFieldsValue({
+            paid_at: dayjs(),
+        });
+    };
+
     const openReturnRefund = (record: ReturnRefund) => {
         setRefundTarget(record);
         refundForm.resetFields();
@@ -180,8 +233,18 @@ export default function AccountsPage() {
                 ? data.customer_accounts.filter((item) => item.customer_id === customerFilter)
                 : customerKeyFilter
                   ? data.customer_accounts.filter((item) => item.customer_key === customerKeyFilter)
-                : data.customer_accounts,
+                  : data.customer_accounts,
         [customerFilter, customerKeyFilter, data.customer_accounts]
+    );
+
+    const filteredLogisticsAccounts = useMemo(
+        () =>
+            logisticsCompanyFilter
+                ? data.logistics_accounts.filter(
+                      (item) => item.company_id === logisticsCompanyFilter
+                  )
+                : data.logistics_accounts,
+        [data.logistics_accounts, logisticsCompanyFilter]
     );
 
     const filteredPayables = useMemo(
@@ -192,12 +255,20 @@ export default function AccountsPage() {
         [data.payables, supplierFilter]
     );
 
+    const filteredLogisticsPayables = useMemo(
+        () =>
+            logisticsCompanyFilter
+                ? data.logistics_payables.filter(
+                      (item) => item.company_id === logisticsCompanyFilter
+                  )
+                : data.logistics_payables,
+        [data.logistics_payables, logisticsCompanyFilter]
+    );
+
     const filteredReturnRefunds = useMemo(
         () =>
             supplierFilter
-                ? data.purchase_return_refunds.filter(
-                      (item) => item.supplier_id === supplierFilter
-                  )
+                ? data.purchase_return_refunds.filter((item) => item.supplier_id === supplierFilter)
                 : data.purchase_return_refunds,
         [data.purchase_return_refunds, supplierFilter]
     );
@@ -208,7 +279,7 @@ export default function AccountsPage() {
                 ? data.receivables.filter((item) => item.customer_id === customerFilter)
                 : customerKeyFilter
                   ? data.receivables.filter((item) => item.customer_key === customerKeyFilter)
-                : data.receivables,
+                  : data.receivables,
         [customerFilter, customerKeyFilter, data.receivables]
     );
 
@@ -234,7 +305,7 @@ export default function AccountsPage() {
                 `${record.order_count || 0} 进货 / ${(record.returns || []).length} 退货`,
         },
         {
-            title: '采购应付',
+            title: '商家应付',
             width: 220,
             render: (_, record) => (
                 <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -266,10 +337,7 @@ export default function AccountsPage() {
             width: 180,
             render: (_, record) =>
                 formatDate(
-                    [record.latest_ordered_at, record.latest_return_at]
-                        .filter(Boolean)
-                        .sort()
-                        .pop()
+                    [record.latest_ordered_at, record.latest_return_at].filter(Boolean).sort().pop()
                 ),
         },
         {
@@ -289,6 +357,65 @@ export default function AccountsPage() {
                         查看明细
                     </Button>
                     <Link href="/admin/dashboard/warehouse/purchase-orders">进货单</Link>
+                </div>
+            ),
+        },
+    ];
+
+    const logisticsAccountColumns: ColumnsType<LogisticsAccount> = [
+        {
+            title: '物流公司',
+            render: (_, record) => (
+                <div>
+                    <div className="font-bold text-gray-900 dark:text-gray-100">
+                        {record.company_name}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                        {record.contact || '未填写联系方式'}
+                    </div>
+                </div>
+            ),
+        },
+        {
+            title: '未付记录',
+            dataIndex: 'record_count',
+            width: 120,
+            render: (count) => `${count || 0} 笔`,
+        },
+        {
+            title: '物流待付款',
+            dataIndex: 'payable_amount',
+            width: 160,
+            align: 'right',
+            render: (amount) => (
+                <span className="font-mono font-black text-red-500">
+                    {formatPrice(Number(amount || 0))}
+                </span>
+            ),
+        },
+        {
+            title: '最近发生',
+            dataIndex: 'latest_occurred_at',
+            width: 180,
+            render: (text) => formatDate(text),
+        },
+        {
+            title: '操作',
+            width: 190,
+            align: 'center',
+            render: (_, record) => (
+                <div className="flex items-center justify-center gap-2">
+                    <Button
+                        type="link"
+                        onClick={() => {
+                            setLogisticsCompanyFilter(record.company_id || null);
+                            setView('detail');
+                            setDetailType('logistics_payables');
+                        }}
+                    >
+                        查看明细
+                    </Button>
+                    <Link href="/admin/dashboard/warehouse/logistics">物流管理</Link>
                 </div>
             ),
         },
@@ -429,6 +556,70 @@ export default function AccountsPage() {
             align: 'center',
             render: (_, record) => (
                 <Button type="link" onClick={() => openPayment(record)}>
+                    登记付款
+                </Button>
+            ),
+        },
+    ];
+
+    const logisticsPayableColumns: ColumnsType<LogisticsPayable> = [
+        {
+            title: '物流记录',
+            dataIndex: 'id',
+            width: 100,
+            render: (id) => <span className="font-mono text-gray-400">WL-{id}</span>,
+        },
+        {
+            title: '物流公司',
+            render: (_, record) => (
+                <div>
+                    <div className="font-bold text-gray-900 dark:text-gray-100">
+                        {record.company?.name || '未指定物流公司'}
+                    </div>
+                    <div className="font-mono text-xs text-gray-400">
+                        {record.tracking_no || '无物流单号'}
+                    </div>
+                </div>
+            ),
+        },
+        {
+            title: '类型',
+            dataIndex: 'type',
+            width: 140,
+            render: (type) => <Tag color="blue">{logisticsTypeMap[type] || type}</Tag>,
+        },
+        {
+            title: '运费/我方承担',
+            width: 190,
+            render: (_, record) => (
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                    <div>运费 {formatPrice(record.shipping_fee)}</div>
+                    <div>我方承担 {formatPrice(record.self_amount)}</div>
+                </div>
+            ),
+        },
+        {
+            title: '待付款',
+            width: 150,
+            align: 'right',
+            render: (_, record) => (
+                <span className="font-mono font-black text-red-500">
+                    {formatPrice(record.payable_amount)}
+                </span>
+            ),
+        },
+        {
+            title: '发生时间',
+            dataIndex: 'occurred_at',
+            width: 180,
+            render: (text) => formatDate(text),
+        },
+        {
+            title: '操作',
+            width: 170,
+            align: 'center',
+            render: (_, record) => (
+                <Button type="link" onClick={() => openLogisticsPayment(record)}>
                     登记付款
                 </Button>
             ),
@@ -603,17 +794,23 @@ export default function AccountsPage() {
                             账款管理
                         </h1>
                         <p className="text-gray-500 dark:text-gray-400 mt-2">
-                            汇总采购待付款、退货待收退款和销售未收款。
+                            汇总商家待付款、物流待付款、退货待收退款和销售未收款。
                         </p>
                     </div>
                     <Button icon={<ReloadOutlined />} onClick={refresh} />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <SummaryCard
                         icon={<WalletOutlined />}
-                        label={`待付款 ${data.summary.payable_count} 笔`}
-                        amount={data.summary.payable_amount}
+                        label={`商家待付款 ${data.summary.merchant_payable_count} 笔`}
+                        amount={data.summary.merchant_payable_amount}
+                        tone="red"
+                    />
+                    <SummaryCard
+                        icon={<CarOutlined />}
+                        label={`物流待付款 ${data.summary.logistics_payable_count} 笔`}
+                        amount={data.summary.logistics_payable_amount}
                         tone="red"
                     />
                     <SummaryCard
@@ -656,11 +853,15 @@ export default function AccountsPage() {
                                 },
                             ]}
                         />
-                        {(supplierFilter || customerFilter || customerKeyFilter) && (
+                        {(supplierFilter ||
+                            logisticsCompanyFilter ||
+                            customerFilter ||
+                            customerKeyFilter) && (
                             <Button
                                 size="small"
                                 onClick={() => {
                                     setSupplierFilter(null);
+                                    setLogisticsCompanyFilter(null);
                                     setCustomerFilter(null);
                                     setCustomerKeyFilter(null);
                                 }}
@@ -673,7 +874,9 @@ export default function AccountsPage() {
                     {view === 'summary' ? (
                         <Tabs
                             activeKey={summaryType}
-                            onChange={(key) => setSummaryType(key as 'supplier' | 'customer')}
+                            onChange={(key) =>
+                                setSummaryType(key as 'supplier' | 'logistics' | 'customer')
+                            }
                             items={[
                                 {
                                     key: 'supplier',
@@ -693,7 +896,7 @@ export default function AccountsPage() {
                                                     <div className="space-y-4">
                                                         <div>
                                                             <div className="mb-2 text-sm font-bold text-gray-900 dark:text-gray-100">
-                                                                采购应付
+                                                                商家应付
                                                             </div>
                                                             <Table
                                                                 rowKey="id"
@@ -718,6 +921,34 @@ export default function AccountsPage() {
                                                             />
                                                         </div>
                                                     </div>
+                                                ),
+                                            }}
+                                        />
+                                    ),
+                                },
+                                {
+                                    key: 'logistics',
+                                    label: `应付物流 ${filteredLogisticsAccounts.length}`,
+                                    children: (
+                                        <Table
+                                            rowKey={(record) =>
+                                                String(record.company_id || record.company_name)
+                                            }
+                                            loading={loading}
+                                            columns={logisticsAccountColumns}
+                                            dataSource={filteredLogisticsAccounts}
+                                            pagination={{ pageSize: 10 }}
+                                            scroll={{ x: 1000 }}
+                                            expandable={{
+                                                expandedRowRender: (record) => (
+                                                    <Table
+                                                        rowKey="id"
+                                                        columns={logisticsPayableColumns}
+                                                        dataSource={record.records}
+                                                        pagination={false}
+                                                        size="small"
+                                                        scroll={{ x: 1100 }}
+                                                    />
                                                 ),
                                             }}
                                         />
@@ -756,19 +987,37 @@ export default function AccountsPage() {
                             activeKey={detailType}
                             onChange={(key) =>
                                 setDetailType(
-                                    key as 'payables' | 'return_refunds' | 'receivables'
+                                    key as
+                                        | 'payables'
+                                        | 'logistics_payables'
+                                        | 'return_refunds'
+                                        | 'receivables'
                                 )
                             }
                             items={[
                                 {
                                     key: 'payables',
-                                    label: `采购应付 ${filteredPayables.length}`,
+                                    label: `商家应付 ${filteredPayables.length}`,
                                     children: (
                                         <Table
                                             rowKey="id"
                                             loading={loading}
                                             columns={payableColumns}
                                             dataSource={filteredPayables}
+                                            pagination={{ pageSize: 10 }}
+                                            scroll={{ x: 1100 }}
+                                        />
+                                    ),
+                                },
+                                {
+                                    key: 'logistics_payables',
+                                    label: `物流待付款 ${filteredLogisticsPayables.length}`,
+                                    children: (
+                                        <Table
+                                            rowKey="id"
+                                            loading={loading}
+                                            columns={logisticsPayableColumns}
+                                            dataSource={filteredLogisticsPayables}
                                             pagination={{ pageSize: 10 }}
                                             scroll={{ x: 1100 }}
                                         />
@@ -822,7 +1071,7 @@ export default function AccountsPage() {
                         <div className="mb-4 rounded-2xl border border-gray-100 bg-gray-50/70 p-4 dark:border-gray-800 dark:bg-black/20">
                             <div className="grid grid-cols-2 gap-3">
                                 <ReadonlyCell
-                                    label="应付款"
+                                    label="商家应付款"
                                     value={formatPrice(paymentTarget.payable_amount)}
                                     strong
                                 />
@@ -856,6 +1105,51 @@ export default function AccountsPage() {
                         rules={[{ required: true, message: '请选择付款时间' }]}
                     >
                         <DatePicker showTime className="w-full" />
+                    </Form.Item>
+                    <Form.Item name="note" label="备注">
+                        <Input.TextArea rows={3} />
+                    </Form.Item>
+                </Form>
+            </Modal>
+
+            <Modal
+                title={
+                    logisticsPaymentTarget
+                        ? `登记 WL-${logisticsPaymentTarget.id} 付款`
+                        : '登记物流付款'
+                }
+                open={Boolean(logisticsPaymentTarget)}
+                onCancel={() => setLogisticsPaymentTarget(null)}
+                onOk={submitLogisticsPayment}
+                confirmLoading={payingLogistics}
+                destroyOnHidden
+                width={620}
+            >
+                <Form form={logisticsPaymentForm} layout="vertical" className="pt-4">
+                    {logisticsPaymentTarget && (
+                        <div className="mb-4 rounded-2xl border border-gray-100 bg-gray-50/70 p-4 dark:border-gray-800 dark:bg-black/20">
+                            <div className="grid grid-cols-2 gap-3">
+                                <ReadonlyCell
+                                    label="物流公司"
+                                    value={logisticsPaymentTarget.company?.name || '未指定物流公司'}
+                                />
+                                <ReadonlyCell
+                                    label="待付款"
+                                    value={formatPrice(logisticsPaymentTarget.payable_amount)}
+                                    strong
+                                />
+                            </div>
+                        </div>
+                    )}
+                    <Form.Item
+                        name="paid_at"
+                        label="付款时间"
+                        rules={[{ required: true, message: '请选择付款时间' }]}
+                    >
+                        <DatePicker showTime className="w-full" />
+                    </Form.Item>
+                    <Form.Item name="payment_account" label="付款账号">
+                        <Input />
                     </Form.Item>
                     <Form.Item name="note" label="备注">
                         <Input.TextArea rows={3} />
@@ -949,6 +1243,10 @@ function ReadonlyCell({
 }
 
 const emptySummary = {
+    merchant_payable_count: 0,
+    merchant_payable_amount: 0,
+    logistics_payable_count: 0,
+    logistics_payable_amount: 0,
     payable_count: 0,
     refund_count: 0,
     receivable_count: 0,

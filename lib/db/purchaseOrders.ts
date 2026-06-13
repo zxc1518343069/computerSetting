@@ -3,12 +3,7 @@ import { listInboundOrders } from './inboundOrders';
 import { listPurchaseReturns } from './purchaseReturns';
 import { ProductRow, serializeProduct, toYuan } from './serializers';
 
-export type PurchaseOrderStatus =
-    | 'draft'
-    | 'ordered'
-    | 'partial_inbound'
-    | 'inbound'
-    | 'cancelled';
+export type PurchaseOrderStatus = 'draft' | 'ordered' | 'partial_inbound' | 'inbound' | 'cancelled';
 
 export const purchaseOrderStatuses: PurchaseOrderStatus[] = [
     'draft',
@@ -149,9 +144,7 @@ export const getPurchaseOrderSummaryCents = (
 
     const goodsAmountCents = Number(itemSummary.goods_amount_cents || 0);
     const payableAmountCents = Math.max(
-        goodsAmountCents +
-            Number(orderFees?.shipping_fee_cents || 0) +
-            Number(orderFees?.misc_fee_cents || 0),
+        goodsAmountCents + Number(orderFees?.misc_fee_cents || 0),
         0
     );
     const paidAmountCents = Number(paymentSummary.paid_amount_cents || 0);
