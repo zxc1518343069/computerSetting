@@ -298,3 +298,27 @@ API 处理：
 3. 支持状态枚举中文化，例如 `paid` 导出为 `已付款`。
 4. 增加导出预览，显示每个工作表的数据行数。
 5. 增加常用导出预设，例如“商品库存”“销售财务”“采购入库”。
+
+## 12. 完成记录
+
+完成提交：`4e63cc8 feat: 收敛数据交换为导出中心`
+
+实际完成内容：
+
+1. `/admin/dashboard/data/exchange` 已改为独立数据导出中心。
+2. 页面已移除下载模板、上传数据和恢复数据相关入口。
+3. `/admin/dashboard/import` 已重定向到数据导出中心。
+4. `GET /api/data-exchange` 仅支持 `mode=export`，并支持按工作表选择导出。
+5. `GET /api/data-exchange?mode=template` 已不再返回模板工作簿。
+6. `POST /api/data-exchange` 已不再执行数据导入。
+7. `lib/db/dataExchange.ts` 已增加统一 `dataExchangeTableMap` 和 `columnLabels` 映射。
+8. 导出 Excel 表头已改为中文映射，不回退导出英文字段名。
+
+验证结果：
+
+1. `npx tsc --noEmit` 通过。
+2. `npm run lint` 通过，仅剩既有 `app/gamesList/_components/GameCard.tsx` 的 `<img>` warning。
+3. `npm run build` 通过，仅剩上述既有 warning。
+4. 手动验证导出元数据返回 22 个工作表，且字段表头为中文。
+5. 手动验证选择 `products,inventory_items` 时只返回 `产品型号` 和 `库存单件`。
+6. 手动验证模板请求和导入请求均不再提供原能力。
