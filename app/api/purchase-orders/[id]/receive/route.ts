@@ -151,6 +151,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                 misc_fee === undefined
                     ? Number(order.misc_fee_cents || 0)
                     : toCents(Number(misc_fee || 0));
+            const logisticsCompanyId = Number(logistics_company_id || 0);
+            if (!logisticsCompanyId) throw new Error('LOGISTICS_COMPANY_REQUIRED');
 
             if (shipping_fee !== undefined || misc_fee !== undefined) {
                 db.prepare(
@@ -172,10 +174,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                 type: 'purchase',
                 related_type: 'purchase_order',
                 related_id: purchaseOrderId,
-                company_id:
-                    logistics_company_id === undefined
-                        ? undefined
-                        : Number(logistics_company_id || 0) || null,
+                company_id: logisticsCompanyId,
                 tracking_no: tracking_no === undefined ? undefined : tracking_no || null,
                 shipping_fee: nextShippingFeeCents / 100,
                 self_amount: nextShippingFeeCents / 100,
@@ -342,6 +341,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                 DUPLICATE_SERIAL: '同一张入库单内序列号不能重复',
                 SERIAL_EXISTS: '序列号已存在',
                 PAYMENT_EXCEEDS_PAYABLE: '本次付款会超过当前应付款',
+                LOGISTICS_COMPANY_REQUIRED: '入库时请选择物流公司',
                 LOGISTICS_COMPANY_NOT_FOUND: '物流公司不存在',
             };
             if (messageMap[message])

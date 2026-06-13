@@ -12,6 +12,7 @@ const recordError = (message: string) => {
         LOGISTICS_RECORD_NOT_FOUND: { code: 404, text: '物流记录不存在' },
         LOGISTICS_COMPANY_NOT_FOUND: { code: 400, text: '物流公司不存在' },
         LOGISTICS_COMPANY_REQUIRED: { code: 400, text: '请选择物流公司' },
+        LOGISTICS_RELATED_RECORD_LOCKED: { code: 400, text: '自动关联记录不能修改关联单据' },
         INVALID_LOGISTICS_AMOUNT: { code: 400, text: '物流金额不能为负数' },
     };
     return messageMap[message] ? error(messageMap[message].code, messageMap[message].text) : null;

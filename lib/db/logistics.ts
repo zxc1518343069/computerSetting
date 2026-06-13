@@ -86,6 +86,15 @@ export interface ListLogisticsRecordFilters {
     dateTo?: string | null;
 }
 
+export interface LogisticsStatsFilters {
+    type?: LogisticsRecordType | 'all' | null;
+    companyId?: number | null;
+    paymentStatus?: LogisticsPaymentStatus | 'all' | null;
+    settlementTarget?: LogisticsSettlementTarget | 'all' | null;
+    dateFrom?: string | null;
+    dateTo?: string | null;
+}
+
 const companyStatuses: LogisticsCompanyStatus[] = ['active', 'disabled'];
 const recordTypes: LogisticsRecordType[] = ['purchase', 'purchase_return', 'manual'];
 const shippingFeeBearers: LogisticsShippingFeeBearer[] = ['self', 'merchant', 'shared'];
@@ -355,6 +364,153 @@ export const listLogisticsRecords = (db: SqliteDb, filters: ListLogisticsRecordF
     return rows.map(serializeLogisticsRecord);
 };
 
+const buildLogisticsStatsQuery = (filters: LogisticsStatsFilters = {}) => {
+    const conditions: string[] = [];
+    const params: Record<string, string | number> = {};
+
+    if (filters.type && filters.type !== 'all') {
+        conditions.push('lr.type = @type');
+        params.type = filters.type;
+    }
+    if (filters.companyId) {
+        conditions.push('lr.company_id = @companyId');
+        params.companyId = filters.companyId;
+    }
+    if (filters.paymentStatus && filters.paymentStatus !== 'all') {
+        conditions.push('lr.payment_status = @paymentStatus');
+        params.paymentStatus = filters.paymentStatus;
+    } else {
+        conditions.push("lr.payment_status <> 'voided'");
+    }
+    if (filters.settlementTarget && filters.settlementTarget !== 'all') {
+        conditions.push('lr.settlement_target = @settlementTarget');
+        params.settlementTarget = filters.settlementTarget;
+    }
+    if (filters.dateFrom) {
+        conditions.push('lr.occurred_at >= @dateFrom');
+        params.dateFrom = normalizeDate(filters.dateFrom);
+    }
+    if (filters.dateTo) {
+        conditions.push('lr.occurred_at <= @dateTo');
+        params.dateTo = normalizeDate(filters.dateTo);
+    }
+
+    return {
+        where: `WHERE ${conditions.join(' AND ')}`,
+        params,
+    };
+};
+
+const logisticsStatsAmountSelect = `
+    COUNT(*) AS record_count,
+    COALESCE(SUM(lr.shipping_fee_cents), 0) AS shipping_fee_cents,
+    COALESCE(SUM(lr.self_amount_cents), 0) AS self_amount_cents,
+    COALESCE(SUM(CASE
+        WHEN lr.settlement_target = 'logistics_company'
+         AND lr.payment_status = 'unpaid'
+        THEN lr.self_amount_cents ELSE 0 END), 0) AS payable_amount_cents,
+    COALESCE(SUM(CASE
+        WHEN lr.settlement_target = 'logistics_company'
+         AND lr.payment_status = 'paid'
+        THEN lr.self_amount_cents ELSE 0 END), 0) AS paid_amount_cents
+`;
+
+const serializeLogisticsStatsAmount = (row: Record<string, unknown>) => ({
+    record_count: Number(row.record_count || 0),
+    shipping_fee: toYuan(Number(row.shipping_fee_cents || 0)),
+    self_amount: toYuan(Number(row.self_amount_cents || 0)),
+    payable_amount: toYuan(Number(row.payable_amount_cents || 0)),
+    paid_amount: toYuan(Number(row.paid_amount_cents || 0)),
+});
+
+const serializeLogisticsStatsGroup = (row: Record<string, unknown>) => ({
+    key: String(row.group_key || ''),
+    label: String(row.group_label || row.group_key || '-'),
+    ...serializeLogisticsStatsAmount(row),
+});
+
+export const getLogisticsStats = (db: SqliteDb, filters: LogisticsStatsFilters = {}) => {
+    const { where, params } = buildLogisticsStatsQuery(filters);
+    const summary = db
+        .prepare(
+            `
+            SELECT ${logisticsStatsAmountSelect}
+            FROM logistics_records lr
+            LEFT JOIN logistics_companies lc ON lc.id = lr.company_id
+            ${where}
+        `
+        )
+        .get(params) as Record<string, unknown>;
+
+    const byCompany = db
+        .prepare(
+            `
+            SELECT COALESCE(CAST(lr.company_id AS TEXT), 'none') AS group_key,
+                   COALESCE(lc.name, '未指定物流公司') AS group_label,
+                   ${logisticsStatsAmountSelect}
+            FROM logistics_records lr
+            LEFT JOIN logistics_companies lc ON lc.id = lr.company_id
+            ${where}
+            GROUP BY lr.company_id
+            ORDER BY shipping_fee_cents DESC, record_count DESC
+        `
+        )
+        .all(params) as Record<string, unknown>[];
+
+    const byMonth = db
+        .prepare(
+            `
+            SELECT SUBSTR(lr.occurred_at, 1, 7) AS group_key,
+                   SUBSTR(lr.occurred_at, 1, 7) AS group_label,
+                   ${logisticsStatsAmountSelect}
+            FROM logistics_records lr
+            LEFT JOIN logistics_companies lc ON lc.id = lr.company_id
+            ${where}
+            GROUP BY SUBSTR(lr.occurred_at, 1, 7)
+            ORDER BY group_key DESC
+        `
+        )
+        .all(params) as Record<string, unknown>[];
+
+    const byType = db
+        .prepare(
+            `
+            SELECT lr.type AS group_key,
+                   lr.type AS group_label,
+                   ${logisticsStatsAmountSelect}
+            FROM logistics_records lr
+            LEFT JOIN logistics_companies lc ON lc.id = lr.company_id
+            ${where}
+            GROUP BY lr.type
+            ORDER BY shipping_fee_cents DESC, record_count DESC
+        `
+        )
+        .all(params) as Record<string, unknown>[];
+
+    const byPaymentStatus = db
+        .prepare(
+            `
+            SELECT lr.payment_status AS group_key,
+                   lr.payment_status AS group_label,
+                   ${logisticsStatsAmountSelect}
+            FROM logistics_records lr
+            LEFT JOIN logistics_companies lc ON lc.id = lr.company_id
+            ${where}
+            GROUP BY lr.payment_status
+            ORDER BY shipping_fee_cents DESC, record_count DESC
+        `
+        )
+        .all(params) as Record<string, unknown>[];
+
+    return {
+        summary: serializeLogisticsStatsAmount(summary || {}),
+        by_company: byCompany.map(serializeLogisticsStatsGroup),
+        by_month: byMonth.map(serializeLogisticsStatsGroup),
+        by_type: byType.map(serializeLogisticsStatsGroup),
+        by_payment_status: byPaymentStatus.map(serializeLogisticsStatsGroup),
+    };
+};
+
 export const getLogisticsRecordById = (db: SqliteDb, id: number) => {
     const row = db
         .prepare(
@@ -547,6 +703,26 @@ export const updateLogisticsRecord = (
         | LogisticsRecordRow
         | undefined;
     if (!current) throw new Error('LOGISTICS_RECORD_NOT_FOUND');
+    const relationLocked =
+        current.type !== 'manual' && Boolean(current.related_type) && Boolean(current.related_id);
+    if (relationLocked) {
+        const nextRelatedType =
+            input.related_type === undefined
+                ? current.related_type || null
+                : normalizeRelatedType(input.related_type);
+        const nextRelatedId =
+            input.related_id === undefined
+                ? current.related_id || null
+                : input.related_id
+                  ? Number(input.related_id)
+                  : null;
+        if (
+            nextRelatedType !== current.related_type ||
+            Number(nextRelatedId || 0) !== Number(current.related_id || 0)
+        ) {
+            throw new Error('LOGISTICS_RELATED_RECORD_LOCKED');
+        }
+    }
 
     const payload = normalizeRecordPayload(db, input, current);
     db.prepare(

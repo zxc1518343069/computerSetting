@@ -220,6 +220,7 @@ export default function InboundPage() {
 
             if (sourceType === 'purchase_order') {
                 if (!values.purchase_order_id) throw new Error('请选择进货单');
+                if (!values.logistics_company_id) throw new Error('请选择物流公司');
                 await receivePurchaseOrder(values.purchase_order_id, {
                     inbound_at: values.inbound_at?.toISOString(),
                     note: values.note || null,
@@ -772,7 +773,11 @@ export default function InboundPage() {
                                         className="w-full"
                                     />
                                 </Form.Item>
-                                <Form.Item name="logistics_company_id" label="物流公司">
+                                <Form.Item
+                                    name="logistics_company_id"
+                                    label="物流公司"
+                                    rules={[{ required: true, message: '请选择物流公司' }]}
+                                >
                                     <Select
                                         allowClear
                                         showSearch

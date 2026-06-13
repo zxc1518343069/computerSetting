@@ -9,6 +9,7 @@ import {
     PurchaseReturn,
     LogisticsCompany,
     LogisticsRecord,
+    LogisticsStats,
     SalesOrder,
     Supplier,
     Customer,
@@ -126,6 +127,17 @@ export const fetchLogisticsRecords = (params?: {
     date_to?: string;
 }) => {
     return api.get<any, LogisticsRecord[]>('/logistics/records', { params });
+};
+
+export const fetchLogisticsStats = (params?: {
+    type?: string;
+    company_id?: number;
+    payment_status?: string;
+    settlement_target?: string;
+    date_from?: string;
+    date_to?: string;
+}) => {
+    return api.get<any, LogisticsStats>('/logistics/stats', { params });
 };
 
 export const saveLogisticsRecord = (data: Partial<LogisticsRecord>, id?: number) => {

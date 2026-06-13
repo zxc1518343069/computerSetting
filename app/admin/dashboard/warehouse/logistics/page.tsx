@@ -1,8 +1,16 @@
 'use client';
 
-import { LogisticsCompany, LogisticsRecord } from '@/const/types';
+import {
+    InboundOrder,
+    LogisticsCompany,
+    LogisticsRecord,
+    LogisticsStats,
+    PurchaseOrder,
+    PurchaseReturn,
+} from '@/const/types';
 import { formatDate, formatPrice } from '@/utils';
 import {
+    BarChartOutlined,
     CarOutlined,
     CheckCircleOutlined,
     DeleteOutlined,
@@ -33,8 +41,12 @@ import dayjs from 'dayjs';
 import React, { useMemo, useState } from 'react';
 import {
     disableLogisticsCompany,
+    fetchInboundOrders,
     fetchLogisticsCompanies,
     fetchLogisticsRecords,
+    fetchLogisticsStats,
+    fetchPurchaseOrders,
+    fetchPurchaseReturns,
     payLogisticsRecord,
     saveLogisticsCompany,
     saveLogisticsRecord,
@@ -64,12 +76,64 @@ const settlementTargetOptions = [
     { value: 'none', label: '无需付款' },
 ];
 
-const relatedTypeOptions = [
-    { value: 'purchase_order', label: '进货单' },
-    { value: 'inbound_order', label: '入库单' },
-    { value: 'purchase_return', label: '采购退货单' },
-    { value: 'manual', label: '手工记录' },
-];
+type LogisticsTabKey = 'companies' | 'records' | 'stats';
+
+interface RecordAssociationOption {
+    value: string;
+    label: string;
+}
+
+const relationLabels: Record<string, string> = {
+    purchase_order: '进货单',
+    inbound_order: '入库单',
+    purchase_return: '采购退货单',
+    manual: '手工记录',
+};
+
+const recordTypeLabelMap: Record<string, string> = {
+    purchase: '进货物流',
+    purchase_return: '采购退货',
+    manual: '手工记录',
+};
+
+const paymentStatusLabelMap: Record<string, string> = {
+    unpaid: '未付款',
+    paid: '已付款',
+    voided: '已作废',
+};
+
+const getAssociationKey = (record?: Pick<LogisticsRecord, 'related_type' | 'related_id'> | null) =>
+    record?.related_type && record.related_id
+        ? `${record.related_type}:${record.related_id}`
+        : 'manual:';
+
+const parseAssociationKey = (key?: string) => {
+    if (!key || key === 'manual:') return { related_type: 'manual', related_id: null };
+    const [relatedType, relatedId] = key.split(':');
+    return {
+        related_type: relatedType || 'manual',
+        related_id: Number(relatedId || 0) || null,
+    };
+};
+
+const formatAssociationLabel = (
+    relatedType?: LogisticsRecord['related_type'] | null,
+    relatedId?: number | null
+) => {
+    if (!relatedType || !relatedId) return '手工记录';
+    const prefix =
+        relatedType === 'purchase_order'
+            ? 'JH'
+            : relatedType === 'inbound_order'
+              ? 'RK'
+              : relatedType === 'purchase_return'
+                ? 'TH'
+                : 'ID';
+    return `${relationLabels[relatedType] || relatedType} ${prefix}-${relatedId}`;
+};
+
+const isAutoRelatedRecord = (record?: LogisticsRecord | null) =>
+    Boolean(record && record.type !== 'manual' && record.related_type && record.related_id);
 
 const getRecordType = (type: string) =>
     recordTypeOptions.find((item) => item.value === type) || recordTypeOptions[2];
@@ -115,7 +179,7 @@ const syncRecordSelfAmount = (
 };
 
 export default function LogisticsPage() {
-    const [activeTab, setActiveTab] = useState<'companies' | 'records'>('companies');
+    const [activeTab, setActiveTab] = useState<LogisticsTabKey>('companies');
     const [companyQuery, setCompanyQuery] = useState<{ search: string; status?: string }>({
         search: '',
         status: 'all',
@@ -131,6 +195,14 @@ export default function LogisticsPage() {
     }>({
         search: '',
     });
+    const [statsQuery, setStatsQuery] = useState<{
+        type?: string;
+        company_id?: number;
+        payment_status?: string;
+        settlement_target?: string;
+        date_from?: string;
+        date_to?: string;
+    }>({});
     const [companyVisible, setCompanyVisible] = useState(false);
     const [recordVisible, setRecordVisible] = useState(false);
     const [payVisible, setPayVisible] = useState(false);
@@ -164,6 +236,19 @@ export default function LogisticsPage() {
         refreshDeps: [recordQuery],
         debounceWait: 300,
     });
+    const {
+        data: stats,
+        loading: statsLoading,
+        refresh: refreshStats,
+    } = useRequest(() => fetchLogisticsStats(statsQuery), {
+        refreshDeps: [statsQuery],
+        debounceWait: 300,
+    });
+    const { data: purchaseOrders = [] } = useRequest(() => fetchPurchaseOrders({ status: 'all' }));
+    const { data: inboundOrders = [] } = useRequest(() =>
+        fetchInboundOrders({ source_type: 'all' })
+    );
+    const { data: purchaseReturns = [] } = useRequest(() => fetchPurchaseReturns());
 
     const recordShippingBearer =
         (Form.useWatch('shipping_fee_bearer', recordForm) as
@@ -177,6 +262,38 @@ export default function LogisticsPage() {
     const activeCompanyCount = useMemo(
         () => allCompanies.filter((item) => item.status === 'active').length,
         [allCompanies]
+    );
+    const associationOptions = useMemo<RecordAssociationOption[]>(
+        () => [
+            { value: 'manual:', label: '手工记录' },
+            ...(purchaseOrders as PurchaseOrder[]).map((order) => ({
+                value: `purchase_order:${order.id}`,
+                label: [`进货单 JH-${order.id}`, order.supplier?.name, formatDate(order.ordered_at)]
+                    .filter(Boolean)
+                    .join(' / '),
+            })),
+            ...(inboundOrders as InboundOrder[]).map((order) => ({
+                value: `inbound_order:${order.id}`,
+                label: [
+                    `入库单 RK-${order.id}`,
+                    order.purchase_order_id ? `JH-${order.purchase_order_id}` : null,
+                    order.supplier?.name,
+                ]
+                    .filter(Boolean)
+                    .join(' / '),
+            })),
+            ...(purchaseReturns as PurchaseReturn[]).map((record) => ({
+                value: `purchase_return:${record.id}`,
+                label: [
+                    `采购退货 TH-${record.id}`,
+                    `JH-${record.purchase_order_id}`,
+                    record.supplier?.name,
+                ]
+                    .filter(Boolean)
+                    .join(' / '),
+            })),
+        ],
+        [inboundOrders, purchaseOrders, purchaseReturns]
     );
 
     const { runAsync: submitCompany, loading: savingCompany } = useRequest(
@@ -214,13 +331,21 @@ export default function LogisticsPage() {
     const { runAsync: submitRecord, loading: savingRecord } = useRequest(
         async () => {
             const values = await recordForm.validateFields();
+            const { related_key, ...recordValues } = values;
+            const association = parseAssociationKey(
+                related_key ||
+                    (isAutoRelatedRecord(editingRecord)
+                        ? getAssociationKey(editingRecord)
+                        : undefined)
+            );
             await saveLogisticsRecord(
                 {
-                    ...values,
+                    ...recordValues,
                     occurred_at: values.occurred_at?.toISOString(),
                     paid_at: values.paid_at?.toISOString(),
                     company_id: values.company_id || null,
-                    related_id: values.related_id || null,
+                    related_type: association.related_type,
+                    related_id: association.related_id,
                 },
                 editingRecord?.id
             );
@@ -233,6 +358,7 @@ export default function LogisticsPage() {
                 setEditingRecord(null);
                 recordForm.resetFields();
                 refreshRecords();
+                refreshStats();
             },
             onError: (e) => message.error(e.message),
         }
@@ -256,6 +382,7 @@ export default function LogisticsPage() {
                 setPaymentTarget(null);
                 payForm.resetFields();
                 refreshRecords();
+                refreshStats();
             },
             onError: (e) => message.error(e.message),
         }
@@ -268,6 +395,7 @@ export default function LogisticsPage() {
             onSuccess: () => {
                 message.success('物流记录已作废');
                 refreshRecords();
+                refreshStats();
             },
             onError: (e) => message.error(e.message),
         }
@@ -289,6 +417,7 @@ export default function LogisticsPage() {
         if (record) {
             recordForm.setFieldsValue({
                 ...record,
+                related_key: getAssociationKey(record),
                 occurred_at: dayjs(record.occurred_at),
                 paid_at: record.paid_at ? dayjs(record.paid_at) : undefined,
             });
@@ -302,6 +431,7 @@ export default function LogisticsPage() {
                 shipping_fee_bearer: 'self',
                 settlement_target: 'logistics_company',
                 payment_status: 'unpaid',
+                related_key: 'manual:',
             });
         }
         setRecordVisible(true);
@@ -439,14 +569,12 @@ export default function LogisticsPage() {
             },
         },
         {
-            title: '关联业务',
+            title: '关联单据',
             width: 160,
             render: (_, record) =>
                 record.related_type && record.related_id ? (
                     <span className="font-mono text-gray-500">
-                        {relatedTypeOptions.find((item) => item.value === record.related_type)
-                            ?.label || record.related_type}
-                        -{record.related_id}
+                        {formatAssociationLabel(record.related_type, record.related_id)}
                     </span>
                 ) : (
                     <span className="text-gray-400">-</span>
@@ -528,7 +656,7 @@ export default function LogisticsPage() {
                         size="large"
                         icon={<PlusOutlined />}
                         onClick={() =>
-                            activeTab === 'records' ? openRecordModal() : openCompanyModal()
+                            activeTab === 'companies' ? openCompanyModal() : openRecordModal()
                         }
                         className="h-12 rounded-xl border-none bg-blue-600 px-6 shadow-lg shadow-blue-600/20"
                     >
@@ -559,7 +687,7 @@ export default function LogisticsPage() {
                 <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-[#1f1f1f]">
                     <Tabs
                         activeKey={activeTab}
-                        onChange={(key) => setActiveTab(key as 'records' | 'companies')}
+                        onChange={(key) => setActiveTab(key as LogisticsTabKey)}
                         items={[
                             {
                                 key: 'companies',
@@ -603,6 +731,24 @@ export default function LogisticsPage() {
                                     </div>
                                 ),
                             },
+                            {
+                                key: 'stats',
+                                label: '运费统计',
+                                children: (
+                                    <div className="space-y-4">
+                                        <StatsFilters
+                                            query={statsQuery}
+                                            companies={allCompanies}
+                                            onChange={setStatsQuery}
+                                            onRefresh={refreshStats}
+                                        />
+                                        <LogisticsStatsPanel
+                                            stats={stats}
+                                            loading={statsLoading || allCompaniesLoading}
+                                        />
+                                    </div>
+                                ),
+                            },
                         ]}
                     />
                 </div>
@@ -621,6 +767,7 @@ export default function LogisticsPage() {
                 editingRecord={editingRecord}
                 form={recordForm}
                 companies={allCompanies}
+                associationOptions={associationOptions}
                 recordShippingBearer={recordShippingBearer}
                 loading={savingRecord}
                 onCancel={() => setRecordVisible(false)}
@@ -759,6 +906,242 @@ function RecordFilters({
     );
 }
 
+function StatsFilters({
+    query,
+    companies,
+    onChange,
+    onRefresh,
+}: {
+    query: {
+        type?: string;
+        company_id?: number;
+        payment_status?: string;
+        settlement_target?: string;
+        date_from?: string;
+        date_to?: string;
+    };
+    companies: LogisticsCompany[];
+    onChange: React.Dispatch<
+        React.SetStateAction<{
+            type?: string;
+            company_id?: number;
+            payment_status?: string;
+            settlement_target?: string;
+            date_from?: string;
+            date_to?: string;
+        }>
+    >;
+    onRefresh: () => void;
+}) {
+    return (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white bg-white/80 p-3 backdrop-blur-xl dark:border-white/10 dark:bg-[#1f1f1f]/80">
+            <div className="flex flex-1 flex-wrap items-center gap-3">
+                <Select
+                    allowClear
+                    placeholder="物流类型"
+                    value={query.type}
+                    onChange={(type) => onChange((prev) => ({ ...prev, type }))}
+                    className="w-36"
+                    options={recordTypeOptions}
+                />
+                <Select
+                    allowClear
+                    showSearch
+                    optionFilterProp="label"
+                    placeholder="物流公司"
+                    value={query.company_id}
+                    onChange={(company_id) => onChange((prev) => ({ ...prev, company_id }))}
+                    className="w-44"
+                    options={companies.map((item) => ({
+                        value: item.id,
+                        label: item.name,
+                    }))}
+                />
+                <Select
+                    allowClear
+                    placeholder="付款状态"
+                    value={query.payment_status}
+                    onChange={(payment_status) => onChange((prev) => ({ ...prev, payment_status }))}
+                    className="w-36"
+                    options={paymentStatusOptions}
+                />
+                <Select
+                    allowClear
+                    placeholder="结算对象"
+                    value={query.settlement_target}
+                    onChange={(settlement_target) =>
+                        onChange((prev) => ({ ...prev, settlement_target }))
+                    }
+                    className="w-36"
+                    options={settlementTargetOptions}
+                />
+                <DatePicker.RangePicker
+                    className="h-10 rounded-xl"
+                    onChange={(dates) =>
+                        onChange((prev) => ({
+                            ...prev,
+                            date_from: dates?.[0]?.startOf('day').toISOString(),
+                            date_to: dates?.[1]?.endOf('day').toISOString(),
+                        }))
+                    }
+                />
+            </div>
+            <Button icon={<ReloadOutlined />} onClick={onRefresh} />
+        </div>
+    );
+}
+
+function LogisticsStatsPanel({ stats, loading }: { stats?: LogisticsStats; loading: boolean }) {
+    const data =
+        stats ||
+        ({
+            summary: {
+                record_count: 0,
+                shipping_fee: 0,
+                self_amount: 0,
+                payable_amount: 0,
+                paid_amount: 0,
+            },
+            by_company: [],
+            by_month: [],
+            by_type: [],
+            by_payment_status: [],
+        } as LogisticsStats);
+
+    return (
+        <div className="space-y-5">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
+                <MetricCard
+                    label="统计物流记录"
+                    value={`${data.summary.record_count} 条`}
+                    icon={<BarChartOutlined />}
+                />
+                <MetricCard
+                    label="物流发生额"
+                    value={formatPrice(data.summary.shipping_fee)}
+                    icon={<WalletOutlined />}
+                    tone="green"
+                />
+                <MetricCard
+                    label="物流成本"
+                    value={formatPrice(data.summary.self_amount)}
+                    icon={<WalletOutlined />}
+                    tone="red"
+                />
+                <MetricCard
+                    label="待付物流款"
+                    value={formatPrice(data.summary.payable_amount)}
+                    icon={<WalletOutlined />}
+                    tone="red"
+                />
+                <MetricCard
+                    label="已付物流款"
+                    value={formatPrice(data.summary.paid_amount)}
+                    icon={<CheckCircleOutlined />}
+                />
+            </div>
+            <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+                <StatsTable
+                    title="按物流公司"
+                    labelTitle="物流公司"
+                    rows={data.by_company}
+                    loading={loading}
+                />
+                <StatsTable
+                    title="按月份"
+                    labelTitle="月份"
+                    rows={data.by_month}
+                    loading={loading}
+                />
+                <StatsTable
+                    title="按物流类型"
+                    labelTitle="物流类型"
+                    rows={data.by_type}
+                    loading={loading}
+                    formatLabel={(row) => recordTypeLabelMap[row.key] || row.label}
+                />
+                <StatsTable
+                    title="按付款状态"
+                    labelTitle="付款状态"
+                    rows={data.by_payment_status}
+                    loading={loading}
+                    formatLabel={(row) => paymentStatusLabelMap[row.key] || row.label}
+                />
+            </div>
+        </div>
+    );
+}
+
+function StatsTable({
+    title,
+    labelTitle,
+    rows,
+    loading,
+    formatLabel,
+}: {
+    title: string;
+    labelTitle: string;
+    rows: LogisticsStats['by_company'];
+    loading: boolean;
+    formatLabel?: (row: LogisticsStats['by_company'][number]) => string;
+}) {
+    const columns: ColumnsType<LogisticsStats['by_company'][number]> = [
+        {
+            title: labelTitle,
+            dataIndex: 'label',
+            render: (_, record) => (
+                <span className="font-bold text-gray-900 dark:text-gray-100">
+                    {formatLabel ? formatLabel(record) : record.label}
+                </span>
+            ),
+        },
+        {
+            title: '记录',
+            dataIndex: 'record_count',
+            width: 80,
+            align: 'right',
+            render: (value) => `${value} 条`,
+        },
+        {
+            title: '发生额',
+            dataIndex: 'shipping_fee',
+            width: 120,
+            align: 'right',
+            render: (value) => formatPrice(value),
+        },
+        {
+            title: '物流成本',
+            dataIndex: 'self_amount',
+            width: 120,
+            align: 'right',
+            render: (value) => formatPrice(value),
+        },
+        {
+            title: '待付款',
+            dataIndex: 'payable_amount',
+            width: 120,
+            align: 'right',
+            render: (value) => (
+                <span className="font-mono font-black text-red-500">{formatPrice(value)}</span>
+            ),
+        },
+    ];
+
+    return (
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 dark:border-gray-800 dark:bg-[#141414]">
+            <div className="mb-3 font-bold text-gray-900 dark:text-gray-100">{title}</div>
+            <Table
+                rowKey="key"
+                size="small"
+                loading={loading}
+                columns={columns}
+                dataSource={rows}
+                pagination={false}
+            />
+        </div>
+    );
+}
+
 function CompanyModal({
     open,
     editingCompany,
@@ -822,6 +1205,7 @@ function RecordModal({
     editingRecord,
     form,
     companies,
+    associationOptions,
     recordShippingBearer,
     loading,
     onCancel,
@@ -831,6 +1215,7 @@ function RecordModal({
     editingRecord: LogisticsRecord | null;
     form: ReturnType<typeof Form.useForm>[0];
     companies: LogisticsCompany[];
+    associationOptions: RecordAssociationOption[];
     recordShippingBearer: LogisticsRecord['shipping_fee_bearer'];
     loading: boolean;
     onCancel: () => void;
@@ -839,6 +1224,19 @@ function RecordModal({
     const paymentStatus =
         (Form.useWatch('payment_status', form) as LogisticsRecord['payment_status'] | undefined) ||
         'unpaid';
+    const relationLocked = isAutoRelatedRecord(editingRecord);
+    const currentAssociationKey = getAssociationKey(editingRecord);
+    const currentAssociationOption = editingRecord
+        ? {
+              value: currentAssociationKey,
+              label: formatAssociationLabel(editingRecord.related_type, editingRecord.related_id),
+          }
+        : null;
+    const resolvedAssociationOptions =
+        currentAssociationOption &&
+        !associationOptions.some((item) => item.value === currentAssociationOption.value)
+            ? [currentAssociationOption, ...associationOptions]
+            : associationOptions;
 
     return (
         <Modal
@@ -931,11 +1329,13 @@ function RecordModal({
                             <Input />
                         </Form.Item>
                     )}
-                    <Form.Item name="related_type" label="关联业务">
-                        <Select allowClear options={relatedTypeOptions} />
-                    </Form.Item>
-                    <Form.Item name="related_id" label="关联单据 ID">
-                        <InputNumber min={1} precision={0} className="w-full" />
+                    <Form.Item name="related_key" label="关联单据">
+                        <Select
+                            showSearch
+                            optionFilterProp="label"
+                            disabled={relationLocked}
+                            options={resolvedAssociationOptions}
+                        />
                     </Form.Item>
                 </div>
                 <Form.Item name="note" label="备注">

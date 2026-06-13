@@ -151,6 +151,30 @@ export interface LogisticsRecord {
     updated_at?: string;
 }
 
+export interface LogisticsStatsGroup {
+    key: string;
+    label: string;
+    record_count: number;
+    shipping_fee: number;
+    self_amount: number;
+    payable_amount: number;
+    paid_amount: number;
+}
+
+export interface LogisticsStats {
+    summary: {
+        record_count: number;
+        shipping_fee: number;
+        self_amount: number;
+        payable_amount: number;
+        paid_amount: number;
+    };
+    by_company: LogisticsStatsGroup[];
+    by_month: LogisticsStatsGroup[];
+    by_type: LogisticsStatsGroup[];
+    by_payment_status: LogisticsStatsGroup[];
+}
+
 export interface Customer {
     id: number;
     name: string;
