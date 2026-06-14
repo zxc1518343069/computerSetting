@@ -5,6 +5,7 @@ import Time from '@/app/_components/Time';
 import { authService } from '@/app/services/auth';
 import {
     AppstoreOutlined,
+    CustomerServiceOutlined,
     DashboardOutlined,
     DownOutlined,
     LogoutOutlined,
@@ -64,6 +65,7 @@ export default function SiteHeader() {
         { label: '产品零售', path: '/retail', icon: <ShoppingOutlined /> },
         { label: '二手', path: '/second-hand', icon: <ToolOutlined /> },
         { label: '租赁', path: '/rental', icon: <AppstoreOutlined /> },
+        { label: '售后服务', path: '/after-sales', icon: <CustomerServiceOutlined /> },
         // ...(isLoggedIn
         //     ? [
         //           {

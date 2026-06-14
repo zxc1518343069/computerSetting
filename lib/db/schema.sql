@@ -119,6 +119,59 @@ CREATE TABLE IF NOT EXISTS category_pricing_rates
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS after_sales_service_categories
+(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT UNIQUE,
+    name TEXT NOT NULL CHECK (name <> ''),
+    description TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_after_sales_categories_active_sort
+    ON after_sales_service_categories(is_active, sort_order);
+
+CREATE TABLE IF NOT EXISTS after_sales_services
+(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT UNIQUE,
+    category_id INTEGER NOT NULL REFERENCES after_sales_service_categories(id),
+    name TEXT NOT NULL CHECK (name <> ''),
+    description TEXT,
+    price_type TEXT NOT NULL DEFAULT 'fixed'
+        CHECK (price_type IN ('fixed', 'range', 'multi', 'custom')),
+    price_cents INTEGER CHECK (price_cents IS NULL OR price_cents >= 0),
+    price_label TEXT NOT NULL DEFAULT '',
+    unit TEXT,
+    includes TEXT,
+    excludes TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    is_featured INTEGER NOT NULL DEFAULT 0,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_after_sales_services_category_sort
+    ON after_sales_services(category_id, is_active, sort_order);
+
+CREATE TABLE IF NOT EXISTS after_sales_service_notices
+(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT UNIQUE,
+    content TEXT NOT NULL CHECK (content <> ''),
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_after_sales_notices_active_sort
+    ON after_sales_service_notices(is_active, sort_order);
+
 CREATE TABLE IF NOT EXISTS admin_users
 (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -35,6 +35,57 @@ export interface ProductCategory {
     updated_at?: string;
 }
 
+export type AfterSalesPriceType = 'fixed' | 'range' | 'multi' | 'custom';
+
+export interface AfterSalesCategory {
+    id: number;
+    code?: string | null;
+    name: string;
+    description?: string | null;
+    sort_order: number;
+    is_active: boolean;
+    service_count?: number;
+    services?: AfterSalesService[];
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface AfterSalesService {
+    id: number;
+    code?: string | null;
+    category_id: number;
+    category_code?: string | null;
+    category_name?: string | null;
+    name: string;
+    description?: string | null;
+    price_type: AfterSalesPriceType;
+    price: number | null;
+    price_label: string;
+    unit?: string | null;
+    includes?: string | null;
+    excludes?: string | null;
+    sort_order: number;
+    is_featured: boolean;
+    is_active: boolean;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface AfterSalesNotice {
+    id: number;
+    code?: string | null;
+    content: string;
+    sort_order: number;
+    is_active: boolean;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface AfterSalesServiceListResponse {
+    categories: AfterSalesCategory[];
+    notices: AfterSalesNotice[];
+}
+
 export interface PricingConfig {
     id?: number;
     unifiedPricing: boolean;

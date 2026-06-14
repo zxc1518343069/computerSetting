@@ -30,6 +30,10 @@ export function middleware(request: NextRequest) {
             return NextResponse.next();
         }
 
+        if (pathname === '/api/after-sales/checkout') {
+            return NextResponse.next();
+        }
+
         const isWriteOperation = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(request.method);
         const isSensitiveRead =
             request.method === 'GET' &&

@@ -5,6 +5,7 @@ import {
     AuditOutlined,
     CarOutlined,
     CloudDownloadOutlined,
+    CustomerServiceOutlined,
     DatabaseOutlined,
     DollarOutlined,
     DownOutlined,
@@ -133,6 +134,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     title: '成本管理',
                     path: '/admin/dashboard/finance/costs',
                     icon: <WalletOutlined />,
+                },
+            ],
+        },
+        {
+            title: '服务管理',
+            items: [
+                {
+                    title: '售后服务',
+                    path: '/admin/dashboard/services/after-sales',
+                    icon: <CustomerServiceOutlined />,
                 },
             ],
         },
