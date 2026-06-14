@@ -195,7 +195,7 @@
 
 采购退货的入口可以出现在入库单页面，但新增退货 Modal 和退货记录维护统一放在进货/退货页的退货 Tab 中处理。
 
-物流公司、物流单号和运费记录作为底层能力拆到 `plans/backlog/logistics-management-backlog.md`，进货和退货流程后续只负责选择并填写物流信息。
+物流公司、物流单号和运费记录作为底层能力已在 `plans/done/logistics-management-plan.md` 归档，进货和退货流程后续只负责选择并填写物流信息。
 
 建议跳转规则：
 
