@@ -38,6 +38,7 @@ import {
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
+import { useRouter } from 'next/navigation';
 import React, { useMemo, useState } from 'react';
 import {
     disableLogisticsCompany,
@@ -121,15 +122,40 @@ const formatAssociationLabel = (
     relatedId?: number | null
 ) => {
     if (!relatedType || !relatedId) return '手工记录';
-    const prefix =
-        relatedType === 'purchase_order'
-            ? 'JH'
-            : relatedType === 'inbound_order'
-              ? 'RK'
-              : relatedType === 'purchase_return'
-                ? 'TH'
-                : 'ID';
+    const prefix = getAssociationPrefix(relatedType);
     return `${relationLabels[relatedType] || relatedType} ${prefix}-${relatedId}`;
+};
+
+const getAssociationPrefix = (relatedType: LogisticsRecord['related_type']) =>
+    relatedType === 'purchase_order'
+        ? 'JH'
+        : relatedType === 'inbound_order'
+          ? 'RK'
+          : relatedType === 'purchase_return'
+            ? 'TH'
+            : 'ID';
+
+const getAssociationSearchToken = (
+    relatedType?: LogisticsRecord['related_type'] | null,
+    relatedId?: number | null
+) => (relatedType && relatedId ? `${getAssociationPrefix(relatedType)}-${relatedId}` : '');
+
+const getAssociationHref = (
+    relatedType?: LogisticsRecord['related_type'] | null,
+    relatedId?: number | null
+) => {
+    const search = encodeURIComponent(getAssociationSearchToken(relatedType, relatedId));
+    if (!relatedType || !relatedId || !search) return '';
+    if (relatedType === 'purchase_order') {
+        return `/admin/dashboard/warehouse/purchase-orders?tab=purchase&search=${search}`;
+    }
+    if (relatedType === 'inbound_order') {
+        return `/admin/dashboard/warehouse/inbound?search=${search}`;
+    }
+    if (relatedType === 'purchase_return') {
+        return `/admin/dashboard/warehouse/purchase-orders?tab=returns&search=${search}`;
+    }
+    return '';
 };
 
 const isAutoRelatedRecord = (record?: LogisticsRecord | null) =>
@@ -179,6 +205,7 @@ const syncRecordSelfAmount = (
 };
 
 export default function LogisticsPage() {
+    const router = useRouter();
     const [activeTab, setActiveTab] = useState<LogisticsTabKey>('companies');
     const [companyQuery, setCompanyQuery] = useState<{ search: string; status?: string }>({
         search: '',
@@ -194,6 +221,7 @@ export default function LogisticsPage() {
         date_to?: string;
     }>({
         search: '',
+        payment_status: 'unpaid',
     });
     const [statsQuery, setStatsQuery] = useState<{
         type?: string;
@@ -571,14 +599,21 @@ export default function LogisticsPage() {
         {
             title: '关联单据',
             width: 160,
-            render: (_, record) =>
-                record.related_type && record.related_id ? (
-                    <span className="font-mono text-gray-500">
+            render: (_, record) => {
+                const href = getAssociationHref(record.related_type, record.related_id);
+                return href ? (
+                    <Button
+                        type="link"
+                        size="small"
+                        className="h-auto p-0 font-mono"
+                        onClick={() => router.push(href)}
+                    >
                         {formatAssociationLabel(record.related_type, record.related_id)}
-                    </span>
+                    </Button>
                 ) : (
                     <span className="text-gray-400">-</span>
-                ),
+                );
+            },
         },
         {
             title: '发生时间',

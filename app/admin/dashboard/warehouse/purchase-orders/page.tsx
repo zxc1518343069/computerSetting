@@ -163,13 +163,15 @@ const syncReturnShippingSplit = (
 export default function PurchaseOrdersPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const [activeTab, setActiveTab] = useState<TabKey>(
-        searchParams.get('tab') === 'returns' ? 'returns' : 'purchase'
-    );
-    const [search, setSearch] = useState('');
+    const initialTab = searchParams.get('tab') === 'returns' ? 'returns' : 'purchase';
+    const initialSearch = searchParams.get('search') || '';
+    const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
+    const [search, setSearch] = useState(initialTab === 'purchase' ? initialSearch : '');
     const [goodsStatus, setGoodsStatus] = useState('all');
     const [paymentStatus, setPaymentStatus] = useState('all');
-    const [returnsSearch, setReturnsSearch] = useState('');
+    const [returnsSearch, setReturnsSearch] = useState(
+        initialTab === 'returns' ? initialSearch : ''
+    );
     const [returnGoodsStatus, setReturnGoodsStatus] = useState('all');
     const [returnRefundStatus, setReturnRefundStatus] = useState('all');
     const [returnInboundOrderId, setReturnInboundOrderId] = useState<number | undefined>(
@@ -420,7 +422,13 @@ export default function PurchaseOrdersPage() {
 
     useEffect(() => {
         const tab = searchParams.get('tab') === 'returns' ? 'returns' : 'purchase';
+        const urlSearch = searchParams.get('search') || '';
         setActiveTab(tab);
+        if (tab === 'returns') {
+            setReturnsSearch(urlSearch);
+        } else {
+            setSearch(urlSearch);
+        }
         const inboundId = Number(searchParams.get('inboundOrderId') || 0) || undefined;
         setReturnInboundOrderId(inboundId);
 

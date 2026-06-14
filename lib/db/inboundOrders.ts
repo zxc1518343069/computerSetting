@@ -219,9 +219,9 @@ const baseInboundOrderQuery = `
 `;
 
 export const getInboundOrderById = (db: SqliteDb, id: number) => {
-    const row = db
-        .prepare(`${baseInboundOrderQuery} WHERE io.id = ?`)
-        .get(id) as InboundOrderRow | undefined;
+    const row = db.prepare(`${baseInboundOrderQuery} WHERE io.id = ?`).get(id) as
+        | InboundOrderRow
+        | undefined;
 
     return row ? serializeInboundOrder(db, row) : null;
 };
@@ -256,22 +256,36 @@ export const listInboundOrders = (
         conditions.push('io.source_type = @sourceType');
         params.sourceType = filters.sourceType;
     }
-    if (filters.search) {
-        conditions.push(`
-            (
-                CAST(io.id AS TEXT) LIKE @search
-                OR CAST(io.purchase_order_id AS TEXT) LIKE @search
-                OR s.name LIKE @search
-                OR EXISTS (
-                    SELECT 1
-                    FROM inbound_order_items ioi
-                    JOIN products p ON p.id = ioi.product_id
-                    WHERE ioi.inbound_order_id = io.id
-                      AND (p.name LIKE @search OR p.barcode LIKE @search)
+    const search = filters.search?.trim();
+    if (search) {
+        const documentMatch = search.match(/^(JH|RK)-?(\d+)$/i);
+        if (documentMatch) {
+            const [, prefix, id] = documentMatch;
+            if (prefix.toUpperCase() === 'JH') {
+                conditions.push('io.purchase_order_id = @searchPurchaseOrderId');
+                params.searchPurchaseOrderId = Number(id);
+            }
+            if (prefix.toUpperCase() === 'RK') {
+                conditions.push('io.id = @searchInboundOrderId');
+                params.searchInboundOrderId = Number(id);
+            }
+        } else {
+            conditions.push(`
+                (
+                    CAST(io.id AS TEXT) LIKE @search
+                    OR CAST(io.purchase_order_id AS TEXT) LIKE @search
+                    OR s.name LIKE @search
+                    OR EXISTS (
+                        SELECT 1
+                        FROM inbound_order_items ioi
+                        JOIN products p ON p.id = ioi.product_id
+                        WHERE ioi.inbound_order_id = io.id
+                          AND (p.name LIKE @search OR p.barcode LIKE @search)
+                    )
                 )
-            )
-        `);
-        params.search = `%${filters.search}%`;
+            `);
+            params.search = `%${search}%`;
+        }
     }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';

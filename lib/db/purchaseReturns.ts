@@ -369,23 +369,41 @@ export const listPurchaseReturns = (
         conditions.push('pr.goods_status = @goodsStatus');
         params.goodsStatus = filters.goodsStatus;
     }
-    if (filters.search) {
-        conditions.push(`
-            (
-                CAST(pr.id AS TEXT) LIKE @search
-                OR CAST(pr.purchase_order_id AS TEXT) LIKE @search
-                OR CAST(pr.inbound_order_id AS TEXT) LIKE @search
-                OR s.name LIKE @search
-                OR EXISTS (
-                    SELECT 1
-                    FROM purchase_return_items pri
-                    JOIN products p ON p.id = pri.product_id
-                    WHERE pri.purchase_return_id = pr.id
-                      AND (p.name LIKE @search OR p.barcode LIKE @search)
+    const search = filters.search?.trim();
+    if (search) {
+        const documentMatch = search.match(/^(JH|RK|TH)-?(\d+)$/i);
+        if (documentMatch) {
+            const [, prefix, id] = documentMatch;
+            if (prefix.toUpperCase() === 'JH') {
+                conditions.push('pr.purchase_order_id = @searchPurchaseOrderId');
+                params.searchPurchaseOrderId = Number(id);
+            }
+            if (prefix.toUpperCase() === 'RK') {
+                conditions.push('pr.inbound_order_id = @searchInboundOrderId');
+                params.searchInboundOrderId = Number(id);
+            }
+            if (prefix.toUpperCase() === 'TH') {
+                conditions.push('pr.id = @searchPurchaseReturnId');
+                params.searchPurchaseReturnId = Number(id);
+            }
+        } else {
+            conditions.push(`
+                (
+                    CAST(pr.id AS TEXT) LIKE @search
+                    OR CAST(pr.purchase_order_id AS TEXT) LIKE @search
+                    OR CAST(pr.inbound_order_id AS TEXT) LIKE @search
+                    OR s.name LIKE @search
+                    OR EXISTS (
+                        SELECT 1
+                        FROM purchase_return_items pri
+                        JOIN products p ON p.id = pri.product_id
+                        WHERE pri.purchase_return_id = pr.id
+                          AND (p.name LIKE @search OR p.barcode LIKE @search)
+                    )
                 )
-            )
-        `);
-        params.search = `%${filters.search}%`;
+            `);
+            params.search = `%${search}%`;
+        }
     }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';

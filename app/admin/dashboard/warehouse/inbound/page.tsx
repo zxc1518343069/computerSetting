@@ -92,7 +92,7 @@ export default function InboundPage() {
     const [visible, setVisible] = useState(false);
     const [editVisible, setEditVisible] = useState(false);
     const [editingOrder, setEditingOrder] = useState<InboundOrder | null>(null);
-    const [search, setSearch] = useState('');
+    const [search, setSearch] = useState(searchParams.get('search') || '');
     const [recordStatus, setRecordStatus] = useState('all');
     const [sourceTypeFilter, setSourceTypeFilter] = useState('all');
     const [purchaseOrderFilter, setPurchaseOrderFilter] = useState<number | undefined>(
@@ -411,6 +411,7 @@ export default function InboundPage() {
 
     useEffect(() => {
         const purchaseOrderId = Number(searchParams.get('purchaseOrderId') || 0) || undefined;
+        setSearch(searchParams.get('search') || '');
         const sourceType: InboundSourceType =
             searchParams.get('sourceType') === 'opening_stock' ? 'opening_stock' : 'purchase_order';
         setPurchaseOrderFilter(purchaseOrderId);

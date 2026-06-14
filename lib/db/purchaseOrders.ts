@@ -405,7 +405,7 @@ export const listPurchaseOrders = (
     } = {}
 ) => {
     const conditions: string[] = [];
-    const params: Record<string, string> = {};
+    const params: Record<string, string | number> = {};
     const goodsStatus = filters.goodsStatus || filters.status;
     const normalizedGoodsStatus = normalizePurchaseOrderStatus(goodsStatus);
 
@@ -414,21 +414,28 @@ export const listPurchaseOrders = (
         params.status = normalizedGoodsStatus;
     }
 
-    if (filters.search) {
-        conditions.push(`
-            (
-                CAST(po.id AS TEXT) LIKE @search
-                OR s.name LIKE @search
-                OR EXISTS (
-                    SELECT 1
-                    FROM purchase_order_items poi
-                    JOIN products p ON p.id = poi.product_id
-                    WHERE poi.purchase_order_id = po.id
-                      AND (p.name LIKE @search OR p.barcode LIKE @search)
+    const search = filters.search?.trim();
+    if (search) {
+        const purchaseOrderMatch = search.match(/^JH-?(\d+)$/i);
+        if (purchaseOrderMatch) {
+            conditions.push('po.id = @searchPurchaseOrderId');
+            params.searchPurchaseOrderId = Number(purchaseOrderMatch[1]);
+        } else {
+            conditions.push(`
+                (
+                    CAST(po.id AS TEXT) LIKE @search
+                    OR s.name LIKE @search
+                    OR EXISTS (
+                        SELECT 1
+                        FROM purchase_order_items poi
+                        JOIN products p ON p.id = poi.product_id
+                        WHERE poi.purchase_order_id = po.id
+                          AND (p.name LIKE @search OR p.barcode LIKE @search)
+                    )
                 )
-            )
-        `);
-        params.search = `%${filters.search}%`;
+            `);
+            params.search = `%${search}%`;
+        }
     }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
