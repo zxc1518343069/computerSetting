@@ -126,6 +126,7 @@ export default function FinanceCostsPage() {
         {
             title: '成本名称',
             dataIndex: 'name',
+            width: 220,
             render: (text) => (
                 <span className="font-bold text-gray-900 dark:text-gray-100">{text}</span>
             ),
@@ -150,6 +151,7 @@ export default function FinanceCostsPage() {
         {
             title: '备注',
             dataIndex: 'note',
+            width: 280,
             ellipsis: true,
             render: (text) => text || '-',
         },
@@ -162,6 +164,7 @@ export default function FinanceCostsPage() {
         {
             title: '操作',
             width: 120,
+            fixed: 'right',
             align: 'center',
             render: (_, record) => (
                 <div className="flex items-center justify-center gap-2">
@@ -266,6 +269,7 @@ export default function FinanceCostsPage() {
                         columns={columns}
                         dataSource={costs}
                         pagination={{ pageSize: 10 }}
+                        scroll={{ x: 1200 }}
                     />
                 </div>
             </div>

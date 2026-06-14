@@ -79,6 +79,7 @@ export default function CustomersPage() {
     const columns: ColumnsType<Customer> = [
         {
             title: '客户',
+            width: 240,
             render: (_, record) => (
                 <div>
                     <div className="font-bold text-gray-900 dark:text-gray-100">{record.name}</div>
@@ -89,6 +90,7 @@ export default function CustomersPage() {
         {
             title: '微信',
             dataIndex: 'wechat',
+            width: 180,
             render: (text) => text || '-',
         },
         {
@@ -123,6 +125,7 @@ export default function CustomersPage() {
         {
             title: '操作',
             width: 180,
+            fixed: 'right',
             align: 'center',
             render: (_, record) => (
                 <div className="flex items-center justify-center gap-2">
@@ -203,6 +206,7 @@ export default function CustomersPage() {
                         columns={columns}
                         dataSource={customers}
                         pagination={{ pageSize: 10, showSizeChanger: true }}
+                        scroll={{ x: 1220 }}
                         expandable={{
                             expandedRowRender: (record) => <CustomerOrders customer={record} />,
                         }}
@@ -335,6 +339,7 @@ function CustomerOrders({ customer }: { customer: Customer }) {
                 dataSource={orders}
                 pagination={false}
                 size="small"
+                scroll={{ x: 850 }}
             />
         </div>
     );

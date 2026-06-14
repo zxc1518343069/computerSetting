@@ -106,28 +106,33 @@ export default function FinanceSalesPage() {
         {
             title: '订单号',
             dataIndex: 'order_no',
+            width: 190,
             render: (text) => <span className="font-mono text-gray-500">{text}</span>,
         },
         {
             title: '客户',
             dataIndex: 'customer_name',
+            width: 180,
         },
         {
             title: '成交金额',
             dataIndex: 'final_amount',
             align: 'right',
+            width: 150,
             render: (amount) => formatPrice(Number(amount)),
         },
         {
             title: '商品成本',
             dataIndex: 'cost_amount',
             align: 'right',
+            width: 150,
             render: (amount) => formatPrice(Number(amount || 0)),
         },
         {
             title: '商品毛利',
             dataIndex: 'profit_amount',
             align: 'right',
+            width: 150,
             render: (amount) => (
                 <span className="text-emerald-500 font-bold">
                     {formatPrice(Number(amount || 0))}
@@ -137,6 +142,7 @@ export default function FinanceSalesPage() {
         {
             title: '交付状态',
             dataIndex: 'delivery_status',
+            width: 120,
             render: () => <Tag color="green">已交付</Tag>,
         },
     ];
@@ -226,6 +232,7 @@ export default function FinanceSalesPage() {
                         columns={columns}
                         dataSource={filteredOrders}
                         pagination={{ pageSize: 10 }}
+                        scroll={{ x: 940 }}
                     />
                 </div>
             </div>

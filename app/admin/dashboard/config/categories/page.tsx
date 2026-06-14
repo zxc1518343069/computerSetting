@@ -135,6 +135,7 @@ export default function ProductCategoriesPage() {
         {
             title: '类目',
             dataIndex: 'name',
+            width: 260,
             render: (_, record) => (
                 <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-2">
@@ -182,6 +183,7 @@ export default function ProductCategoriesPage() {
         {
             title: '操作',
             width: 140,
+            fixed: 'right',
             align: 'center',
             render: (_, record) => {
                 const hasProducts = Number(record.product_count || 0) > 0;
@@ -264,6 +266,7 @@ export default function ProductCategoriesPage() {
                         columns={columns}
                         dataSource={categories}
                         pagination={false}
+                        scroll={{ x: 840 }}
                     />
                 </div>
             </div>

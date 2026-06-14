@@ -816,6 +816,7 @@ export default function PurchaseOrdersPage() {
         {
             title: '商家',
             dataIndex: ['supplier', 'name'],
+            width: 200,
             render: (text) => (
                 <span className="font-bold text-gray-900 dark:text-gray-100">{text || '-'}</span>
             ),
@@ -869,6 +870,7 @@ export default function PurchaseOrdersPage() {
         {
             title: '操作',
             width: 300,
+            fixed: 'right',
             align: 'center',
             render: (_, record) => (
                 <div className="flex flex-wrap items-center justify-center gap-2">
@@ -943,6 +945,7 @@ export default function PurchaseOrdersPage() {
         {
             title: '商家',
             dataIndex: ['supplier', 'name'],
+            width: 200,
             render: (text) => (
                 <span className="font-bold text-gray-900 dark:text-gray-100">{text || '-'}</span>
             ),
@@ -1004,6 +1007,7 @@ export default function PurchaseOrdersPage() {
         {
             title: '操作',
             width: 270,
+            fixed: 'right',
             align: 'center',
             render: (_, record) => (
                 <div className="flex flex-wrap items-center justify-center gap-2">
@@ -1197,7 +1201,7 @@ export default function PurchaseOrdersPage() {
                                             columns={purchaseColumns}
                                             dataSource={purchaseOrders}
                                             pagination={{ pageSize: 10 }}
-                                            scroll={{ x: 1300 }}
+                                            scroll={{ x: 1350 }}
                                             expandable={{
                                                 expandedRowRender: (record) => (
                                                     <PurchaseOrderDetails
@@ -1284,7 +1288,7 @@ export default function PurchaseOrdersPage() {
                                             columns={returnColumns}
                                             dataSource={purchaseReturns}
                                             pagination={{ pageSize: 10 }}
-                                            scroll={{ x: 1500 }}
+                                            scroll={{ x: 1650 }}
                                             expandable={{
                                                 expandedRowRender: (record) => (
                                                     <PurchaseReturnDetails record={record} />

@@ -116,6 +116,7 @@ export default function AdminAccountsPage() {
         {
             title: '账号',
             dataIndex: 'username',
+            width: 260,
             render: (username) => (
                 <div className="flex items-center gap-3">
                     <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400">
@@ -162,6 +163,7 @@ export default function AdminAccountsPage() {
         {
             title: '操作',
             width: 190,
+            fixed: 'right',
             align: 'center',
             render: (_, record) => (
                 <div className="flex items-center justify-center gap-2">
@@ -264,6 +266,7 @@ export default function AdminAccountsPage() {
                         columns={columns}
                         dataSource={users}
                         pagination={{ pageSize: 10 }}
+                        scroll={{ x: 1070 }}
                     />
                 </div>
             </div>
@@ -328,4 +331,3 @@ export default function AdminAccountsPage() {
         </div>
     );
 }
-

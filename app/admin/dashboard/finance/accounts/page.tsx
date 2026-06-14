@@ -286,6 +286,7 @@ export default function AccountsPage() {
     const supplierAccountColumns: ColumnsType<SupplierAccount> = [
         {
             title: '商家',
+            width: 260,
             render: (_, record) => (
                 <div>
                     <div className="font-bold text-gray-900 dark:text-gray-100">
@@ -343,6 +344,7 @@ export default function AccountsPage() {
         {
             title: '操作',
             width: 200,
+            fixed: 'right',
             align: 'center',
             render: (_, record) => (
                 <div className="flex items-center justify-center gap-2">
@@ -365,6 +367,7 @@ export default function AccountsPage() {
     const logisticsAccountColumns: ColumnsType<LogisticsAccount> = [
         {
             title: '物流公司',
+            width: 260,
             render: (_, record) => (
                 <div>
                     <div className="font-bold text-gray-900 dark:text-gray-100">
@@ -402,6 +405,7 @@ export default function AccountsPage() {
         {
             title: '操作',
             width: 190,
+            fixed: 'right',
             align: 'center',
             render: (_, record) => (
                 <div className="flex items-center justify-center gap-2">
@@ -424,6 +428,7 @@ export default function AccountsPage() {
     const customerAccountColumns: ColumnsType<CustomerAccount> = [
         {
             title: '客户',
+            width: 260,
             render: (_, record) => (
                 <div>
                     <div className="font-bold text-gray-900 dark:text-gray-100">
@@ -471,6 +476,7 @@ export default function AccountsPage() {
         {
             title: '操作',
             width: 210,
+            fixed: 'right',
             align: 'center',
             render: (_, record) => (
                 <div className="flex items-center justify-center gap-2">
@@ -505,6 +511,7 @@ export default function AccountsPage() {
         {
             title: '商家',
             dataIndex: 'supplier_name',
+            width: 220,
             render: (text) => (
                 <span className="font-bold text-gray-900 dark:text-gray-100">{text}</span>
             ),
@@ -553,6 +560,7 @@ export default function AccountsPage() {
         {
             title: '操作',
             width: 150,
+            fixed: 'right',
             align: 'center',
             render: (_, record) => (
                 <Button type="link" onClick={() => openPayment(record)}>
@@ -571,6 +579,7 @@ export default function AccountsPage() {
         },
         {
             title: '物流公司',
+            width: 260,
             render: (_, record) => (
                 <div>
                     <div className="font-bold text-gray-900 dark:text-gray-100">
@@ -617,6 +626,7 @@ export default function AccountsPage() {
         {
             title: '操作',
             width: 170,
+            fixed: 'right',
             align: 'center',
             render: (_, record) => (
                 <Button type="link" onClick={() => openLogisticsPayment(record)}>
@@ -646,6 +656,7 @@ export default function AccountsPage() {
         {
             title: '商家',
             dataIndex: 'supplier_name',
+            width: 220,
             render: (text) => (
                 <span className="font-bold text-gray-900 dark:text-gray-100">{text}</span>
             ),
@@ -690,6 +701,7 @@ export default function AccountsPage() {
         {
             title: '操作',
             width: 170,
+            fixed: 'right',
             align: 'center',
             render: (_, record) => (
                 <Button type="link" onClick={() => openReturnRefund(record)}>
@@ -708,6 +720,7 @@ export default function AccountsPage() {
         },
         {
             title: '客户',
+            width: 240,
             render: (_, record) => (
                 <div>
                     <div className="font-bold text-gray-900 dark:text-gray-100">
@@ -760,6 +773,7 @@ export default function AccountsPage() {
         {
             title: '操作',
             width: 210,
+            fixed: 'right',
             align: 'center',
             render: (_, record) => (
                 <div className="flex items-center justify-center gap-2">
@@ -894,7 +908,7 @@ export default function AccountsPage() {
                                             columns={supplierAccountColumns}
                                             dataSource={filteredSupplierAccounts}
                                             pagination={{ pageSize: 10 }}
-                                            scroll={{ x: 1100 }}
+                                            scroll={{ x: 1200 }}
                                             expandable={{
                                                 expandedRowRender: (record) => (
                                                     <div className="space-y-4">
@@ -908,7 +922,7 @@ export default function AccountsPage() {
                                                                 dataSource={record.orders}
                                                                 pagination={false}
                                                                 size="small"
-                                                                scroll={{ x: 1100 }}
+                                                                scroll={{ x: 1280 }}
                                                             />
                                                         </div>
                                                         <div>
@@ -921,7 +935,7 @@ export default function AccountsPage() {
                                                                 dataSource={record.returns}
                                                                 pagination={false}
                                                                 size="small"
-                                                                scroll={{ x: 1200 }}
+                                                                scroll={{ x: 1400 }}
                                                             />
                                                         </div>
                                                     </div>
@@ -951,7 +965,7 @@ export default function AccountsPage() {
                                                         dataSource={record.records}
                                                         pagination={false}
                                                         size="small"
-                                                        scroll={{ x: 1100 }}
+                                                        scroll={{ x: 1200 }}
                                                     />
                                                 ),
                                             }}
@@ -977,7 +991,7 @@ export default function AccountsPage() {
                                                         dataSource={record.orders}
                                                         pagination={false}
                                                         size="small"
-                                                        scroll={{ x: 1100 }}
+                                                        scroll={{ x: 1220 }}
                                                     />
                                                 ),
                                             }}
@@ -1009,7 +1023,7 @@ export default function AccountsPage() {
                                             columns={payableColumns}
                                             dataSource={filteredPayables}
                                             pagination={{ pageSize: 10 }}
-                                            scroll={{ x: 1100 }}
+                                            scroll={{ x: 1280 }}
                                         />
                                     ),
                                 },
@@ -1023,7 +1037,7 @@ export default function AccountsPage() {
                                             columns={logisticsPayableColumns}
                                             dataSource={filteredLogisticsPayables}
                                             pagination={{ pageSize: 10 }}
-                                            scroll={{ x: 1100 }}
+                                            scroll={{ x: 1200 }}
                                         />
                                     ),
                                 },
@@ -1037,7 +1051,7 @@ export default function AccountsPage() {
                                             columns={returnRefundColumns}
                                             dataSource={filteredReturnRefunds}
                                             pagination={{ pageSize: 10 }}
-                                            scroll={{ x: 1200 }}
+                                            scroll={{ x: 1400 }}
                                         />
                                     ),
                                 },
@@ -1051,7 +1065,7 @@ export default function AccountsPage() {
                                             columns={receivableColumns}
                                             dataSource={filteredReceivables}
                                             pagination={{ pageSize: 10 }}
-                                            scroll={{ x: 1100 }}
+                                            scroll={{ x: 1220 }}
                                         />
                                     ),
                                 },

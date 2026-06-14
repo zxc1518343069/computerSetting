@@ -72,6 +72,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
             title: '产品名称',
             dataIndex: 'name',
             key: 'name',
+            width: 240,
             sorter: (a, b) => a.name.localeCompare(b.name),
             render: (text) => (
                 <Text strong className="text-gray-800 dark:text-gray-100 text-[15px]">
@@ -220,6 +221,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
             title: '操作',
             key: 'action',
             width: 150,
+            fixed: 'right',
             align: 'center',
             render: (_, record) => (
                 <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">

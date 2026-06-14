@@ -472,6 +472,7 @@ export default function InboundPage() {
         {
             title: '商家',
             dataIndex: ['supplier', 'name'],
+            width: 200,
             render: (text) => (
                 <span className="font-bold text-gray-900 dark:text-gray-100">{text || '-'}</span>
             ),
@@ -479,6 +480,7 @@ export default function InboundPage() {
         {
             title: '明细',
             dataIndex: 'items',
+            width: 300,
             render: (items: InboundOrderItemWithProduct[] = []) => (
                 <div className="space-y-1">
                     {items.slice(0, 3).map((item) => (
@@ -550,6 +552,7 @@ export default function InboundPage() {
         {
             title: '操作',
             width: 240,
+            fixed: 'right',
             align: 'center',
             render: (_, record) => (
                 <div className="flex flex-wrap items-center justify-center gap-2">
@@ -657,7 +660,7 @@ export default function InboundPage() {
                         columns={columns}
                         dataSource={inboundOrders}
                         pagination={{ pageSize: 10 }}
-                        scroll={{ x: 1600 }}
+                        scroll={{ x: 2000 }}
                     />
                 </div>
             </div>

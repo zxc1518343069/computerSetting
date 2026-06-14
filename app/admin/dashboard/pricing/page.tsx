@@ -179,6 +179,7 @@ export default function PricingPage() {
         {
             title: '商品类目',
             dataIndex: 'categoryName',
+            width: 260,
             render: (_, record) => (
                 <div className="flex flex-col gap-1">
                     <Tag
@@ -220,6 +221,7 @@ export default function PricingPage() {
         {
             title: '操作',
             width: 100,
+            fixed: 'right',
             align: 'center',
             render: (_, record) => (
                 <Popconfirm
@@ -347,6 +349,7 @@ export default function PricingPage() {
                             columns={columns}
                             dataSource={config.rates || []}
                             pagination={false}
+                            scroll={{ x: 720 }}
                             locale={{
                                 emptyText: (
                                     <Empty description="暂无分类溢价规则，新增后可按类目设置比例" />

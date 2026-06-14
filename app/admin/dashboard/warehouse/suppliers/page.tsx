@@ -82,6 +82,7 @@ export default function SuppliersPage() {
         {
             title: '商家名称',
             dataIndex: 'name',
+            width: 220,
             render: (text) => (
                 <span className="font-bold text-gray-900 dark:text-gray-100">{text}</span>
             ),
@@ -89,16 +90,19 @@ export default function SuppliersPage() {
         {
             title: '联系人',
             dataIndex: 'contact_name',
+            width: 140,
             render: (text) => text || '-',
         },
         {
             title: '手机号',
             dataIndex: 'phone',
+            width: 150,
             render: (text) => text || '-',
         },
         {
             title: '地址',
             dataIndex: 'address',
+            width: 260,
             ellipsis: true,
             render: (text) => text || '-',
         },
@@ -131,6 +135,7 @@ export default function SuppliersPage() {
         {
             title: '操作',
             width: 120,
+            fixed: 'right',
             align: 'center',
             render: (_, record) => (
                 <div className="flex items-center justify-center gap-2">
@@ -211,6 +216,7 @@ export default function SuppliersPage() {
                         columns={columns}
                         dataSource={suppliers}
                         pagination={{ pageSize: 10, showSizeChanger: true }}
+                        scroll={{ x: 1290 }}
                     />
                 </div>
             </div>

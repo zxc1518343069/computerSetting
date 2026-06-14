@@ -478,6 +478,7 @@ export default function LogisticsPage() {
         {
             title: '物流公司',
             dataIndex: 'name',
+            width: 260,
             render: (text, record) => (
                 <div>
                     <div className="font-bold text-gray-900 dark:text-gray-100">{text}</div>
@@ -500,6 +501,7 @@ export default function LogisticsPage() {
         {
             title: '备注',
             dataIndex: 'note',
+            width: 280,
             ellipsis: true,
             render: (text) => text || '-',
         },
@@ -512,6 +514,7 @@ export default function LogisticsPage() {
         {
             title: '操作',
             width: 150,
+            fixed: 'right',
             align: 'center',
             render: (_, record) => (
                 <div className="flex items-center justify-center gap-2">
@@ -624,12 +627,14 @@ export default function LogisticsPage() {
         {
             title: '备注',
             dataIndex: 'note',
+            width: 240,
             ellipsis: true,
             render: (text) => text || '-',
         },
         {
             title: '操作',
             width: 180,
+            fixed: 'right',
             align: 'center',
             render: (_, record) => (
                 <div className="flex items-center justify-center gap-2">
@@ -740,6 +745,7 @@ export default function LogisticsPage() {
                                             columns={companyColumns}
                                             dataSource={companies}
                                             pagination={{ pageSize: 10, showSizeChanger: true }}
+                                            scroll={{ x: 970 }}
                                         />
                                     </div>
                                 ),
@@ -761,7 +767,7 @@ export default function LogisticsPage() {
                                             columns={recordColumns}
                                             dataSource={records}
                                             pagination={{ pageSize: 10, showSizeChanger: true }}
-                                            scroll={{ x: 1280 }}
+                                            scroll={{ x: 1390 }}
                                         />
                                     </div>
                                 ),
@@ -1172,6 +1178,7 @@ function StatsTable({
                 columns={columns}
                 dataSource={rows}
                 pagination={false}
+                scroll={{ x: 680 }}
             />
         </div>
     );
