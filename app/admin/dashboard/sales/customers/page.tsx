@@ -81,9 +81,7 @@ export default function CustomersPage() {
             title: '客户',
             render: (_, record) => (
                 <div>
-                    <div className="font-bold text-gray-900 dark:text-gray-100">
-                        {record.name}
-                    </div>
+                    <div className="font-bold text-gray-900 dark:text-gray-100">{record.name}</div>
                     <div className="text-xs text-gray-400">{record.phone}</div>
                 </div>
             ),
@@ -280,20 +278,33 @@ function CustomerOrders({ customer }: { customer: Customer }) {
             ),
         },
         {
-            title: '收款',
-            dataIndex: 'is_paid',
+            title: '收款状态',
+            dataIndex: 'payment_status',
             width: 100,
-            render: (paid) => <Tag color={paid ? 'green' : 'orange'}>{paid ? '已收' : '未收'}</Tag>,
+            render: (status) => {
+                const map = {
+                    unpaid: { label: '未收款', color: 'orange' },
+                    paid: { label: '已收款', color: 'green' },
+                    refund_pending: { label: '待退款', color: 'red' },
+                    refunded: { label: '已退款', color: 'default' },
+                } as const;
+                const config = map[status as keyof typeof map] || map.unpaid;
+                return <Tag color={config.color}>{config.label}</Tag>;
+            },
         },
         {
-            title: '状态',
-            dataIndex: 'status',
+            title: '交付状态',
+            dataIndex: 'delivery_status',
             width: 110,
-            render: (status) => (
-                <Tag color={status === 'completed' ? 'green' : 'orange'}>
-                    {status === 'completed' ? '已结算' : '待结算'}
-                </Tag>
-            ),
+            render: (status) => {
+                const map = {
+                    undelivered: { label: '未交付', color: 'orange' },
+                    delivered: { label: '已交付', color: 'green' },
+                    cancelled: { label: '已取消', color: 'default' },
+                } as const;
+                const config = map[status as keyof typeof map] || map.undelivered;
+                return <Tag color={config.color}>{config.label}</Tag>;
+            },
         },
         {
             title: '创建时间',

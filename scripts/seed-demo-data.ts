@@ -643,12 +643,14 @@ const seedSalesOrders = (db: ReturnType<typeof getDb>, products: ProductRecord[]
         INSERT INTO sales_orders (
             order_no, customer_name, customer_phone, original_amount_cents, final_amount_cents,
             discount_amount_cents, cost_amount_cents, profit_amount_cents, status, is_paid,
-            source, note, sold_at, created_at, updated_at
+            payment_status, delivery_status, source, note, sold_at, delivered_at, created_at,
+            updated_at
         )
         VALUES (
             @order_no, @customer_name, @customer_phone, @original_amount_cents, @final_amount_cents,
             @discount_amount_cents, @cost_amount_cents, @profit_amount_cents, @status, @is_paid,
-            @source, @note, @sold_at, @created_at, CURRENT_TIMESTAMP
+            @payment_status, @delivery_status, @source, @note, @sold_at, @delivered_at,
+            @created_at, CURRENT_TIMESTAMP
         )
     `
     );
@@ -700,6 +702,13 @@ const seedSalesOrders = (db: ReturnType<typeof getDb>, products: ProductRecord[]
         const status =
             orderIndex % 11 === 0 ? 'cancelled' : orderIndex % 3 === 0 ? 'completed' : 'pending';
         const isPaid = status === 'cancelled' ? 0 : orderIndex % 4 === 1 ? 0 : 1;
+        const deliveryStatus =
+            status === 'completed'
+                ? 'delivered'
+                : status === 'cancelled'
+                  ? 'cancelled'
+                  : 'undelivered';
+        const paymentStatus = isPaid ? 'paid' : 'unpaid';
         const createdAt = addDays(now, -22 + orderIndex);
         const [customerName, customerPhone] = pick(customers, orderIndex);
         const orderResult = orderInsert.run({
@@ -713,9 +722,12 @@ const seedSalesOrders = (db: ReturnType<typeof getDb>, products: ProductRecord[]
             profit_amount_cents: finalCents,
             status,
             is_paid: isPaid,
+            payment_status: paymentStatus,
+            delivery_status: deliveryStatus,
             source: orderIndex % 2 === 0 ? 'frontend' : 'manual',
-            note: status === 'pending' ? '演示待结算订单' : '演示销售订单',
+            note: status === 'pending' ? '演示未交付订单' : '演示销售订单',
             sold_at: status === 'completed' ? createdAt : null,
+            delivered_at: status === 'completed' ? createdAt : null,
             created_at: createdAt,
         });
         const orderId = Number(orderResult.lastInsertRowid);
@@ -888,7 +900,12 @@ const main = () => {
         receivables: (
             db
                 .prepare(
-                    "SELECT COUNT(*) AS count FROM sales_orders WHERE is_paid = 0 AND status != 'cancelled'"
+                    `
+                    SELECT COUNT(*) AS count
+                    FROM sales_orders
+                    WHERE payment_status = 'unpaid'
+                      AND delivery_status != 'cancelled'
+                `
                 )
                 .get() as {
                 count: number;

@@ -3,10 +3,7 @@ import { toYuan } from '@/lib/db/serializers';
 import { error, success } from '@/lib/request/apiResponse';
 import { NextRequest } from 'next/server';
 
-export async function GET(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         const { id: idParam } = await params;
         const id = Number(idParam);
@@ -27,9 +24,12 @@ export async function GET(
                        so.cost_amount_cents,
                        so.profit_amount_cents,
                        so.status,
+                       so.payment_status,
+                       so.delivery_status,
                        so.is_paid,
                        so.created_at,
                        so.sold_at,
+                       so.delivered_at,
                        COUNT(soi.id) AS line_count,
                        COALESCE(SUM(soi.quantity), 0) AS total_quantity
                 FROM sales_orders so
@@ -51,11 +51,14 @@ export async function GET(
                 cost_amount: toYuan(row.cost_amount_cents as number),
                 profit_amount: toYuan(row.profit_amount_cents as number),
                 status: row.status,
+                payment_status: row.payment_status,
+                delivery_status: row.delivery_status,
                 is_paid: Boolean(row.is_paid),
                 line_count: Number(row.line_count || 0),
                 total_quantity: Number(row.total_quantity || 0),
                 created_at: row.created_at,
                 sold_at: row.sold_at,
+                delivered_at: row.delivered_at,
             })),
             '获取客户订单成功'
         );

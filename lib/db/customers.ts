@@ -146,7 +146,8 @@ export const listCustomers = (db: SqliteDb, filters: { search?: string | null } 
                    COUNT(so.id) AS order_count,
                    COALESCE(SUM(
                        CASE
-                           WHEN so.is_paid = 0 AND so.status != 'cancelled'
+                           WHEN so.payment_status = 'unpaid'
+                                AND so.delivery_status != 'cancelled'
                            THEN so.final_amount_cents
                            ELSE 0
                        END

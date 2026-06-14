@@ -738,14 +738,18 @@ export default function AccountsPage() {
             ),
         },
         {
-            title: '订单状态',
-            dataIndex: 'status',
+            title: '交付状态',
+            dataIndex: 'delivery_status',
             width: 110,
-            render: (status) => (
-                <Tag color={status === 'completed' ? 'green' : 'orange'}>
-                    {status === 'completed' ? '已结算' : '待结算'}
-                </Tag>
-            ),
+            render: (status) => {
+                const map = {
+                    undelivered: { label: '未交付', color: 'orange' },
+                    delivered: { label: '已交付', color: 'green' },
+                    cancelled: { label: '已取消', color: 'default' },
+                } as const;
+                const config = map[status as keyof typeof map] || map.undelivered;
+                return <Tag color={config.color}>{config.label}</Tag>;
+            },
         },
         {
             title: '创建时间',
@@ -769,9 +773,9 @@ export default function AccountsPage() {
                             标记已收
                         </Button>
                     </Popconfirm>
-                    {record.status === 'pending' && (
-                        <Tooltip title="库存结算仍在订单列表处理">
-                            <Link href="/admin/dashboard/sales/orders">去结算</Link>
+                    {record.delivery_status === 'undelivered' && (
+                        <Tooltip title="交付和扣库存仍在订单列表处理">
+                            <Link href="/admin/dashboard/sales/orders">去确认交付</Link>
                         </Tooltip>
                     )}
                 </div>

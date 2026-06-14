@@ -6,7 +6,9 @@ import { formatDate, formatPrice } from '@/utils';
 import {
     CheckCircleOutlined,
     CloseCircleOutlined,
+    DollarCircleOutlined,
     EditOutlined,
+    InfoCircleOutlined,
     ReloadOutlined,
     ShoppingCartOutlined,
     SwapOutlined,
@@ -20,9 +22,9 @@ import {
     InputNumber,
     message,
     Modal,
+    Popconfirm,
     Segmented,
     Select,
-    Switch,
     Table,
     Tag,
     Tooltip,
@@ -33,6 +35,9 @@ import {
     fetchCustomers,
     fetchInventoryItems,
     fetchOrders,
+    cancelOrder,
+    markOrderRefunded,
+    updateAccountPayment,
     settleOrder,
     updateOrder,
 } from '../../services';
@@ -41,15 +46,24 @@ import { ConfigAdjustmentModal } from './components/ConfigAdjustmentModal';
 const getSettlementItemKey = (item: OrderSettlementItem) =>
     `${item.source_type || 'order_item'}_${item.id}`;
 
+const tableScrollX = 1760;
+
 export default function OrdersPage() {
-    const [query, setQuery] = useState({ search: '', status: undefined as string | undefined });
+    const [query, setQuery] = useState({
+        search: '',
+        payment_status: undefined as string | undefined,
+        delivery_status: undefined as string | undefined,
+        scope: 'todo' as 'todo' | 'all',
+    });
     const [editVisible, setEditVisible] = useState(false);
     const [adjustVisible, setAdjustVisible] = useState(false);
     const [settleVisible, setSettleVisible] = useState(false);
+    const [cancelVisible, setCancelVisible] = useState(false);
     const [currentOrder, setCurrentOrder] = useState<SalesOrder | null>(null);
     const [inventoryOptions, setInventoryOptions] = useState<Record<string, InventoryItem[]>>({});
     const [editForm] = Form.useForm();
     const [settleForm] = Form.useForm();
+    const [cancelForm] = Form.useForm();
     const editCustomerSource = Form.useWatch('customer_source', editForm) || 'new';
     const shouldSaveCustomer = Form.useWatch('save_customer', editForm);
 
@@ -83,7 +97,7 @@ export default function OrdersPage() {
                 save_customer:
                     values.customer_source === 'new' ? Boolean(values.save_customer) : false,
                 final_amount: values.final_amount,
-                is_paid: values.is_paid,
+                payment_status: values.payment_status,
                 note: values.note,
             });
         },
@@ -114,9 +128,58 @@ export default function OrdersPage() {
         {
             manual: true,
             onSuccess: () => {
-                message.success('订单已结算');
+                message.success('订单已交付');
                 setSettleVisible(false);
                 setCurrentOrder(null);
+                refresh();
+            },
+            onError: (e) => message.error(e.message),
+        }
+    );
+
+    const { runAsync: submitCancel, loading: cancelling } = useRequest(
+        async () => {
+            if (!currentOrder) return;
+            const values = await cancelForm.validateFields();
+            await cancelOrder(currentOrder.id, {
+                refund_confirmed: Boolean(values.refund_confirmed),
+                cancel_reason: values.cancel_reason,
+            });
+        },
+        {
+            manual: true,
+            onSuccess: () => {
+                message.success('订单已取消');
+                setCancelVisible(false);
+                setCurrentOrder(null);
+                refresh();
+            },
+            onError: (e) => message.error(e.message),
+        }
+    );
+
+    const { runAsync: submitMarkRefunded, loading: markingRefunded } = useRequest(
+        async (order: SalesOrder) => {
+            await markOrderRefunded(order.id);
+        },
+        {
+            manual: true,
+            onSuccess: () => {
+                message.success('已标记退款');
+                refresh();
+            },
+            onError: (e) => message.error(e.message),
+        }
+    );
+
+    const { runAsync: submitMarkPaid, loading: markingPaid } = useRequest(
+        async (order: SalesOrder) => {
+            await updateAccountPayment('receivable', order.id, true);
+        },
+        {
+            manual: true,
+            onSuccess: () => {
+                message.success('已确认收款');
                 refresh();
             },
             onError: (e) => message.error(e.message),
@@ -133,7 +196,7 @@ export default function OrdersPage() {
             customer_phone: order.customer_phone,
             save_customer: false,
             final_amount: Number(order.final_amount),
-            is_paid: Boolean(order.is_paid),
+            payment_status: order.payment_status || (order.is_paid ? 'paid' : 'unpaid'),
             note: order.note,
         });
         setEditVisible(true);
@@ -145,6 +208,10 @@ export default function OrdersPage() {
     };
 
     const openSettle = async (order: SalesOrder) => {
+        if (!isInventoryEnough(order)) {
+            message.warning('库存不足，无法确认交付');
+            return;
+        }
         setCurrentOrder(order);
         settleForm.resetFields();
         const optionEntries = await Promise.all(
@@ -160,11 +227,18 @@ export default function OrdersPage() {
         setSettleVisible(true);
     };
 
+    const openCancel = (order: SalesOrder) => {
+        setCurrentOrder(order);
+        cancelForm.resetFields();
+        cancelForm.setFieldsValue({ refund_confirmed: false, cancel_reason: '' });
+        setCancelVisible(true);
+    };
+
     const columns: ColumnsType<SalesOrder> = [
         {
             title: '订单号',
             dataIndex: 'order_no',
-            width: 180,
+            width: 190,
             render: (text, record) => (
                 <div className="space-y-1">
                     <span className="font-mono text-gray-500">{text}</span>
@@ -178,6 +252,7 @@ export default function OrdersPage() {
         },
         {
             title: '客户',
+            width: 220,
             render: (_, record) => (
                 <div>
                     <div className="font-bold text-gray-900 dark:text-gray-100">
@@ -195,26 +270,51 @@ export default function OrdersPage() {
             ),
         },
         {
-            title: '库存状态',
-            width: 120,
+            title: (
+                <StatusColumnTitle
+                    label="库存状态"
+                    tooltip={
+                        <StatusDefinitionList
+                            items={[
+                                '库存满足：未交付订单所需商品当前库存充足，可确认交付。',
+                                '库存不足：未交付订单所需商品库存不足，暂不能确认交付。',
+                                '已出库：订单已确认交付，库存件已绑定并扣减。',
+                            ]}
+                        />
+                    }
+                />
+            ),
+            width: 130,
             render: (_, record) => <InventoryStatus order={record} />,
         },
         {
             title: '成交金额',
             dataIndex: 'final_amount',
             align: 'right',
-            width: 140,
+            width: 150,
             render: (amount) => (
                 <span className="font-mono font-bold">{formatPrice(Number(amount))}</span>
             ),
         },
         {
-            title: '收款',
-            dataIndex: 'is_paid',
-            width: 100,
-            render: (paid) => (
-                <Tag color={paid ? 'green' : 'orange'}>{paid ? '已收款' : '未收款'}</Tag>
+            title: (
+                <StatusColumnTitle
+                    label="收款状态"
+                    tooltip={
+                        <StatusDefinitionList
+                            items={[
+                                '未收款：尚未收到客户款项，未交付订单仍可编辑，已交付订单进入应收款。',
+                                '已收款：已收到客户款项。',
+                                '待退款：已收款订单取消后，款项尚未退还客户。',
+                                '已退款：取消订单的已收款项已退还客户。',
+                            ]}
+                        />
+                    }
+                />
             ),
+            dataIndex: 'payment_status',
+            width: 130,
+            render: (status) => <PaymentStatusTag status={status} />,
         },
         {
             title: '成本/利润',
@@ -229,68 +329,138 @@ export default function OrdersPage() {
             ),
         },
         {
-            title: '状态',
-            dataIndex: 'status',
-            width: 110,
-            render: (status) => {
-                const map = {
-                    pending: { label: '待结算', color: 'orange' },
-                    completed: { label: '已结算', color: 'green' },
-                    cancelled: { label: '已取消', color: 'default' },
-                } as const;
-                const config = map[status as keyof typeof map] || map.pending;
-                return <Tag color={config.color}>{config.label}</Tag>;
-            },
+            title: (
+                <StatusColumnTitle
+                    label="交付状态"
+                    tooltip={
+                        <StatusDefinitionList
+                            items={[
+                                '未交付：尚未把整机或配件交给客户，可编辑、调整配置、确认交付或取消。',
+                                '已交付：已绑定库存件并扣减库存，后续资金状态通过收款状态跟进。',
+                                '已取消：订单不再交付，已收款订单需继续跟进退款状态。',
+                            ]}
+                        />
+                    }
+                />
+            ),
+            dataIndex: 'delivery_status',
+            width: 130,
+            render: (status) => <DeliveryStatusTag status={status} />,
         },
         {
             title: '经手人',
             dataIndex: 'created_by_username',
-            width: 120,
+            width: 130,
             render: (username) => username || '-',
         },
         {
             title: '创建时间',
             dataIndex: 'created_at',
-            width: 180,
+            width: 190,
             render: (text) => formatDate(text),
         },
         {
             title: '操作',
-            width: 250,
+            width: 320,
+            fixed: 'right',
             align: 'center',
-            render: (_, record) => (
-                <div className="flex items-center justify-center gap-2">
-                    <Tooltip
-                        title={record.status === 'pending' ? '编辑订单' : '已结算订单不可编辑'}
-                    >
+            render: (_, record) => {
+                const deliveryStatus = record.delivery_status || 'undelivered';
+                const inventoryEnough = isInventoryEnough(record);
+
+                if (deliveryStatus === 'cancelled' && record.payment_status === 'refund_pending') {
+                    return (
+                        <Popconfirm
+                            title="确认已完成退款？"
+                            okText="确认"
+                            cancelText="取消"
+                            onConfirm={() => submitMarkRefunded(record)}
+                        >
+                            <Button
+                                type="text"
+                                size="small"
+                                loading={markingRefunded}
+                                icon={<DollarCircleOutlined />}
+                            >
+                                标记已退款
+                            </Button>
+                        </Popconfirm>
+                    );
+                }
+
+                if (deliveryStatus === 'delivered' && record.payment_status === 'unpaid') {
+                    return (
+                        <Popconfirm
+                            title="确认客户已付款？"
+                            okText="确认"
+                            cancelText="取消"
+                            onConfirm={() => submitMarkPaid(record)}
+                        >
+                            <Button
+                                type="text"
+                                size="small"
+                                loading={markingPaid}
+                                icon={<DollarCircleOutlined />}
+                            >
+                                确认收款
+                            </Button>
+                        </Popconfirm>
+                    );
+                }
+
+                if (deliveryStatus !== 'undelivered') {
+                    return <span className="text-gray-400">-</span>;
+                }
+
+                return (
+                    <div className="flex flex-wrap items-center justify-center gap-2">
                         <Button
                             type="text"
-                            disabled={record.status !== 'pending'}
+                            size="small"
                             icon={<EditOutlined />}
                             onClick={() => openEdit(record)}
-                        />
-                    </Tooltip>
-                    <Tooltip
-                        title={
-                            record.status === 'pending' ? '调整装机配置' : '已结算订单不可调整配置'
-                        }
-                    >
+                        >
+                            编辑
+                        </Button>
                         <Button
                             type="text"
-                            disabled={record.status !== 'pending'}
+                            size="small"
                             icon={<SwapOutlined />}
                             onClick={() => openAdjust(record)}
-                        />
-                    </Tooltip>
-                    <Button
-                        type="link"
-                        disabled={record.status !== 'pending'}
-                        onClick={() => openSettle(record)}
-                    >
-                        结算
-                    </Button>
-                </div>
-            ),
+                        >
+                            调整配置
+                        </Button>
+                        <Tooltip
+                            title={
+                                inventoryEnough
+                                    ? record.payment_status === 'unpaid'
+                                        ? '该订单尚未收款，交付后将进入应收款'
+                                        : '绑定库存并确认交付'
+                                    : '库存不足，无法交付'
+                            }
+                        >
+                            <Button
+                                type="text"
+                                size="small"
+                                disabled={!inventoryEnough}
+                                icon={<CheckCircleOutlined />}
+                                onClick={() => openSettle(record)}
+                            >
+                                确认交付
+                            </Button>
+                        </Tooltip>
+                        <Button
+                            type="text"
+                            danger
+                            size="small"
+                            icon={<CloseCircleOutlined />}
+                            onClick={() => openCancel(record)}
+                        >
+                            取消
+                        </Button>
+                    </div>
+                );
+            },
         },
     ];
 
@@ -309,7 +479,7 @@ export default function OrdersPage() {
                             订单列表
                         </h1>
                         <p className="text-gray-500 dark:text-gray-400 mt-2">
-                            前台保存订单后进入待结算，后台结算时绑定具体库存并扣减库存。
+                            前台保存订单后进入未交付，后台确认交付时绑定具体库存并扣减库存。
                         </p>
                     </div>
                     <Button icon={<ReloadOutlined />} onClick={refresh} />
@@ -324,14 +494,41 @@ export default function OrdersPage() {
                         className="max-w-md"
                     />
                     <Select
+                        placeholder="订单范围"
+                        value={query.scope}
+                        onChange={(scope) => setQuery((prev) => ({ ...prev, scope }))}
+                        className="w-36"
+                        options={[
+                            { value: 'todo', label: '待办订单' },
+                            { value: 'all', label: '全部订单' },
+                        ]}
+                    />
+                    <Select
                         allowClear
-                        placeholder="订单状态"
-                        value={query.status}
-                        onChange={(status) => setQuery((prev) => ({ ...prev, status }))}
+                        placeholder="收款状态"
+                        value={query.payment_status}
+                        onChange={(payment_status) =>
+                            setQuery((prev) => ({ ...prev, payment_status }))
+                        }
                         className="w-40"
                         options={[
-                            { value: 'pending', label: '待结算' },
-                            { value: 'completed', label: '已结算' },
+                            { value: 'unpaid', label: '未收款' },
+                            { value: 'paid', label: '已收款' },
+                            { value: 'refund_pending', label: '待退款' },
+                            { value: 'refunded', label: '已退款' },
+                        ]}
+                    />
+                    <Select
+                        allowClear
+                        placeholder="交付状态"
+                        value={query.delivery_status}
+                        onChange={(delivery_status) =>
+                            setQuery((prev) => ({ ...prev, delivery_status }))
+                        }
+                        className="w-40"
+                        options={[
+                            { value: 'undelivered', label: '未交付' },
+                            { value: 'delivered', label: '已交付' },
                             { value: 'cancelled', label: '已取消' },
                         ]}
                     />
@@ -343,6 +540,7 @@ export default function OrdersPage() {
                         loading={loading}
                         columns={columns}
                         dataSource={orders}
+                        scroll={{ x: tableScrollX }}
                         expandable={{
                             expandedRowRender: (record) => <OrderDetails order={record} />,
                         }}
@@ -352,7 +550,7 @@ export default function OrdersPage() {
             </div>
 
             <Modal
-                title="编辑待结算订单"
+                title="编辑未交付订单"
                 open={editVisible}
                 onCancel={() => setEditVisible(false)}
                 onOk={submitEdit}
@@ -422,8 +620,13 @@ export default function OrdersPage() {
                     >
                         <InputNumber min={0} precision={2} prefix="¥" className="w-full" />
                     </Form.Item>
-                    <Form.Item name="is_paid" label="是否已收款" valuePropName="checked">
-                        <Switch checkedChildren="已收款" unCheckedChildren="未收款" />
+                    <Form.Item name="payment_status" label="收款状态">
+                        <Select
+                            options={[
+                                { value: 'unpaid', label: '未收款' },
+                                { value: 'paid', label: '已收款' },
+                            ]}
+                        />
                     </Form.Item>
                     <Form.Item name="note" label="备注">
                         <Input.TextArea rows={3} />
@@ -443,7 +646,7 @@ export default function OrdersPage() {
             />
 
             <Modal
-                title="订单结算"
+                title="确认交付"
                 open={settleVisible}
                 onCancel={() => setSettleVisible(false)}
                 onOk={submitSettle}
@@ -487,25 +690,84 @@ export default function OrdersPage() {
                             </Form.Item>
                         );
                     })}
+                    {currentOrder?.payment_status === 'unpaid' && (
+                        <div className="mb-3 rounded-lg border border-orange-100 bg-orange-50 p-3 text-xs text-orange-700 dark:border-orange-900/40 dark:bg-orange-900/10 dark:text-orange-300">
+                            该订单尚未收款，交付后将进入应收款。
+                        </div>
+                    )}
                     <div className="text-xs text-gray-400">
-                        结算后将绑定所选库存物品并扣减库存。销售退货流程已列入 TODO。
+                        确认交付后将绑定所选库存物品并扣减库存。销售退货流程已列入 TODO。
                     </div>
+                </Form>
+            </Modal>
+
+            <Modal
+                title="取消订单"
+                open={cancelVisible}
+                onCancel={() => setCancelVisible(false)}
+                onOk={submitCancel}
+                confirmLoading={cancelling}
+                destroyOnHidden
+                width={620}
+            >
+                <Form form={cancelForm} layout="vertical" className="pt-4">
+                    {currentOrder?.payment_status === 'paid' && (
+                        <div className="mb-4 rounded-lg border border-orange-100 bg-orange-50 p-3 text-sm text-orange-700 dark:border-orange-900/40 dark:bg-orange-900/10 dark:text-orange-300">
+                            该订单已收款。取消前请确认是否已经将款项退还给客户。
+                        </div>
+                    )}
+                    <Form.Item name="cancel_reason" label="取消原因">
+                        <Input.TextArea rows={3} placeholder="可填写取消原因，便于后续追溯" />
+                    </Form.Item>
+                    {currentOrder?.payment_status === 'paid' && (
+                        <Form.Item name="refund_confirmed" valuePropName="checked">
+                            <Checkbox>已将款项退还给客户</Checkbox>
+                        </Form.Item>
+                    )}
                 </Form>
             </Modal>
         </div>
     );
 }
 
+function StatusColumnTitle({ label, tooltip }: { label: string; tooltip: React.ReactNode }) {
+    return (
+        <span className="inline-flex items-center gap-1">
+            {label}
+            <Tooltip title={tooltip}>
+                <InfoCircleOutlined className="text-xs text-gray-400 cursor-help" />
+            </Tooltip>
+        </span>
+    );
+}
+
+function StatusDefinitionList({ items }: { items: string[] }) {
+    return (
+        <div className="max-w-xs space-y-1 text-xs leading-5">
+            {items.map((item) => (
+                <div key={item}>{item}</div>
+            ))}
+        </div>
+    );
+}
+
 function OrderDetails({ order }: { order: SalesOrder }) {
     const originalItems = order.original_items || order.items || [];
-    const actualItems = order.latest_adjustment ? order.items || [] : [];
+    const actualItems = order.items || [];
+    const shouldShowActual =
+        Boolean(order.latest_adjustment) || order.delivery_status === 'delivered';
+    const actualTitle = order.delivery_status === 'delivered' ? '实际交付配置' : '当前实际装机配置';
+
+    if (!shouldShowActual) {
+        return <OrderItemsBlock title="原始下单配置" items={originalItems} />;
+    }
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <OrderItemsBlock title="原始下单配置" items={originalItems} />
             <div className="space-y-3">
                 <OrderItemsBlock
-                    title="当前实际装机配置"
+                    title={actualTitle}
                     items={actualItems.length ? actualItems : originalItems}
                     emptyText="未调整，按原始配置装机"
                 />
@@ -588,11 +850,48 @@ function formatSignedPrice(value: number) {
     return formatPrice(0);
 }
 
-function InventoryStatus({ order }: { order: SalesOrder }) {
-    const isEnough = (order.items || []).every((item) => {
+function isInventoryEnough(order: SalesOrder) {
+    return (order.items || []).every((item) => {
         const stock = item.product?.stock_quantity || 0;
         return stock >= item.quantity;
     });
+}
+
+function PaymentStatusTag({ status }: { status: SalesOrder['payment_status'] }) {
+    const map = {
+        unpaid: { label: '未收款', color: 'orange' },
+        paid: { label: '已收款', color: 'green' },
+        refund_pending: { label: '待退款', color: 'red' },
+        refunded: { label: '已退款', color: 'default' },
+    } as const;
+    const config = map[status] || map.unpaid;
+    return <Tag color={config.color}>{config.label}</Tag>;
+}
+
+function DeliveryStatusTag({ status }: { status: SalesOrder['delivery_status'] }) {
+    const map = {
+        undelivered: { label: '未交付', color: 'orange' },
+        delivered: { label: '已交付', color: 'green' },
+        cancelled: { label: '已取消', color: 'default' },
+    } as const;
+    const config = map[status] || map.undelivered;
+    return <Tag color={config.color}>{config.label}</Tag>;
+}
+
+function InventoryStatus({ order }: { order: SalesOrder }) {
+    if (order.delivery_status === 'delivered') {
+        return (
+            <Tag icon={<CheckCircleOutlined />} color="green">
+                已出库
+            </Tag>
+        );
+    }
+
+    if (order.delivery_status === 'cancelled') {
+        return <span className="text-gray-400">-</span>;
+    }
+
+    const isEnough = isInventoryEnough(order);
 
     if (isEnough) {
         return (
@@ -603,7 +902,7 @@ function InventoryStatus({ order }: { order: SalesOrder }) {
     }
 
     return (
-        <Tooltip title="允许保存待结算订单，但库存不足时不能结算">
+        <Tooltip title="允许保存未交付订单，但库存不足时不能确认交付">
             <Tag icon={<CloseCircleOutlined />} color="red">
                 库存不足
             </Tag>

@@ -1,4 +1,5 @@
 import { getDb } from '@/lib/db';
+import { resolveSalesOrderStatuses } from '@/lib/db/salesOrders';
 import { error, success } from '@/lib/request/apiResponse';
 import { NextRequest } from 'next/server';
 
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         const { bindings } = await request.json();
 
         if (!Array.isArray(bindings) || bindings.length === 0) {
-            return error(400, '请选择要结算的库存物品');
+            return error(400, '请选择要交付的库存物品');
         }
 
         const settle = db.transaction(() => {
@@ -44,7 +45,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                 | Record<string, unknown>
                 | undefined;
             if (!order) throw new Error('ORDER_NOT_FOUND');
-            if (order.status !== 'pending') throw new Error('ORDER_NOT_PENDING');
+            if (resolveSalesOrderStatuses(order).deliveryStatus !== 'undelivered') {
+                throw new Error('ORDER_NOT_PENDING');
+            }
 
             const orderItems = db
                 .prepare('SELECT * FROM sales_order_items WHERE order_id = ?')
@@ -180,8 +183,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                 `
                 UPDATE sales_orders
                 SET status = 'completed',
+                    delivery_status = 'delivered',
                     cost_amount_cents = @cost_amount_cents,
                     profit_amount_cents = @profit_amount_cents,
+                    delivered_at = CURRENT_TIMESTAMP,
                     sold_at = CURRENT_TIMESTAMP,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = @id
@@ -200,7 +205,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         } catch (e) {
             const message = e instanceof Error ? e.message : '';
             if (message === 'ORDER_NOT_FOUND') return error(404, '订单不存在');
-            if (message === 'ORDER_NOT_PENDING') return error(400, '只有待结算订单可以结算');
+            if (message === 'ORDER_NOT_PENDING') return error(400, '只有未交付订单可以交付');
             if (message === 'DUPLICATE_INVENTORY') return error(400, '同一库存物品不能重复绑定');
             if (message === 'INCOMPLETE_BINDINGS') return error(400, '请为每条订单明细选择库存');
             if (message === 'ORDER_ITEM_NOT_FOUND') return error(400, '订单明细不存在');
@@ -216,9 +221,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             throw e;
         }
 
-        return success(null, '订单结算成功');
+        return success(null, '订单交付成功');
     } catch (e) {
-        console.error('Settle order error:', e);
-        return error(500, '订单结算失败');
+        console.error('Deliver order error:', e);
+        return error(500, '订单交付失败');
     }
 }

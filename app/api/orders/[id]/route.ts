@@ -5,6 +5,11 @@ import {
     normalizeCustomerName,
     normalizeCustomerPhone,
 } from '@/lib/db/customers';
+import {
+    legacyPaidFromPaymentStatus,
+    normalizeSalesPaymentStatus,
+    resolveSalesOrderStatuses,
+} from '@/lib/db/salesOrders';
 import { toCents } from '@/lib/db/serializers';
 import { error, success } from '@/lib/request/apiResponse';
 import { NextRequest } from 'next/server';
@@ -76,13 +81,17 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             save_customer,
             note,
             is_paid,
+            payment_status,
         } = await request.json();
 
         const order = db.prepare('SELECT * FROM sales_orders WHERE id = ?').get(id) as
             | Record<string, unknown>
             | undefined;
         if (!order) return error(404, '订单不存在');
-        if (order.status !== 'pending') return error(400, '只有待结算订单可以修改');
+        const currentStatuses = resolveSalesOrderStatuses(order);
+        if (currentStatuses.deliveryStatus !== 'undelivered') {
+            return error(400, '只有未交付订单可以修改');
+        }
 
         const nextFinalCents =
             final_amount === undefined
@@ -96,6 +105,18 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             customer_phone,
             save_customer,
         });
+        const nextPaymentStatus =
+            payment_status !== undefined
+                ? normalizeSalesPaymentStatus(payment_status, currentStatuses.paymentStatus)
+                : is_paid === undefined
+                  ? currentStatuses.paymentStatus
+                  : is_paid
+                    ? 'paid'
+                    : 'unpaid';
+
+        if (nextPaymentStatus !== 'unpaid' && nextPaymentStatus !== 'paid') {
+            return error(400, '未交付订单只能标记为未收款或已收款');
+        }
 
         db.prepare(
             `
@@ -107,6 +128,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
                 final_amount_cents = @final_amount_cents,
                 discount_amount_cents = @discount_amount_cents,
                 profit_amount_cents = @profit_amount_cents,
+                payment_status = @payment_status,
                 is_paid = @is_paid,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = @id
@@ -120,7 +142,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             final_amount_cents: nextFinalCents,
             discount_amount_cents: originalCents - nextFinalCents,
             profit_amount_cents: nextFinalCents - costCents,
-            is_paid: is_paid === undefined ? (order.is_paid as number) : is_paid ? 1 : 0,
+            payment_status: nextPaymentStatus,
+            is_paid: legacyPaidFromPaymentStatus(nextPaymentStatus) ? 1 : 0,
         });
 
         return success(null, '订单更新成功');

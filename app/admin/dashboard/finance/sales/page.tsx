@@ -17,7 +17,7 @@ export default function FinanceSalesPage() {
         data: orders = [],
         loading: ordersLoading,
         refresh: refreshOrders,
-    } = useRequest(() => fetchOrders({ status: 'completed' }), {
+    } = useRequest(() => fetchOrders({ delivery_status: 'delivered' }), {
         refreshDeps: [month],
     });
 
@@ -32,7 +32,8 @@ export default function FinanceSalesPage() {
     const filteredOrders = useMemo(
         () =>
             (orders as SalesOrder[]).filter((order) => {
-                const soldAt = order.sold_at || order.updated_at || order.created_at;
+                const soldAt =
+                    order.delivered_at || order.sold_at || order.updated_at || order.created_at;
                 return soldAt ? dayjs(soldAt).format('YYYY-MM') === month : false;
             }),
         [orders, month]
@@ -97,9 +98,9 @@ export default function FinanceSalesPage() {
             ),
         },
         {
-            title: '状态',
-            dataIndex: 'status',
-            render: () => <Tag color="green">已结算</Tag>,
+            title: '交付状态',
+            dataIndex: 'delivery_status',
+            render: () => <Tag color="green">已交付</Tag>,
         },
     ];
 
@@ -123,7 +124,7 @@ export default function FinanceSalesPage() {
                             销售数据
                         </h1>
                         <p className="text-gray-500 dark:text-gray-400 mt-2">
-                            按月份汇总结算订单、商品成本、经营成本和净利润。
+                            按月份汇总已交付订单、商品成本、经营成本和净利润。
                         </p>
                     </div>
                     <div className="flex gap-3">

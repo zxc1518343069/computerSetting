@@ -380,6 +380,9 @@ export interface PurchaseOrder {
     summary: PurchaseOrderSummary;
 }
 
+export type SalesPaymentStatus = 'unpaid' | 'paid' | 'refund_pending' | 'refunded';
+export type SalesDeliveryStatus = 'undelivered' | 'delivered' | 'cancelled';
+
 export interface SalesOrder {
     id: number;
     order_no: string;
@@ -393,6 +396,8 @@ export interface SalesOrder {
     cost_amount: number;
     profit_amount: number;
     status: 'pending' | 'completed' | 'cancelled';
+    payment_status: SalesPaymentStatus;
+    delivery_status: SalesDeliveryStatus;
     is_paid?: boolean;
     source?: string | null;
     created_by_user_id?: number | null;
@@ -408,6 +413,15 @@ export interface SalesOrder {
     adjusted_by_username?: string | null;
     note?: string | null;
     sold_at?: string | null;
+    delivered_at?: string | null;
+    cancelled_at?: string | null;
+    cancelled_by_user_id?: number | null;
+    cancelled_by_username?: string | null;
+    cancel_reason?: string | null;
+    refunded_at?: string | null;
+    refunded_by_user_id?: number | null;
+    refunded_by_username?: string | null;
+    refund_note?: string | null;
     created_at?: string;
     updated_at?: string;
     items?: OrderSettlementItem[];

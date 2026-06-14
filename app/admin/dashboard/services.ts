@@ -29,11 +29,14 @@ export interface CustomerOrderSummary {
     cost_amount: number;
     profit_amount: number;
     status: SalesOrder['status'];
+    payment_status: SalesOrder['payment_status'];
+    delivery_status: SalesOrder['delivery_status'];
     is_paid: boolean;
     line_count: number;
     total_quantity: number;
     created_at?: string;
     sold_at?: string | null;
+    delivered_at?: string | null;
 }
 
 export const fetchCustomers = (params?: { search?: string }) => {
@@ -282,7 +285,13 @@ export const fetchInventoryItems = (params?: {
     return api.get<any, InventoryItem[]>('/inventory-items', { params });
 };
 
-export const fetchOrders = (params?: { search?: string; status?: string }) => {
+export const fetchOrders = (params?: {
+    search?: string;
+    status?: string;
+    payment_status?: string;
+    delivery_status?: string;
+    scope?: string;
+}) => {
     return api.get<any, SalesOrder[]>('/orders', { params });
 };
 
@@ -356,6 +365,8 @@ export interface AccountReceivableDetail {
     total_quantity: number;
     amount: number;
     status: SalesOrder['status'];
+    payment_status: SalesOrder['payment_status'];
+    delivery_status: SalesOrder['delivery_status'];
     created_at?: string;
 }
 
@@ -447,6 +458,17 @@ export const updateOrderConfigAdjustment = (id: number, data: any) => {
 
 export const settleOrder = (id: number, data: any) => {
     return api.post<any, SalesOrder>(`/orders/${id}/settle`, data);
+};
+
+export const cancelOrder = (
+    id: number,
+    data: { refund_confirmed?: boolean; cancel_reason?: string }
+) => {
+    return api.post<any, SalesOrder>(`/orders/${id}/cancel`, data);
+};
+
+export const markOrderRefunded = (id: number, data?: { refund_note?: string }) => {
+    return api.post<any, SalesOrder>(`/orders/${id}/refund`, data || {});
 };
 
 export const fetchOperatingCosts = (params?: {

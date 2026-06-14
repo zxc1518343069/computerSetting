@@ -1,6 +1,7 @@
 import { isAuthError, requireAdminUser } from '@/lib/auth/currentUser';
 import { getDb } from '@/lib/db';
 import { getPricingConfig } from '@/lib/db/pricing';
+import { resolveSalesOrderStatuses } from '@/lib/db/salesOrders';
 import { ProductRow, serializeProduct, toCents, toYuan } from '@/lib/db/serializers';
 import { error, success } from '@/lib/request/apiResponse';
 import { PricingCalculator } from '@/utils/pricing';
@@ -50,7 +51,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
                 | Record<string, unknown>
                 | undefined;
             if (!order) throw new Error('ORDER_NOT_FOUND');
-            if (order.status !== 'pending') throw new Error('ORDER_NOT_PENDING');
+            if (resolveSalesOrderStatuses(order).deliveryStatus !== 'undelivered') {
+                throw new Error('ORDER_NOT_PENDING');
+            }
 
             const originalItems = db
                 .prepare('SELECT * FROM sales_order_items WHERE order_id = ?')
@@ -208,7 +211,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
         const message = e instanceof Error ? e.message : '';
         if (message === 'ORDER_NOT_FOUND') return error(404, '订单不存在');
-        if (message === 'ORDER_NOT_PENDING') return error(400, '只有待结算订单可以调整配置');
+        if (message === 'ORDER_NOT_PENDING') return error(400, '只有未交付订单可以调整配置');
         if (message === 'PRODUCT_REQUIRED') return error(400, '请选择商品');
         if (message === 'INVALID_QUANTITY') return error(400, '商品数量必须大于 0');
         if (message === 'PRODUCT_NOT_FOUND') return error(400, '商品不存在');

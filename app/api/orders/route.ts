@@ -6,6 +6,11 @@ import {
     normalizeCustomerName,
     normalizeCustomerPhone,
 } from '@/lib/db/customers';
+import {
+    normalizeSalesDeliveryStatus,
+    normalizeSalesPaymentStatus,
+    resolveSalesOrderStatuses,
+} from '@/lib/db/salesOrders';
 import { ProductRow, serializeProduct, toCents, toYuan } from '@/lib/db/serializers';
 import { error, success } from '@/lib/request/apiResponse';
 import { NextRequest } from 'next/server';
@@ -32,28 +37,43 @@ const createOrderNo = () => {
     return `ORD${date}${time}`;
 };
 
-const serializeOrderRow = (row: Record<string, unknown>) => ({
-    id: row.id,
-    order_no: row.order_no,
-    customer_id: row.customer_id,
-    customer_name: row.customer_name,
-    customer_phone: row.customer_phone,
-    original_amount: toYuan(row.original_amount_cents as number),
-    final_amount: toYuan(row.final_amount_cents as number),
-    discount_amount: toYuan(row.discount_amount_cents as number),
-    cost_amount: toYuan(row.cost_amount_cents as number),
-    profit_amount: toYuan(row.profit_amount_cents as number),
-    status: row.status,
-    is_paid: Boolean(row.is_paid),
-    source: row.source,
-    created_by_user_id: row.created_by_user_id,
-    created_by_username: row.created_by_username,
-    latest_adjustment_id: row.latest_adjustment_id,
-    note: row.note,
-    sold_at: row.sold_at,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-});
+const serializeOrderRow = (row: Record<string, unknown>) => {
+    const { paymentStatus, deliveryStatus } = resolveSalesOrderStatuses(row);
+
+    return {
+        id: row.id,
+        order_no: row.order_no,
+        customer_id: row.customer_id,
+        customer_name: row.customer_name,
+        customer_phone: row.customer_phone,
+        original_amount: toYuan(row.original_amount_cents as number),
+        final_amount: toYuan(row.final_amount_cents as number),
+        discount_amount: toYuan(row.discount_amount_cents as number),
+        cost_amount: toYuan(row.cost_amount_cents as number),
+        profit_amount: toYuan(row.profit_amount_cents as number),
+        status: row.status,
+        payment_status: paymentStatus,
+        delivery_status: deliveryStatus,
+        is_paid: Boolean(row.is_paid),
+        source: row.source,
+        created_by_user_id: row.created_by_user_id,
+        created_by_username: row.created_by_username,
+        latest_adjustment_id: row.latest_adjustment_id,
+        note: row.note,
+        sold_at: row.sold_at,
+        delivered_at: row.delivered_at || row.sold_at,
+        cancelled_at: row.cancelled_at,
+        cancelled_by_user_id: row.cancelled_by_user_id,
+        cancelled_by_username: row.cancelled_by_username,
+        cancel_reason: row.cancel_reason,
+        refunded_at: row.refunded_at,
+        refunded_by_user_id: row.refunded_by_user_id,
+        refunded_by_username: row.refunded_by_username,
+        refund_note: row.refund_note,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+    };
+};
 
 const resolveOrderCustomer = (
     db: ReturnType<typeof getDb>,
@@ -189,20 +209,43 @@ const serializeAdjustmentItemRow = (
     inventory_bindings: inventoryBindings,
 });
 
-const getOrders = (search?: string | null, status?: string | null) => {
+const getOrders = (filters: {
+    search?: string | null;
+    status?: string | null;
+    paymentStatus?: string | null;
+    deliveryStatus?: string | null;
+    scope?: string | null;
+}) => {
     const db = getDb();
     const conditions: string[] = [];
     const params: Record<string, string> = {};
 
-    if (status) {
+    if (filters.status) {
         conditions.push('status = @status');
-        params.status = status;
+        params.status = filters.status;
     }
-    if (search) {
+    if (filters.paymentStatus) {
+        conditions.push('payment_status = @payment_status');
+        params.payment_status = normalizeSalesPaymentStatus(filters.paymentStatus);
+    }
+    if (filters.deliveryStatus) {
+        conditions.push('delivery_status = @delivery_status');
+        params.delivery_status = normalizeSalesDeliveryStatus(filters.deliveryStatus);
+    }
+    if (filters.scope === 'todo') {
+        conditions.push(`
+            NOT (
+                (payment_status = 'paid' AND delivery_status = 'delivered')
+                OR (payment_status = 'unpaid' AND delivery_status = 'cancelled')
+                OR (payment_status = 'refunded' AND delivery_status = 'cancelled')
+            )
+        `);
+    }
+    if (filters.search) {
         conditions.push(
             '(order_no LIKE @search OR customer_name LIKE @search OR customer_phone LIKE @search)'
         );
-        params.search = `%${search}%`;
+        params.search = `%${filters.search}%`;
     }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -276,7 +319,13 @@ export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
         return success(
-            getOrders(searchParams.get('search'), searchParams.get('status')),
+            getOrders({
+                search: searchParams.get('search'),
+                status: searchParams.get('status'),
+                paymentStatus: searchParams.get('payment_status'),
+                deliveryStatus: searchParams.get('delivery_status'),
+                scope: searchParams.get('scope'),
+            }),
             '获取订单列表成功'
         );
     } catch (e) {
@@ -322,14 +371,14 @@ export async function POST(request: NextRequest) {
                     INSERT INTO sales_orders (
                         order_no, customer_id, customer_name, customer_phone, original_amount_cents,
                         final_amount_cents, discount_amount_cents, cost_amount_cents,
-                        profit_amount_cents, status, is_paid, source, created_by_user_id,
-                        created_by_username, note, updated_at
+                        profit_amount_cents, status, is_paid, payment_status, delivery_status,
+                        source, created_by_user_id, created_by_username, note, updated_at
                     )
                     VALUES (
                         @order_no, @customer_id, @customer_name, @customer_phone, @original_amount_cents,
                         @final_amount_cents, @discount_amount_cents, 0,
-                        @profit_amount_cents, 'pending', 0, @source, @created_by_user_id,
-                        @created_by_username, @note, CURRENT_TIMESTAMP
+                        @profit_amount_cents, 'pending', 0, 'unpaid', 'undelivered',
+                        @source, @created_by_user_id, @created_by_username, @note, CURRENT_TIMESTAMP
                     )
                 `
                 )
@@ -373,7 +422,7 @@ export async function POST(request: NextRequest) {
         });
 
         const orderId = createOrder();
-        const order = getOrders(null, null).find((item) => item.id === orderId);
+        const order = getOrders({}).find((item) => item.id === orderId);
         return success(order, '订单保存成功');
     } catch (e) {
         if (isAuthError(e)) return error(e.code, e.message);

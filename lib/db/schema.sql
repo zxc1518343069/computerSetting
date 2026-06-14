@@ -636,6 +636,8 @@ CREATE TABLE IF NOT EXISTS sales_orders
     NULL
     DEFAULT
     0,
+    payment_status TEXT NOT NULL DEFAULT 'unpaid',
+    delivery_status TEXT NOT NULL DEFAULT 'undelivered',
     source
     TEXT,
     created_by_user_id
@@ -648,6 +650,15 @@ CREATE TABLE IF NOT EXISTS sales_orders
     TEXT,
     sold_at
     TEXT,
+    delivered_at TEXT,
+    cancelled_at TEXT,
+    cancelled_by_user_id INTEGER,
+    cancelled_by_username TEXT,
+    cancel_reason TEXT,
+    refunded_at TEXT,
+    refunded_by_user_id INTEGER,
+    refunded_by_username TEXT,
+    refund_note TEXT,
     created_at
     TEXT
     NOT

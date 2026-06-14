@@ -56,12 +56,18 @@ export async function PUT(
                 .prepare(
                     `
                     UPDATE sales_orders
-                    SET is_paid = @is_paid,
+                    SET payment_status = @payment_status,
+                        is_paid = @is_paid,
                         updated_at = CURRENT_TIMESTAMP
                     WHERE id = @id
+                      AND delivery_status != 'cancelled'
                 `
                 )
-                .run({ id, is_paid: is_paid ? 1 : 0 });
+                .run({
+                    id,
+                    payment_status: is_paid ? 'paid' : 'unpaid',
+                    is_paid: is_paid ? 1 : 0,
+                });
 
             if (result.changes === 0) return error(404, '订单不存在');
             return success(null, is_paid ? '已标记收款' : '已标记未收款');

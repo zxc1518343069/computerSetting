@@ -107,6 +107,8 @@ const buildReceivableDetail = (row: Record<string, unknown>) => {
         total_quantity: Number(row.total_quantity || 0),
         amount: toYuan(row.final_amount_cents as number),
         status: String(row.status || ''),
+        payment_status: String(row.payment_status || ''),
+        delivery_status: String(row.delivery_status || ''),
         created_at: row.created_at ? String(row.created_at) : undefined,
     };
 };
@@ -129,12 +131,15 @@ export async function GET() {
                        so.customer_phone,
                        so.final_amount_cents,
                        so.status,
+                       so.payment_status,
+                       so.delivery_status,
                        so.created_at,
                        COUNT(soi.id) AS line_count,
                        COALESCE(SUM(soi.quantity), 0) AS total_quantity
                 FROM sales_orders so
                 LEFT JOIN sales_order_items soi ON soi.order_id = so.id
-                WHERE so.is_paid = 0 AND so.status != 'cancelled'
+                WHERE so.payment_status = 'unpaid'
+                  AND so.delivery_status != 'cancelled'
                 GROUP BY so.id
                 ORDER BY so.created_at DESC
             `
