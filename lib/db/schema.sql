@@ -691,6 +691,8 @@ CREATE TABLE IF NOT EXISTS sales_orders
     0,
     payment_status TEXT NOT NULL DEFAULT 'unpaid',
     delivery_status TEXT NOT NULL DEFAULT 'undelivered',
+    source_type TEXT NOT NULL DEFAULT 'manual'
+        CHECK (source_type IN ('diy', 'retail', 'after_sales', 'manual')),
     source
     TEXT,
     created_by_user_id
@@ -727,6 +729,8 @@ CREATE TABLE IF NOT EXISTS sales_orders
 );
 
 CREATE INDEX IF NOT EXISTS idx_sales_orders_status ON sales_orders(status);
+CREATE INDEX IF NOT EXISTS idx_sales_orders_payment_status ON sales_orders(payment_status);
+CREATE INDEX IF NOT EXISTS idx_sales_orders_delivery_status ON sales_orders(delivery_status);
 
 CREATE TABLE IF NOT EXISTS sales_order_items
 (
@@ -755,6 +759,77 @@ CREATE TABLE IF NOT EXISTS sales_order_items
     sale_price_cents INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
+
+CREATE TABLE IF NOT EXISTS sales_order_after_sales_details
+(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id INTEGER NOT NULL UNIQUE REFERENCES sales_orders(id) ON DELETE CASCADE,
+    device_model TEXT,
+    fault_description TEXT,
+    service_note TEXT,
+    completed_note TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_sales_order_after_sales_details_order_id
+    ON sales_order_after_sales_details(order_id);
+
+CREATE TABLE IF NOT EXISTS sales_order_after_sales_items
+(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id INTEGER NOT NULL REFERENCES sales_orders(id) ON DELETE CASCADE,
+    service_id INTEGER REFERENCES after_sales_services(id),
+    service_name TEXT NOT NULL,
+    service_category_name TEXT,
+    price_type TEXT NOT NULL CHECK (price_type IN ('fixed', 'range', 'multi', 'custom')),
+    price_label TEXT NOT NULL DEFAULT '',
+    quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),
+    sale_price_cents INTEGER NOT NULL DEFAULT 0 CHECK (sale_price_cents >= 0),
+    total_price_cents INTEGER NOT NULL DEFAULT 0 CHECK (total_price_cents >= 0),
+    note TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_sales_order_after_sales_items_order_id
+    ON sales_order_after_sales_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_sales_order_after_sales_items_service_id
+    ON sales_order_after_sales_items(service_id);
+
+CREATE TABLE IF NOT EXISTS sales_order_after_sales_adjustments
+(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id INTEGER NOT NULL REFERENCES sales_orders(id) ON DELETE CASCADE,
+    previous_final_amount_cents INTEGER NOT NULL DEFAULT 0,
+    final_amount_cents INTEGER NOT NULL DEFAULT 0,
+    adjustment_note TEXT NOT NULL,
+    created_by_user_id INTEGER,
+    created_by_username TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_sales_order_after_sales_adjustments_order_created
+    ON sales_order_after_sales_adjustments(order_id, created_at);
+
+CREATE TABLE IF NOT EXISTS sales_order_after_sales_adjustment_items
+(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    adjustment_id INTEGER NOT NULL REFERENCES sales_order_after_sales_adjustments(id) ON DELETE CASCADE,
+    source_service_item_id INTEGER REFERENCES sales_order_after_sales_items(id) ON DELETE SET NULL,
+    service_id INTEGER REFERENCES after_sales_services(id),
+    service_name TEXT NOT NULL,
+    service_category_name TEXT,
+    price_type TEXT NOT NULL CHECK (price_type IN ('fixed', 'range', 'multi', 'custom')),
+    price_label TEXT NOT NULL DEFAULT '',
+    quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),
+    sale_price_cents INTEGER NOT NULL DEFAULT 0 CHECK (sale_price_cents >= 0),
+    total_price_cents INTEGER NOT NULL DEFAULT 0 CHECK (total_price_cents >= 0),
+    note TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_sales_order_after_sales_adjustment_items_adjustment
+    ON sales_order_after_sales_adjustment_items(adjustment_id);
 
 CREATE TABLE IF NOT EXISTS sales_order_adjustments
 (

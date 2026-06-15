@@ -2,6 +2,11 @@ import { getDb } from '@/lib/db';
 import { listLogisticsPayableAccounts, listLogisticsPayableRecords } from '@/lib/db/logistics';
 import { listPurchaseOrders } from '@/lib/db/purchaseOrders';
 import { listPurchaseReturns } from '@/lib/db/purchaseReturns';
+import {
+    inferSalesOrderSourceType,
+    normalizeSalesOrderSourceType,
+    salesOrderSourceTypeLabels,
+} from '@/lib/db/salesOrders';
 import { toYuan } from '@/lib/db/serializers';
 import { error, success } from '@/lib/request/apiResponse';
 
@@ -93,6 +98,12 @@ const buildReceivableDetail = (row: Record<string, unknown>) => {
     const customerId = row.customer_id ? Number(row.customer_id) : null;
     const customerName = String(row.customer_name || '');
     const customerPhone = row.customer_phone ? String(row.customer_phone) : null;
+    const sourceType = normalizeSalesOrderSourceType(
+        row.source_type,
+        inferSalesOrderSourceType(row.source)
+    );
+    const lineCount = Number(row.line_count || 0);
+    const totalQuantity = Number(row.total_quantity || 0);
 
     return {
         id: Number(row.id),
@@ -103,8 +114,14 @@ const buildReceivableDetail = (row: Record<string, unknown>) => {
         order_no: String(row.order_no || ''),
         customer_name: customerName,
         customer_phone: customerPhone,
-        line_count: Number(row.line_count || 0),
-        total_quantity: Number(row.total_quantity || 0),
+        source_type: sourceType,
+        source_type_label: salesOrderSourceTypeLabels[sourceType],
+        line_count: lineCount,
+        total_quantity: totalQuantity,
+        detail_summary:
+            sourceType === 'after_sales'
+                ? `${lineCount} 项 / ${totalQuantity} 次`
+                : `${lineCount} 条 / ${totalQuantity} 件`,
         amount: toYuan(row.final_amount_cents as number),
         status: String(row.status || ''),
         payment_status: String(row.payment_status || ''),
@@ -133,14 +150,36 @@ export async function GET() {
                        so.status,
                        so.payment_status,
                        so.delivery_status,
+                       so.source,
+                       so.source_type,
                        so.created_at,
-                       COUNT(soi.id) AS line_count,
-                       COALESCE(SUM(soi.quantity), 0) AS total_quantity
+                       CASE
+                           WHEN so.source_type = 'after_sales' THEN (
+                               SELECT COUNT(*)
+                               FROM sales_order_after_sales_items asoi
+                               WHERE asoi.order_id = so.id
+                           )
+                           ELSE (
+                               SELECT COUNT(*)
+                               FROM sales_order_items soi
+                               WHERE soi.order_id = so.id
+                           )
+                       END AS line_count,
+                       CASE
+                           WHEN so.source_type = 'after_sales' THEN (
+                               SELECT COALESCE(SUM(asoi.quantity), 0)
+                               FROM sales_order_after_sales_items asoi
+                               WHERE asoi.order_id = so.id
+                           )
+                           ELSE (
+                               SELECT COALESCE(SUM(soi.quantity), 0)
+                               FROM sales_order_items soi
+                               WHERE soi.order_id = so.id
+                           )
+                       END AS total_quantity
                 FROM sales_orders so
-                LEFT JOIN sales_order_items soi ON soi.order_id = so.id
                 WHERE so.payment_status = 'unpaid'
                   AND so.delivery_status != 'cancelled'
-                GROUP BY so.id
                 ORDER BY so.created_at DESC
             `
             )

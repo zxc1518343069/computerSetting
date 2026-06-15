@@ -1,6 +1,6 @@
 'use client';
 
-import { InventoryItem, OrderSettlementItem, SalesOrder } from '@/const/types';
+import { AfterSalesService, InventoryItem, OrderSettlementItem, SalesOrder } from '@/const/types';
 import { categoryNameMap } from '@/const';
 import { formatDate, formatPrice } from '@/utils';
 import {
@@ -35,28 +35,40 @@ import {
     fetchCustomers,
     fetchInventoryItems,
     fetchOrders,
+    completeAfterSalesOrder,
     cancelOrder,
     markOrderRefunded,
     updateAccountPayment,
     settleOrder,
     updateOrder,
+    updateAfterSalesOrderAdjustment,
 } from '../../services';
+import { fetchAdminAfterSalesServices } from '@/app/services/afterSales';
 import { ConfigAdjustmentModal } from './components/ConfigAdjustmentModal';
 
 const getSettlementItemKey = (item: OrderSettlementItem) =>
     `${item.source_type || 'order_item'}_${item.id}`;
 
-const tableScrollX = 1760;
+const tableScrollX = 1880;
+
+const sourceTypeOptions = [
+    { value: 'diy', label: 'DIY整机' },
+    { value: 'retail', label: '零售' },
+    { value: 'after_sales', label: '售后服务' },
+    { value: 'manual', label: '手动/其他' },
+] as const;
 
 export default function OrdersPage() {
     const [query, setQuery] = useState({
         search: '',
         payment_status: undefined as string | undefined,
         delivery_status: undefined as string | undefined,
+        source_type: undefined as SalesOrder['source_type'] | undefined,
         scope: 'todo' as 'todo' | 'all',
     });
     const [editVisible, setEditVisible] = useState(false);
     const [adjustVisible, setAdjustVisible] = useState(false);
+    const [afterSalesAdjustVisible, setAfterSalesAdjustVisible] = useState(false);
     const [settleVisible, setSettleVisible] = useState(false);
     const [cancelVisible, setCancelVisible] = useState(false);
     const [currentOrder, setCurrentOrder] = useState<SalesOrder | null>(null);
@@ -64,6 +76,7 @@ export default function OrdersPage() {
     const [editForm] = Form.useForm();
     const [settleForm] = Form.useForm();
     const [cancelForm] = Form.useForm();
+    const [afterSalesAdjustForm] = Form.useForm();
     const editCustomerSource = Form.useWatch('customer_source', editForm) || 'new';
     const shouldSaveCustomer = Form.useWatch('save_customer', editForm);
 
@@ -76,6 +89,9 @@ export default function OrdersPage() {
         debounceWait: 300,
     });
     const { data: customers = [] } = useRequest(fetchCustomers);
+    const { data: afterSalesServices = [] } = useRequest(() =>
+        fetchAdminAfterSalesServices({ status: 'active' })
+    );
     const customerOptions = useMemo(
         () =>
             customers.map((customer) => ({
@@ -136,6 +152,50 @@ export default function OrdersPage() {
             onError: (e) => message.error(e.message),
         }
     );
+
+    const { runAsync: submitCompleteAfterSales, loading: completingAfterSales } = useRequest(
+        async (order: SalesOrder) => {
+            await completeAfterSalesOrder(order.id);
+        },
+        {
+            manual: true,
+            onSuccess: () => {
+                message.success('售后服务已完成');
+                refresh();
+            },
+            onError: (e) => message.error(e.message),
+        }
+    );
+
+    const { runAsync: submitAfterSalesAdjustment, loading: savingAfterSalesAdjustment } =
+        useRequest(
+            async () => {
+                if (!currentOrder) return;
+                const values = await afterSalesAdjustForm.validateFields();
+                await updateAfterSalesOrderAdjustment(currentOrder.id, {
+                    services: (values.services || []).map((item: Record<string, unknown>) => ({
+                        source_service_item_id: item.source_service_item_id || null,
+                        service_id: item.service_id,
+                        quantity: item.quantity,
+                        sale_price: item.sale_price,
+                        note: item.note,
+                    })),
+                    final_amount: values.final_amount,
+                    adjustment_note: values.adjustment_note,
+                });
+            },
+            {
+                manual: true,
+                onSuccess: () => {
+                    message.success('售后服务订单已调整');
+                    setAfterSalesAdjustVisible(false);
+                    setCurrentOrder(null);
+                    afterSalesAdjustForm.resetFields();
+                    refresh();
+                },
+                onError: (e) => message.error(e.message),
+            }
+        );
 
     const { runAsync: submitCancel, loading: cancelling } = useRequest(
         async () => {
@@ -203,11 +263,36 @@ export default function OrdersPage() {
     };
 
     const openAdjust = (order: SalesOrder) => {
+        if (order.source_type === 'after_sales') {
+            setCurrentOrder(order);
+            afterSalesAdjustForm.resetFields();
+            afterSalesAdjustForm.setFieldsValue({
+                services: (order.after_sales_items || []).map((item) => ({
+                    source_service_item_id: item.id,
+                    service_id: item.service_id,
+                    quantity: item.quantity,
+                    sale_price: item.sale_price,
+                    note: item.note,
+                })),
+                final_amount: Number(order.final_amount || 0),
+                adjustment_note: '',
+            });
+            setAfterSalesAdjustVisible(true);
+            return;
+        }
+        if (order.source_type !== 'diy') {
+            message.info('当前来源暂不支持配置调整');
+            return;
+        }
         setCurrentOrder(order);
         setAdjustVisible(true);
     };
 
     const openSettle = async (order: SalesOrder) => {
+        if (order.source_type === 'after_sales') {
+            message.warning('售后服务订单请使用确认完成');
+            return;
+        }
         if (!isInventoryEnough(order)) {
             message.warning('库存不足，无法确认交付');
             return;
@@ -249,6 +334,12 @@ export default function OrdersPage() {
                     )}
                 </div>
             ),
+        },
+        {
+            title: '来源',
+            dataIndex: 'source_type',
+            width: 120,
+            render: (sourceType) => <SourceTypeTag sourceType={sourceType} />,
         },
         {
             title: '客户',
@@ -319,14 +410,27 @@ export default function OrdersPage() {
         {
             title: '成本/利润',
             width: 170,
-            render: (_, record) => (
-                <div className="text-xs text-gray-500 dark:text-gray-400 text-right">
-                    <div>成本 {formatPrice(Number(record.cost_amount || 0))}</div>
-                    <div className="text-emerald-500">
-                        利润 {formatPrice(Number(record.profit_amount || 0))}
+            render: (_, record) => {
+                if (record.source_type === 'after_sales') {
+                    return (
+                        <div className="text-right text-xs text-gray-500 dark:text-gray-400">
+                            <div>成本 暂未核算</div>
+                            <div className="text-emerald-500">
+                                收入 {formatPrice(Number(record.final_amount || 0))}
+                            </div>
+                        </div>
+                    );
+                }
+
+                return (
+                    <div className="text-right text-xs text-gray-500 dark:text-gray-400">
+                        <div>成本 {formatPrice(Number(record.cost_amount || 0))}</div>
+                        <div className="text-emerald-500">
+                            利润 {formatPrice(Number(record.profit_amount || 0))}
+                        </div>
                     </div>
-                </div>
-            ),
+                );
+            },
         },
         {
             title: (
@@ -345,7 +449,12 @@ export default function OrdersPage() {
             ),
             dataIndex: 'delivery_status',
             width: 130,
-            render: (status) => <DeliveryStatusTag status={status} />,
+            render: (_, record) => (
+                <DeliveryStatusTag
+                    status={record.delivery_status}
+                    sourceType={record.source_type}
+                />
+            ),
         },
         {
             title: '经手人',
@@ -366,6 +475,8 @@ export default function OrdersPage() {
             align: 'center',
             render: (_, record) => {
                 const deliveryStatus = record.delivery_status || 'undelivered';
+                const isAfterSales = record.source_type === 'after_sales';
+                const isDiy = record.source_type === 'diy';
                 const inventoryEnough = isInventoryEnough(record);
 
                 if (deliveryStatus === 'cancelled' && record.payment_status === 'refund_pending') {
@@ -422,33 +533,54 @@ export default function OrdersPage() {
                         >
                             编辑
                         </Button>
-                        <Button
-                            type="text"
-                            size="small"
-                            icon={<SwapOutlined />}
-                            onClick={() => openAdjust(record)}
-                        >
-                            调整配置
-                        </Button>
-                        <Tooltip
-                            title={
-                                inventoryEnough
-                                    ? record.payment_status === 'unpaid'
-                                        ? '该订单尚未收款，交付后将进入应收款'
-                                        : '绑定库存并确认交付'
-                                    : '库存不足，无法交付'
-                            }
-                        >
+                        {(isDiy || isAfterSales) && (
                             <Button
                                 type="text"
                                 size="small"
-                                disabled={!inventoryEnough}
-                                icon={<CheckCircleOutlined />}
-                                onClick={() => openSettle(record)}
+                                icon={<SwapOutlined />}
+                                onClick={() => openAdjust(record)}
                             >
-                                确认交付
+                                {isAfterSales ? '调整' : '调整配置'}
                             </Button>
-                        </Tooltip>
+                        )}
+                        {isAfterSales ? (
+                            <Popconfirm
+                                title="确认售后服务已完成？"
+                                description="确认后只更新服务完成状态，不绑定库存、不扣减库存。"
+                                okText="确认"
+                                cancelText="取消"
+                                onConfirm={() => submitCompleteAfterSales(record)}
+                            >
+                                <Button
+                                    type="text"
+                                    size="small"
+                                    loading={completingAfterSales}
+                                    icon={<CheckCircleOutlined />}
+                                >
+                                    确认完成
+                                </Button>
+                            </Popconfirm>
+                        ) : (
+                            <Tooltip
+                                title={
+                                    inventoryEnough
+                                        ? record.payment_status === 'unpaid'
+                                            ? '该订单尚未收款，交付后将进入应收款'
+                                            : '绑定库存并确认交付'
+                                        : '库存不足，无法交付'
+                                }
+                            >
+                                <Button
+                                    type="text"
+                                    size="small"
+                                    disabled={!inventoryEnough}
+                                    icon={<CheckCircleOutlined />}
+                                    onClick={() => openSettle(record)}
+                                >
+                                    确认交付
+                                </Button>
+                            </Tooltip>
+                        )}
                         <Button
                             type="text"
                             danger
@@ -531,6 +663,19 @@ export default function OrdersPage() {
                             { value: 'delivered', label: '已交付' },
                             { value: 'cancelled', label: '已取消' },
                         ]}
+                    />
+                    <Select
+                        allowClear
+                        placeholder="订单来源"
+                        value={query.source_type}
+                        onChange={(source_type) =>
+                            setQuery((prev) => ({ ...prev, source_type }))
+                        }
+                        className="w-40"
+                        options={sourceTypeOptions.map((item) => ({
+                            value: item.value,
+                            label: item.label,
+                        }))}
                     />
                 </div>
 
@@ -645,6 +790,15 @@ export default function OrdersPage() {
                 }}
             />
 
+            <AfterSalesAdjustmentModal
+                open={afterSalesAdjustVisible}
+                form={afterSalesAdjustForm}
+                services={afterSalesServices}
+                submitting={savingAfterSalesAdjustment}
+                onCancel={() => setAfterSalesAdjustVisible(false)}
+                onSubmit={() => submitAfterSalesAdjustment()}
+            />
+
             <Modal
                 title="确认交付"
                 open={settleVisible}
@@ -752,6 +906,10 @@ function StatusDefinitionList({ items }: { items: string[] }) {
 }
 
 function OrderDetails({ order }: { order: SalesOrder }) {
+    if (order.source_type === 'after_sales') {
+        return <AfterSalesOrderDetails order={order} />;
+    }
+
     const originalItems = order.original_items || order.items || [];
     const actualItems = order.items || [];
     const shouldShowActual =
@@ -800,6 +958,191 @@ function OrderDetails({ order }: { order: SalesOrder }) {
                 )}
             </div>
         </div>
+    );
+}
+
+function AfterSalesOrderDetails({ order }: { order: SalesOrder }) {
+    const detail = order.after_sales_detail;
+    const items = order.after_sales_items || [];
+
+    return (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="rounded-lg border border-gray-100 bg-white p-3 dark:border-gray-800 dark:bg-[#141414]">
+                <div className="mb-3 text-sm font-bold text-gray-900 dark:text-gray-100">
+                    原始下单服务
+                </div>
+                {items.length === 0 ? (
+                    <div className="text-sm text-gray-400">暂无服务明细</div>
+                ) : (
+                    <div className="space-y-2">
+                        {items.map((item) => (
+                            <div
+                                key={item.id}
+                                className="flex items-center justify-between gap-3 text-sm"
+                            >
+                                <div className="min-w-0">
+                                    <Tag color="cyan">
+                                        {item.service_category_name || item.price_type}
+                                    </Tag>
+                                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                                        {item.service_name}
+                                    </span>
+                                    {item.note && (
+                                        <div className="mt-1 text-xs text-gray-400">
+                                            {item.note}
+                                        </div>
+                                    )}
+                                </div>
+                                <span className="shrink-0 font-mono text-gray-500">
+                                    × {item.quantity} / {formatPrice(Number(item.sale_price || 0))}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+            <div className="rounded-lg border border-gray-100 bg-white p-3 text-sm dark:border-gray-800 dark:bg-[#141414]">
+                <div className="mb-3 font-bold text-gray-900 dark:text-gray-100">服务信息</div>
+                <InfoLine label="设备型号" value={detail?.device_model} />
+                <InfoLine label="故障描述" value={detail?.fault_description} />
+                <InfoLine label="服务备注" value={detail?.service_note} />
+                <InfoLine label="完成备注" value={detail?.completed_note} />
+            </div>
+        </div>
+    );
+}
+
+function InfoLine({ label, value }: { label: string; value?: string | null }) {
+    return (
+        <div className="mb-2 flex gap-3 last:mb-0">
+            <span className="w-16 shrink-0 text-gray-400">{label}</span>
+            <span className="min-w-0 flex-1 break-words text-gray-700 dark:text-gray-300">
+                {value || '-'}
+            </span>
+        </div>
+    );
+}
+
+function AfterSalesAdjustmentModal({
+    open,
+    form,
+    services,
+    submitting,
+    onCancel,
+    onSubmit,
+}: {
+    open: boolean;
+    form: ReturnType<typeof Form.useForm>[0];
+    services: AfterSalesService[];
+    submitting: boolean;
+    onCancel: () => void;
+    onSubmit: () => void;
+}) {
+    const serviceOptions = services.map((service) => ({
+        value: service.id,
+        label: `${service.category_name || '售后服务'} / ${service.name}`,
+    }));
+
+    const applyServiceDefaults = (fieldName: number, serviceId: number) => {
+        const service = services.find((item) => item.id === serviceId);
+        const currentServices = form.getFieldValue('services') || [];
+        currentServices[fieldName] = {
+            ...currentServices[fieldName],
+            service_id: serviceId,
+            sale_price: service?.price_type === 'fixed' ? service.price || 0 : currentServices[fieldName]?.sale_price,
+        };
+        form.setFieldValue('services', currentServices);
+    };
+
+    return (
+        <Modal
+            title="调整售后服务"
+            open={open}
+            onCancel={onCancel}
+            onOk={onSubmit}
+            confirmLoading={submitting}
+            destroyOnHidden
+            width={860}
+        >
+            <Form form={form} layout="vertical" className="pt-4">
+                <Form.List name="services">
+                    {(fields, { add, remove }) => (
+                        <div className="space-y-3">
+                            {fields.map((field) => (
+                                <div
+                                    key={field.key}
+                                    className="rounded-lg border border-gray-100 bg-gray-50/70 p-3 dark:border-gray-800 dark:bg-black/20"
+                                >
+                                    <Form.Item name={[field.name, 'source_service_item_id']} hidden>
+                                        <Input />
+                                    </Form.Item>
+                                    <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_110px_130px_80px]">
+                                        <Form.Item
+                                            name={[field.name, 'service_id']}
+                                            label="服务项目"
+                                            rules={[{ required: true, message: '请选择服务项目' }]}
+                                        >
+                                            <Select
+                                                showSearch
+                                                optionFilterProp="label"
+                                                options={serviceOptions}
+                                                onChange={(serviceId) =>
+                                                    applyServiceDefaults(field.name, serviceId)
+                                                }
+                                            />
+                                        </Form.Item>
+                                        <Form.Item
+                                            name={[field.name, 'quantity']}
+                                            label="数量"
+                                            rules={[{ required: true, message: '请输入数量' }]}
+                                        >
+                                            <InputNumber min={1} precision={0} className="w-full" />
+                                        </Form.Item>
+                                        <Form.Item
+                                            name={[field.name, 'sale_price']}
+                                            label="成交单价"
+                                            rules={[{ required: true, message: '请输入成交单价' }]}
+                                        >
+                                            <InputNumber min={0} precision={2} prefix="¥" className="w-full" />
+                                        </Form.Item>
+                                        <div className="flex items-end pb-6">
+                                            <Button danger onClick={() => remove(field.name)}>
+                                                删除
+                                            </Button>
+                                        </div>
+                                    </div>
+                                    <Form.Item name={[field.name, 'note']} label="明细备注">
+                                        <Input />
+                                    </Form.Item>
+                                </div>
+                            ))}
+                            <Button
+                                type="dashed"
+                                block
+                                onClick={() => add({ quantity: 1, sale_price: 0 })}
+                            >
+                                添加服务项目
+                            </Button>
+                        </div>
+                    )}
+                </Form.List>
+                <Form.Item
+                    name="final_amount"
+                    label="最终成交金额"
+                    rules={[{ required: true, message: '请输入最终成交金额' }]}
+                    className="mt-4"
+                >
+                    <InputNumber min={0} precision={2} prefix="¥" className="w-full" />
+                </Form.Item>
+                <Form.Item
+                    name="adjustment_note"
+                    label="调整说明"
+                    rules={[{ required: true, message: '请填写调整说明' }]}
+                >
+                    <Input.TextArea rows={3} />
+                </Form.Item>
+            </Form>
+        </Modal>
     );
 }
 
@@ -868,17 +1211,45 @@ function PaymentStatusTag({ status }: { status: SalesOrder['payment_status'] }) 
     return <Tag color={config.color}>{config.label}</Tag>;
 }
 
-function DeliveryStatusTag({ status }: { status: SalesOrder['delivery_status'] }) {
+function SourceTypeTag({ sourceType }: { sourceType: SalesOrder['source_type'] }) {
     const map = {
-        undelivered: { label: '未交付', color: 'orange' },
-        delivered: { label: '已交付', color: 'green' },
-        cancelled: { label: '已取消', color: 'default' },
+        diy: { label: 'DIY整机', color: 'blue' },
+        retail: { label: '零售', color: 'green' },
+        after_sales: { label: '售后服务', color: 'cyan' },
+        manual: { label: '手动/其他', color: 'default' },
     } as const;
+    const config = map[sourceType] || map.manual;
+    return <Tag color={config.color}>{config.label}</Tag>;
+}
+
+function DeliveryStatusTag({
+    status,
+    sourceType,
+}: {
+    status: SalesOrder['delivery_status'];
+    sourceType?: SalesOrder['source_type'];
+}) {
+    const map =
+        sourceType === 'after_sales'
+            ? {
+                  undelivered: { label: '未完成', color: 'orange' },
+                  delivered: { label: '已完成', color: 'green' },
+                  cancelled: { label: '已取消', color: 'default' },
+              }
+            : {
+                  undelivered: { label: '未交付', color: 'orange' },
+                  delivered: { label: '已交付', color: 'green' },
+                  cancelled: { label: '已取消', color: 'default' },
+              };
     const config = map[status] || map.undelivered;
     return <Tag color={config.color}>{config.label}</Tag>;
 }
 
 function InventoryStatus({ order }: { order: SalesOrder }) {
+    if (order.source_type === 'after_sales') {
+        return <span className="text-gray-400">不涉及库存</span>;
+    }
+
     if (order.delivery_status === 'delivered') {
         return (
             <Tag icon={<CheckCircleOutlined />} color="green">

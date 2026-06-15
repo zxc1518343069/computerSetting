@@ -5,6 +5,7 @@ import type {
     AfterSalesPriceType,
     AfterSalesService,
     AfterSalesServiceListResponse,
+    SalesOrder,
 } from '@/const/types';
 import api from '@/lib/request/axios';
 
@@ -47,19 +48,29 @@ export interface AfterSalesServiceQuery {
 }
 
 export interface AfterSalesCheckoutPayload {
+    customer_id?: number | null;
+    customer_name?: string | null;
+    customer_phone?: string | null;
+    save_customer?: boolean;
+    handler_user_id?: number | null;
+    note?: string | null;
+    device_model?: string | null;
+    fault_description?: string | null;
+    service_note?: string | null;
+    final_amount?: number | null;
     services: Array<{
         service_id: number;
-        name: string;
-        price_label: string;
         quantity: number;
         sale_price?: number | null;
+        note?: string | null;
+        name?: string;
+        price_label?: string;
     }>;
-    total_amount: number;
+    total_amount?: number;
 }
 
-export interface AfterSalesCheckoutResponse {
+export interface AfterSalesOrderResponse extends SalesOrder {
     checkout_no: string;
-    status: 'mock_created';
 }
 
 export const fetchPublicAfterSalesServices = () => {
@@ -67,8 +78,10 @@ export const fetchPublicAfterSalesServices = () => {
 };
 
 export const submitAfterSalesCheckout = (data: AfterSalesCheckoutPayload) => {
-    return api.post<any, AfterSalesCheckoutResponse>('/after-sales/checkout', data);
+    return api.post<any, AfterSalesOrderResponse>('/after-sales/orders', data);
 };
+
+export const createAfterSalesOrder = submitAfterSalesCheckout;
 
 export const fetchAdminAfterSalesServices = (params?: AfterSalesServiceQuery) => {
     return api.get<any, AfterSalesService[]>('/after-sales/admin/services', { params });

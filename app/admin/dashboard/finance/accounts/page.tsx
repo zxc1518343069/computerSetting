@@ -716,7 +716,14 @@ export default function AccountsPage() {
             title: '订单号',
             dataIndex: 'order_no',
             width: 180,
-            render: (text) => <span className="font-mono text-gray-500">{text}</span>,
+            render: (text, record) => (
+                <div className="space-y-1">
+                    <span className="font-mono text-gray-500">{text}</span>
+                    <div>
+                        <SourceTypeTag sourceType={record.source_type} />
+                    </div>
+                </div>
+            ),
         },
         {
             title: '客户',
@@ -737,7 +744,7 @@ export default function AccountsPage() {
             width: 140,
             render: (_, record) => (
                 <span className="text-gray-500 dark:text-gray-400">
-                    {record.line_count} 条 / {record.total_quantity} 件
+                    {record.detail_summary || `${record.line_count} 条 / ${record.total_quantity} 件`}
                 </span>
             ),
         },
@@ -754,15 +761,12 @@ export default function AccountsPage() {
             title: '交付状态',
             dataIndex: 'delivery_status',
             width: 110,
-            render: (status) => {
-                const map = {
-                    undelivered: { label: '未交付', color: 'orange' },
-                    delivered: { label: '已交付', color: 'green' },
-                    cancelled: { label: '已取消', color: 'default' },
-                } as const;
-                const config = map[status as keyof typeof map] || map.undelivered;
-                return <Tag color={config.color}>{config.label}</Tag>;
-            },
+            render: (_, record) => (
+                <DeliveryStatusTag
+                    status={record.delivery_status}
+                    sourceType={record.source_type}
+                />
+            ),
         },
         {
             title: '创建时间',
@@ -789,7 +793,9 @@ export default function AccountsPage() {
                     </Popconfirm>
                     {record.delivery_status === 'undelivered' && (
                         <Tooltip title="交付和扣库存仍在订单列表处理">
-                            <Link href="/admin/dashboard/sales/orders">去确认交付</Link>
+                            <Link href="/admin/dashboard/sales/orders">
+                                {record.source_type === 'after_sales' ? '去确认完成' : '去确认交付'}
+                            </Link>
                         </Tooltip>
                     )}
                 </div>
@@ -1258,6 +1264,40 @@ function ReadonlyCell({
             </div>
         </div>
     );
+}
+
+function SourceTypeTag({ sourceType }: { sourceType: Receivable['source_type'] }) {
+    const map = {
+        diy: { label: 'DIY整机', color: 'blue' },
+        retail: { label: '零售', color: 'green' },
+        after_sales: { label: '售后服务', color: 'cyan' },
+        manual: { label: '手动/其他', color: 'default' },
+    } as const;
+    const config = map[sourceType] || map.manual;
+    return <Tag color={config.color}>{config.label}</Tag>;
+}
+
+function DeliveryStatusTag({
+    status,
+    sourceType,
+}: {
+    status: Receivable['delivery_status'];
+    sourceType: Receivable['source_type'];
+}) {
+    const map =
+        sourceType === 'after_sales'
+            ? {
+                  undelivered: { label: '未完成', color: 'orange' },
+                  delivered: { label: '已完成', color: 'green' },
+                  cancelled: { label: '已取消', color: 'default' },
+              }
+            : {
+                  undelivered: { label: '未交付', color: 'orange' },
+                  delivered: { label: '已交付', color: 'green' },
+                  cancelled: { label: '已取消', color: 'default' },
+              };
+    const config = map[status] || map.undelivered;
+    return <Tag color={config.color}>{config.label}</Tag>;
 }
 
 const emptySummary = {

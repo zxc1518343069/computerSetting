@@ -1,44 +1,28 @@
 import { getDb } from '@/lib/db';
 import { isAuthError, requireAdminUser } from '@/lib/auth/currentUser';
 import {
-    createCustomer,
-    getCustomerRowById,
-    normalizeCustomerName,
-    normalizeCustomerPhone,
-} from '@/lib/db/customers';
-import {
+    inferSalesOrderSourceType,
     normalizeSalesDeliveryStatus,
+    normalizeSalesOrderSourceType,
     normalizeSalesPaymentStatus,
     resolveSalesOrderStatuses,
+    salesOrderSourceTypeLabels,
 } from '@/lib/db/salesOrders';
-import { ProductRow, serializeProduct, toCents, toYuan } from '@/lib/db/serializers';
+import {
+    serializeAfterSalesOrderDetail,
+    serializeAfterSalesOrderItem,
+} from '@/lib/db/afterSalesOrders';
+import { createProductSalesOrder } from '@/lib/db/salesProductOrders';
+import { ProductRow, serializeProduct, toYuan } from '@/lib/db/serializers';
 import { error, success } from '@/lib/request/apiResponse';
 import { NextRequest } from 'next/server';
 
-interface OrderItemInput {
-    product_id: number;
-    product_name: string;
-    product_category: string;
-    quantity: number;
-    sale_price: number;
-}
-
-interface OrderHandlerUserRow {
-    id: number;
-    username: string;
-    role: 'admin' | 'staff';
-    status: 'active' | 'disabled';
-}
-
-const createOrderNo = () => {
-    const now = new Date();
-    const date = now.toISOString().slice(0, 10).replace(/-/g, '');
-    const time = now.getTime().toString().slice(-6);
-    return `ORD${date}${time}`;
-};
-
 const serializeOrderRow = (row: Record<string, unknown>) => {
     const { paymentStatus, deliveryStatus } = resolveSalesOrderStatuses(row);
+    const sourceType = normalizeSalesOrderSourceType(
+        row.source_type,
+        inferSalesOrderSourceType(row.source)
+    );
 
     return {
         id: row.id,
@@ -56,6 +40,8 @@ const serializeOrderRow = (row: Record<string, unknown>) => {
         delivery_status: deliveryStatus,
         is_paid: Boolean(row.is_paid),
         source: row.source,
+        source_type: sourceType,
+        source_type_label: salesOrderSourceTypeLabels[sourceType],
         created_by_user_id: row.created_by_user_id,
         created_by_username: row.created_by_username,
         latest_adjustment_id: row.latest_adjustment_id,
@@ -75,51 +61,6 @@ const serializeOrderRow = (row: Record<string, unknown>) => {
     };
 };
 
-const resolveOrderCustomer = (
-    db: ReturnType<typeof getDb>,
-    input: {
-        customer_id?: number | null;
-        customer_name?: string | null;
-        customer_phone?: string | null;
-        save_customer?: boolean;
-    }
-) => {
-    if (input.customer_id) {
-        const customer = getCustomerRowById(db, Number(input.customer_id));
-        if (!customer) throw new Error('CUSTOMER_NOT_FOUND');
-        return {
-            customerId: customer.id,
-            customerName: customer.name,
-            customerPhone: customer.phone,
-        };
-    }
-
-    const customerName = normalizeCustomerName(input.customer_name);
-    const customerPhone = normalizeCustomerPhone(input.customer_phone);
-    if (!customerName) throw new Error('CUSTOMER_NAME_REQUIRED');
-
-    if (!input.save_customer) {
-        return {
-            customerId: null,
-            customerName,
-            customerPhone: customerPhone || null,
-        };
-    }
-
-    const customerId = createCustomer(db, {
-        name: customerName,
-        phone: customerPhone,
-    });
-    const customer = getCustomerRowById(db, customerId);
-    if (!customer) throw new Error('CUSTOMER_NOT_FOUND');
-
-    return {
-        customerId: customer.id,
-        customerName: customer.name,
-        customerPhone: customer.phone,
-    };
-};
-
 const orderCustomerError = (e: unknown) => {
     const message = e instanceof Error ? e.message : '';
     if (message === 'CUSTOMER_NOT_FOUND') return error(400, '客户不存在');
@@ -127,21 +68,6 @@ const orderCustomerError = (e: unknown) => {
     if (message === 'CUSTOMER_PHONE_REQUIRED') return error(400, '手机号不能为空');
     if (message === 'CUSTOMER_PHONE_EXISTS') return error(400, '该手机号已存在，请选择已有客户');
     return null;
-};
-
-const resolveActiveHandlerUser = (
-    db: ReturnType<typeof getDb>,
-    handlerUserId: unknown
-): OrderHandlerUserRow => {
-    const id = Number(handlerUserId);
-    if (!Number.isInteger(id) || id <= 0) throw new Error('HANDLER_REQUIRED');
-
-    const row = db
-        .prepare('SELECT id, username, role, status FROM admin_users WHERE id = ?')
-        .get(id) as OrderHandlerUserRow | undefined;
-
-    if (!row || row.status !== 'active') throw new Error('HANDLER_NOT_FOUND');
-    return row;
 };
 
 const orderHandlerError = (e: unknown) => {
@@ -214,6 +140,7 @@ const getOrders = (filters: {
     status?: string | null;
     paymentStatus?: string | null;
     deliveryStatus?: string | null;
+    sourceType?: string | null;
     scope?: string | null;
 }) => {
     const db = getDb();
@@ -231,6 +158,10 @@ const getOrders = (filters: {
     if (filters.deliveryStatus) {
         conditions.push('delivery_status = @delivery_status');
         params.delivery_status = normalizeSalesDeliveryStatus(filters.deliveryStatus);
+    }
+    if (filters.sourceType && filters.sourceType !== 'all') {
+        conditions.push('source_type = @source_type');
+        params.source_type = normalizeSalesOrderSourceType(filters.sourceType);
     }
     if (filters.scope === 'todo') {
         conditions.push(`
@@ -269,8 +200,40 @@ const getOrders = (filters: {
     const adjustmentItemBindingStmt = db.prepare(
         'SELECT * FROM order_inventory_items WHERE adjustment_item_id = ?'
     );
+    const afterSalesDetailStmt = db.prepare(
+        'SELECT * FROM sales_order_after_sales_details WHERE order_id = ?'
+    );
+    const afterSalesItemStmt = db.prepare(
+        'SELECT * FROM sales_order_after_sales_items WHERE order_id = ? ORDER BY id ASC'
+    );
 
     return rows.map((row) => {
+        const sourceType = normalizeSalesOrderSourceType(
+            row.source_type,
+            inferSalesOrderSourceType(row.source)
+        );
+        if (sourceType === 'after_sales') {
+            const afterSalesDetail = afterSalesDetailStmt.get(row.id) as
+                | Record<string, unknown>
+                | undefined;
+            const afterSalesItems = afterSalesItemStmt.all(row.id) as Record<string, unknown>[];
+
+            return {
+                ...serializeOrderRow(row),
+                adjusted_amount: null,
+                adjustment_note: null,
+                adjusted_at: null,
+                adjusted_by_username: null,
+                latest_adjustment: null,
+                adjustment_history: [],
+                original_items: [],
+                latest_adjustment_items: [],
+                items: [],
+                after_sales_detail: serializeAfterSalesOrderDetail(afterSalesDetail || null),
+                after_sales_items: afterSalesItems.map(serializeAfterSalesOrderItem),
+            };
+        }
+
         const items = itemStmt.all(row.id) as Record<string, unknown>[];
         const originalItems = items.map((item) => {
             const product = productStmt.get(item.product_id) as ProductRow | undefined;
@@ -311,6 +274,8 @@ const getOrders = (filters: {
             original_items: originalItems,
             latest_adjustment_items: latestAdjustmentItems,
             items: latestAdjustment ? latestAdjustmentItems : originalItems,
+            after_sales_detail: null,
+            after_sales_items: [],
         };
     });
 };
@@ -324,6 +289,7 @@ export async function GET(request: NextRequest) {
                 status: searchParams.get('status'),
                 paymentStatus: searchParams.get('payment_status'),
                 deliveryStatus: searchParams.get('delivery_status'),
+                sourceType: searchParams.get('source_type'),
                 scope: searchParams.get('scope'),
             }),
             '获取订单列表成功'
@@ -338,90 +304,11 @@ export async function POST(request: NextRequest) {
     try {
         await requireAdminUser();
         const db = getDb();
-        const {
-            handler_user_id,
-            customer_id,
-            customer_name,
-            customer_phone,
-            save_customer,
-            original_amount = 0,
-            final_amount,
-            source = 'manual',
-            note,
-            items,
-        } = await request.json();
-
-        if (!Array.isArray(items) || items.length === 0) return error(400, '订单明细不能为空');
-
-        const finalAmount = Number(final_amount ?? original_amount);
-        const originalCents = toCents(original_amount);
-        const finalCents = toCents(finalAmount);
-
-        const createOrder = db.transaction(() => {
-            const handlerUser = resolveActiveHandlerUser(db, handler_user_id);
-            const customer = resolveOrderCustomer(db, {
-                customer_id,
-                customer_name,
-                customer_phone,
-                save_customer,
-            });
-            const orderResult = db
-                .prepare(
-                    `
-                    INSERT INTO sales_orders (
-                        order_no, customer_id, customer_name, customer_phone, original_amount_cents,
-                        final_amount_cents, discount_amount_cents, cost_amount_cents,
-                        profit_amount_cents, status, is_paid, payment_status, delivery_status,
-                        source, created_by_user_id, created_by_username, note, updated_at
-                    )
-                    VALUES (
-                        @order_no, @customer_id, @customer_name, @customer_phone, @original_amount_cents,
-                        @final_amount_cents, @discount_amount_cents, 0,
-                        @profit_amount_cents, 'pending', 0, 'unpaid', 'undelivered',
-                        @source, @created_by_user_id, @created_by_username, @note, CURRENT_TIMESTAMP
-                    )
-                `
-                )
-                .run({
-                    order_no: createOrderNo(),
-                    customer_id: customer.customerId,
-                    customer_name: customer.customerName,
-                    customer_phone: customer.customerPhone,
-                    original_amount_cents: originalCents,
-                    final_amount_cents: finalCents,
-                    discount_amount_cents: originalCents - finalCents,
-                    profit_amount_cents: finalCents,
-                    source,
-                    created_by_user_id: handlerUser.id,
-                    created_by_username: handlerUser.username,
-                    note,
-                });
-
-            const orderId = Number(orderResult.lastInsertRowid);
-            const insertItem = db.prepare(
-                `
-                INSERT INTO sales_order_items (
-                    order_id, product_id, product_name, product_category, quantity, sale_price_cents
-                )
-                VALUES (@order_id, @product_id, @product_name, @product_category, @quantity, @sale_price_cents)
-            `
-            );
-
-            for (const item of items as OrderItemInput[]) {
-                insertItem.run({
-                    order_id: orderId,
-                    product_id: item.product_id,
-                    product_name: item.product_name,
-                    product_category: item.product_category,
-                    quantity: item.quantity || 1,
-                    sale_price_cents: toCents(item.sale_price || 0),
-                });
-            }
-
-            return orderId;
+        const payload = await request.json();
+        const orderId = createProductSalesOrder(db, payload, {
+            sourceType: 'manual',
+            legacySource: 'manual',
         });
-
-        const orderId = createOrder();
         const order = getOrders({}).find((item) => item.id === orderId);
         return success(order, '订单保存成功');
     } catch (e) {
@@ -430,6 +317,12 @@ export async function POST(request: NextRequest) {
         if (handlerError) return handlerError;
         const knownError = orderCustomerError(e);
         if (knownError) return knownError;
+        const message = e instanceof Error ? e.message : '';
+        if (message === 'ORDER_ITEMS_REQUIRED') return error(400, '订单明细不能为空');
+        if (message === 'INVALID_ORIGINAL_AMOUNT') return error(400, '原始金额不能小于 0');
+        if (message === 'INVALID_FINAL_AMOUNT') return error(400, '最终成交金额不能小于 0');
+        if (message === 'PRODUCT_REQUIRED') return error(400, '请选择商品');
+        if (message === 'INVALID_QUANTITY') return error(400, '商品数量必须大于 0');
         console.error('Create order error:', e);
         return error(500, '保存订单失败');
     }

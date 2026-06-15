@@ -1,5 +1,9 @@
 import { getDb } from '@/lib/db';
-import { resolveSalesOrderStatuses } from '@/lib/db/salesOrders';
+import {
+    inferSalesOrderSourceType,
+    normalizeSalesOrderSourceType,
+    resolveSalesOrderStatuses,
+} from '@/lib/db/salesOrders';
 import { error, success } from '@/lib/request/apiResponse';
 import { NextRequest } from 'next/server';
 
@@ -45,6 +49,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                 | Record<string, unknown>
                 | undefined;
             if (!order) throw new Error('ORDER_NOT_FOUND');
+            const sourceType = normalizeSalesOrderSourceType(
+                order.source_type,
+                inferSalesOrderSourceType(order.source)
+            );
+            if (sourceType === 'after_sales') throw new Error('AFTER_SALES_ORDER');
             if (resolveSalesOrderStatuses(order).deliveryStatus !== 'undelivered') {
                 throw new Error('ORDER_NOT_PENDING');
             }
@@ -205,6 +214,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         } catch (e) {
             const message = e instanceof Error ? e.message : '';
             if (message === 'ORDER_NOT_FOUND') return error(404, '订单不存在');
+            if (message === 'AFTER_SALES_ORDER') return error(400, '售后服务订单不能走商品库存交付');
             if (message === 'ORDER_NOT_PENDING') return error(400, '只有未交付订单可以交付');
             if (message === 'DUPLICATE_INVENTORY') return error(400, '同一库存物品不能重复绑定');
             if (message === 'INCOMPLETE_BINDINGS') return error(400, '请为每条订单明细选择库存');

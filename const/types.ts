@@ -433,6 +433,7 @@ export interface PurchaseOrder {
 
 export type SalesPaymentStatus = 'unpaid' | 'paid' | 'refund_pending' | 'refunded';
 export type SalesDeliveryStatus = 'undelivered' | 'delivered' | 'cancelled';
+export type SalesOrderSourceType = 'diy' | 'retail' | 'after_sales' | 'manual';
 
 export interface SalesOrder {
     id: number;
@@ -451,6 +452,8 @@ export interface SalesOrder {
     delivery_status: SalesDeliveryStatus;
     is_paid?: boolean;
     source?: string | null;
+    source_type: SalesOrderSourceType;
+    source_type_label?: string;
     created_by_user_id?: number | null;
     created_by_username?: string | null;
     latest_adjustment_id?: number | null;
@@ -458,6 +461,9 @@ export interface SalesOrder {
     latest_adjustment_items?: SalesOrderAdjustmentItem[];
     adjustment_history?: SalesOrderAdjustment[];
     original_items?: SalesOrderItem[];
+    after_sales_detail?: SalesOrderAfterSalesDetail | null;
+    after_sales_items?: SalesOrderAfterSalesItem[];
+    after_sales_adjustment_history?: SalesOrderAfterSalesAdjustment[];
     adjusted_amount?: number | null;
     adjustment_note?: string | null;
     adjusted_at?: string | null;
@@ -479,6 +485,43 @@ export interface SalesOrder {
 }
 
 export type OrderSettlementItem = SalesOrderItem | SalesOrderAdjustmentItem;
+
+export interface SalesOrderAfterSalesDetail {
+    id: number;
+    order_id: number;
+    device_model?: string | null;
+    fault_description?: string | null;
+    service_note?: string | null;
+    completed_note?: string | null;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface SalesOrderAfterSalesItem {
+    id: number;
+    order_id: number;
+    service_id?: number | null;
+    service_name: string;
+    service_category_name?: string | null;
+    price_type: AfterSalesPriceType;
+    price_label: string;
+    quantity: number;
+    sale_price: number;
+    total_price: number;
+    note?: string | null;
+    created_at?: string;
+}
+
+export interface SalesOrderAfterSalesAdjustment {
+    id: number;
+    order_id: number;
+    previous_final_amount: number;
+    final_amount: number;
+    adjustment_note: string;
+    created_by_user_id?: number | null;
+    created_by_username?: string | null;
+    created_at?: string;
+}
 
 export interface SalesOrderItem {
     id: number;

@@ -1,6 +1,8 @@
 'use client';
 
 import SiteHeader from '@/app/_components/SiteHeader';
+import { useAuth } from '@/app/_components/AuthProvider';
+import { fetchActiveAdminUsers } from '@/app/admin/dashboard/services';
 import {
     fetchPublicAfterSalesServices,
     submitAfterSalesCheckout,
@@ -22,7 +24,9 @@ import {
     Button,
     Checkbox,
     Empty,
+    Form,
     Input,
+    InputNumber,
     Layout,
     message,
     Modal,
@@ -44,7 +48,15 @@ export default function AfterSalesPage() {
     const [keyword, setKeyword] = useState('');
     const [selectedServices, setSelectedServices] = useState<Record<number, SelectedService>>({});
     const [checkoutVisible, setCheckoutVisible] = useState(false);
+    const [checkoutForm] = Form.useForm();
+    const { isLoggedIn, currentUser } = useAuth();
     const { data, loading, error, refresh } = useRequest(fetchPublicAfterSalesServices);
+    const { data: handlerUsers = [], loading: loadingHandlerUsers } = useRequest(
+        fetchActiveAdminUsers,
+        {
+            ready: isLoggedIn,
+        }
+    );
 
     const categories = useMemo(() => data?.categories || [], [data?.categories]);
     const notices = useMemo(() => data?.notices || [], [data?.notices]);
@@ -96,6 +108,7 @@ export default function AfterSalesPage() {
         (sum, item) => sum + getServiceCheckoutPrice(item.service) * item.quantity,
         0
     );
+    const defaultHandlerUserId = handlerUsers.find((user) => user.id === currentUser?.id)?.id;
 
     const toggleServiceSelection = (service: AfterSalesService) => {
         setSelectedServices((prev) => {
@@ -127,11 +140,19 @@ export default function AfterSalesPage() {
 
     const { runAsync: submitCheckout, loading: checkoutSubmitting } = useRequest(
         async () => {
+            const values = await checkoutForm.validateFields();
             const result = await submitAfterSalesCheckout({
+                customer_name: values.customer_name,
+                customer_phone: values.customer_phone,
+                save_customer: Boolean(values.save_customer),
+                handler_user_id: values.handler_user_id,
+                device_model: values.device_model,
+                fault_description: values.fault_description,
+                service_note: values.service_note,
+                note: values.note,
+                final_amount: values.final_amount,
                 services: selectedList.map((item) => ({
                     service_id: item.service.id,
-                    name: item.service.name,
-                    price_label: getDisplayPrice(item.service),
                     quantity: item.quantity,
                     sale_price: getServiceCheckoutPrice(item.service) || null,
                 })),
@@ -142,8 +163,9 @@ export default function AfterSalesPage() {
         {
             manual: true,
             onSuccess: (result) => {
-                message.success(`下单请求已提交：${result.checkout_no}`);
+                message.success(`售后服务订单已创建：${result.order_no}`);
                 setCheckoutVisible(false);
+                checkoutForm.resetFields();
                 setSelectedServices({});
             },
             onError: (e) => message.error(e.message || '下单请求提交失败'),
@@ -192,6 +214,23 @@ export default function AfterSalesPage() {
                             }
                         />
                     )}
+
+                    <div className="flex flex-col gap-3 rounded-2xl border border-white bg-white/85 p-3 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-[#1f1f1f]/85 md:flex-row md:items-center">
+                        <Input
+                            allowClear
+                            prefix={<SearchOutlined />}
+                            placeholder="搜索服务名称、说明或价格"
+                            value={keyword}
+                            onChange={(event) => setKeyword(event.target.value)}
+                            className="md:max-w-md"
+                        />
+                        <Select
+                            value={activeCategory}
+                            onChange={setActiveCategory}
+                            options={categoryOptions}
+                            className="w-full md:hidden"
+                        />
+                    </div>
 
                     <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
                         <aside className="hidden lg:block">
@@ -244,14 +283,29 @@ export default function AfterSalesPage() {
                 <CheckoutBar
                     selectedCount={selectedCount}
                     total={checkoutTotal}
-                    onCheckout={() => setCheckoutVisible(true)}
+                    onCheckout={() => {
+                        if (!isLoggedIn) {
+                            message.warning('请先登录后台后再提交售后服务订单');
+                            return;
+                        }
+                        checkoutForm.resetFields();
+                        checkoutForm.setFieldsValue({
+                            save_customer: true,
+                            final_amount: checkoutTotal,
+                            handler_user_id: defaultHandlerUserId,
+                        });
+                        setCheckoutVisible(true);
+                    }}
                     onClear={() => setSelectedServices({})}
                 />
             )}
             <CheckoutModal
+                form={checkoutForm}
                 open={checkoutVisible}
                 selectedList={selectedList}
                 total={checkoutTotal}
+                handlerUsers={handlerUsers}
+                loadingHandlerUsers={loadingHandlerUsers}
                 submitting={checkoutSubmitting}
                 onCancel={() => setCheckoutVisible(false)}
                 onConfirm={() => submitCheckout()}
@@ -503,16 +557,22 @@ function CheckoutBar({
 }
 
 function CheckoutModal({
+    form,
     open,
     selectedList,
     total,
+    handlerUsers,
+    loadingHandlerUsers,
     submitting,
     onCancel,
     onConfirm,
 }: {
+    form: ReturnType<typeof Form.useForm>[0];
     open: boolean;
     selectedList: SelectedService[];
     total: number;
+    handlerUsers: Array<{ id: number; username: string }>;
+    loadingHandlerUsers: boolean;
     submitting: boolean;
     onCancel: () => void;
     onConfirm: () => void;
@@ -563,6 +623,67 @@ function CheckoutModal({
                         {formatYuan(total)}
                     </div>
                 </div>
+                <Form form={form} layout="vertical" className="grid grid-cols-1 gap-x-4 md:grid-cols-2">
+                    <Form.Item
+                        name="customer_name"
+                        label="客户姓名"
+                        rules={[{ required: true, message: '请输入客户姓名' }]}
+                    >
+                        <Input placeholder="客户姓名" />
+                    </Form.Item>
+                    <Form.Item
+                        name="customer_phone"
+                        label="手机号"
+                        rules={[
+                            ({ getFieldValue }) => ({
+                                validator: (_, value) => {
+                                    if (!getFieldValue('save_customer') || value) {
+                                        return Promise.resolve();
+                                    }
+                                    return Promise.reject(new Error('保存客户时请输入手机号'));
+                                },
+                            }),
+                        ]}
+                    >
+                        <Input placeholder="可选" />
+                    </Form.Item>
+                    <Form.Item
+                        name="handler_user_id"
+                        label="经手人"
+                        rules={[{ required: true, message: '请选择经手人' }]}
+                    >
+                        <Select
+                            loading={loadingHandlerUsers}
+                            placeholder="请选择经手人"
+                            options={handlerUsers.map((user) => ({
+                                label: user.username,
+                                value: user.id,
+                            }))}
+                        />
+                    </Form.Item>
+                    <Form.Item
+                        name="final_amount"
+                        label="最终成交金额"
+                        rules={[{ required: true, message: '请输入最终成交金额' }]}
+                    >
+                        <InputNumber min={0} precision={2} prefix="¥" className="w-full" />
+                    </Form.Item>
+                    <Form.Item name="save_customer" valuePropName="checked" className="md:col-span-2">
+                        <Checkbox>保存客户信息</Checkbox>
+                    </Form.Item>
+                    <Form.Item name="device_model" label="设备型号">
+                        <Input placeholder="可选" />
+                    </Form.Item>
+                    <Form.Item name="fault_description" label="故障描述">
+                        <Input placeholder="可选" />
+                    </Form.Item>
+                    <Form.Item name="service_note" label="服务备注" className="md:col-span-2">
+                        <Input.TextArea rows={2} placeholder="可选" />
+                    </Form.Item>
+                    <Form.Item name="note" label="订单备注" className="md:col-span-2">
+                        <Input.TextArea rows={2} placeholder="可选" />
+                    </Form.Item>
+                </Form>
             </div>
         </Modal>
     );

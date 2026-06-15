@@ -20,7 +20,7 @@ import { useTableControl } from './hooks/useTableControl';
 import {
     fetchActiveAdminUsers,
     fetchCustomers,
-    saveOrder,
+    saveDiyOrder,
 } from '@/app/admin/dashboard/services';
 import { useRequest } from 'ahooks';
 import { useAuth } from '@/app/_components/AuthProvider';
@@ -188,7 +188,7 @@ export function Content(props: ContentProps) {
                 };
             });
 
-            await saveOrder({
+            await saveDiyOrder({
                 handler_user_id: values.handler_user_id,
                 customer_id:
                     values.customer_source === 'existing' ? values.customer_id || null : null,
@@ -198,7 +198,6 @@ export function Content(props: ContentProps) {
                     values.customer_source === 'new' ? Boolean(values.save_customer) : false,
                 original_amount: totalPrice,
                 final_amount: values.final_amount || totalPrice,
-                source: 'frontend_quote',
                 note: values.note,
                 items: orderItems,
             });

@@ -68,10 +68,13 @@ export default function FinanceSalesPage() {
             0
         );
         const productCost = filteredOrders.reduce(
-            (sum, order) => sum + Number(order.cost_amount || 0),
+            (sum, order) => sum + getFinanceOrderCost(order),
             0
         );
-        const grossProfit = salesAmount - productCost;
+        const grossProfit = filteredOrders.reduce(
+            (sum, order) => sum + getFinanceOrderGrossProfit(order),
+            0
+        );
         const logisticsCost = Number(logisticsStats?.summary.self_amount || 0);
         const operatingCost = (costs as OperatingCost[]).reduce(
             (sum, cost) => sum + Number(cost.amount || 0),
@@ -115,6 +118,21 @@ export default function FinanceSalesPage() {
             width: 180,
         },
         {
+            title: '来源',
+            dataIndex: 'source_type',
+            width: 120,
+            filters: [
+                { text: 'DIY整机', value: 'diy' },
+                { text: '零售', value: 'retail' },
+                { text: '售后服务', value: 'after_sales' },
+                { text: '手动/其他', value: 'manual' },
+            ],
+            onFilter: (value, record) => record.source_type === value,
+            render: (sourceType: SalesOrder['source_type']) => (
+                <SourceTypeTag sourceType={sourceType} />
+            ),
+        },
+        {
             title: '成交金额',
             dataIndex: 'final_amount',
             align: 'right',
@@ -126,24 +144,31 @@ export default function FinanceSalesPage() {
             dataIndex: 'cost_amount',
             align: 'right',
             width: 150,
-            render: (amount) => formatPrice(Number(amount || 0)),
+            render: (_amount, record) =>
+                record.source_type === 'after_sales' ? (
+                    <span className="text-gray-400">不涉及</span>
+                ) : (
+                    formatPrice(getFinanceOrderCost(record))
+                ),
         },
         {
-            title: '商品毛利',
+            title: '销售毛利',
             dataIndex: 'profit_amount',
             align: 'right',
             width: 150,
-            render: (amount) => (
+            render: (_amount, record) => (
                 <span className="text-emerald-500 font-bold">
-                    {formatPrice(Number(amount || 0))}
+                    {formatPrice(getFinanceOrderGrossProfit(record))}
                 </span>
             ),
         },
         {
-            title: '交付状态',
+            title: '交付/完成',
             dataIndex: 'delivery_status',
             width: 120,
-            render: () => <Tag color="green">已交付</Tag>,
+            render: (_status, record) => (
+                <Tag color="green">{record.source_type === 'after_sales' ? '已完成' : '已交付'}</Tag>
+            ),
         },
     ];
 
@@ -204,7 +229,7 @@ export default function FinanceSalesPage() {
                             icon={<WalletOutlined />}
                             label="商品成本"
                             value={formatPrice(metrics.productCost)}
-                            helper={`商品毛利 ${formatPrice(metrics.grossProfit)}`}
+                            helper={`销售毛利 ${formatPrice(metrics.grossProfit)}`}
                             tone="red"
                         />
                         <MetricCard
@@ -232,7 +257,7 @@ export default function FinanceSalesPage() {
                         columns={columns}
                         dataSource={filteredOrders}
                         pagination={{ pageSize: 10 }}
-                        scroll={{ x: 940 }}
+                        scroll={{ x: 1060 }}
                     />
                 </div>
             </div>
@@ -278,7 +303,7 @@ function ProfitOverviewCard({
                 </Tag>
             </div>
             <div className="mt-6 grid grid-cols-1 gap-4 border-t border-gray-100 pt-4 text-sm dark:border-gray-800 sm:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3">
-                <ProfitFormulaItem label="商品毛利" value={formatPrice(grossProfit)} tone="green" />
+                <ProfitFormulaItem label="销售毛利" value={formatPrice(grossProfit)} tone="green" />
                 <ProfitFormulaItem label="物流成本" value={formatPrice(logisticsCost)} tone="red" />
                 <ProfitFormulaItem label="经营成本" value={formatPrice(operatingCost)} tone="red" />
             </div>
@@ -370,4 +395,25 @@ function formatPercent(value: number) {
         return '0.0%';
     }
     return `${value.toFixed(1)}%`;
+}
+
+function getFinanceOrderCost(order: SalesOrder) {
+    if (order.source_type === 'after_sales') return 0;
+    return Number(order.cost_amount || 0);
+}
+
+function getFinanceOrderGrossProfit(order: SalesOrder) {
+    if (order.source_type === 'after_sales') return Number(order.final_amount || 0);
+    return Number(order.final_amount || 0) - getFinanceOrderCost(order);
+}
+
+function SourceTypeTag({ sourceType }: { sourceType: SalesOrder['source_type'] }) {
+    const map = {
+        diy: { label: 'DIY整机', color: 'blue' },
+        retail: { label: '零售', color: 'green' },
+        after_sales: { label: '售后服务', color: 'cyan' },
+        manual: { label: '手动/其他', color: 'default' },
+    } as const;
+    const config = map[sourceType] || map.manual;
+    return <Tag color={config.color}>{config.label}</Tag>;
 }

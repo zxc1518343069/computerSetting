@@ -290,6 +290,7 @@ export const fetchOrders = (params?: {
     status?: string;
     payment_status?: string;
     delivery_status?: string;
+    source_type?: SalesOrder['source_type'] | 'all';
     scope?: string;
 }) => {
     return api.get<any, SalesOrder[]>('/orders', { params });
@@ -361,8 +362,11 @@ export interface AccountReceivableDetail {
     order_no: string;
     customer_name: string;
     customer_phone?: string | null;
+    source_type: SalesOrder['source_type'];
+    source_type_label?: string;
     line_count: number;
     total_quantity: number;
+    detail_summary?: string;
     amount: number;
     status: SalesOrder['status'];
     payment_status: SalesOrder['payment_status'];
@@ -445,6 +449,14 @@ export const saveOrder = (data: any) => {
     return api.post<any, SalesOrder>('/orders', data);
 };
 
+export const saveDiyOrder = (data: any) => {
+    return api.post<any, { id: number; source_type: 'diy' }>('/diy/orders', data);
+};
+
+export const saveRetailOrder = (data: any) => {
+    return api.post<any, { id: number; source_type: 'retail' }>('/retail/orders', data);
+};
+
 export const updateOrder = (
     id: number,
     data: Partial<SalesOrder> & { save_customer?: boolean }
@@ -458,6 +470,14 @@ export const updateOrderConfigAdjustment = (id: number, data: any) => {
 
 export const settleOrder = (id: number, data: any) => {
     return api.post<any, SalesOrder>(`/orders/${id}/settle`, data);
+};
+
+export const completeAfterSalesOrder = (id: number, data?: { completed_note?: string }) => {
+    return api.post<any, SalesOrder>(`/after-sales/orders/${id}/complete`, data || {});
+};
+
+export const updateAfterSalesOrderAdjustment = (id: number, data: any) => {
+    return api.put<any, SalesOrder>(`/after-sales/orders/${id}/adjustment`, data);
 };
 
 export const cancelOrder = (

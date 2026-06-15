@@ -5,7 +5,7 @@ import { ExportButton } from '@/app/_components/PCPartsTable/Content/components/
 import {
     fetchActiveAdminUsers,
     fetchCustomers,
-    saveOrder,
+    saveRetailOrder,
 } from '@/app/admin/dashboard/services';
 import { usePackageCalculator } from '@/app/admin/dashboard/packages/components/EditablePackageTable/hooks/usePackageCalculator';
 import { usePackageTableData } from '@/app/admin/dashboard/packages/components/EditablePackageTable/hooks/usePackageTableData';
@@ -136,7 +136,7 @@ export default function RetailQuote() {
                 };
             });
 
-            await saveOrder({
+            await saveRetailOrder({
                 handler_user_id: values.handler_user_id,
                 customer_id:
                     values.customer_source === 'existing' ? values.customer_id || null : null,
@@ -146,7 +146,6 @@ export default function RetailQuote() {
                     values.customer_source === 'new' ? Boolean(values.save_customer) : false,
                 original_amount: totalPrice,
                 final_amount: values.final_amount || totalPrice,
-                source: 'frontend_retail',
                 note: values.note,
                 items: orderItems,
             });

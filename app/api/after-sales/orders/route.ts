@@ -10,7 +10,7 @@ import { NextRequest } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-const afterSalesCheckoutError = (e: unknown) => {
+const afterSalesOrderError = (e: unknown) => {
     if (isAuthError(e)) return error(e.code, e.message);
 
     const message = e instanceof Error ? e.message : '';
@@ -36,19 +36,16 @@ export async function POST(request: NextRequest) {
 
         const db = getDb();
         const payload = await request.json();
-        const orderId = createAfterSalesOrder(db, {
-            ...payload,
-            final_amount: payload.final_amount ?? payload.total_amount,
-        });
+        const orderId = createAfterSalesOrder(db, payload);
         const createdOrder = getAfterSalesOrderById(db, orderId);
 
         if (!createdOrder) return error(500, '售后服务订单创建后读取失败');
         return success(serializeCreatedAfterSalesOrder(createdOrder), '售后服务订单创建成功');
     } catch (e) {
-        const knownError = afterSalesCheckoutError(e);
+        const knownError = afterSalesOrderError(e);
         if (knownError) return knownError;
 
-        console.error('After-sales checkout error:', e);
+        console.error('Create after-sales order error:', e);
         return error(500, '售后服务下单失败');
     }
 }
