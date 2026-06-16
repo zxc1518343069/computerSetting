@@ -1,6 +1,10 @@
 import type { SqliteDb } from './index';
 import { listInboundOrders } from './inboundOrders';
 import { getLogisticsRecordByRelated } from './logistics';
+import {
+    getPurchaseMerchantRefundSummaryCents,
+    listPurchaseMerchantRefunds,
+} from './purchaseMerchantRefunds';
 import { listPurchaseReturns } from './purchaseReturns';
 import { ProductRow, serializeProduct, toYuan } from './serializers';
 
@@ -101,6 +105,14 @@ interface SummaryCents {
     payableAmountCents: number;
     paidAmountCents: number;
     refundedAmountCents: number;
+    merchantRefundAmountCents: number;
+    merchantRefundSettledAmountCents: number;
+    merchantRefundPendingAmountCents: number;
+    merchantRefundCashAmountCents: number;
+    merchantRefundOffsetAmountCents: number;
+    rebateAmountCents: number;
+    priceProtectionAmountCents: number;
+    adjustedGoodsAmountCents: number;
     netPaidCents: number;
     pendingPaymentCents: number;
     pendingRefundCents: number;
@@ -144,6 +156,7 @@ export const getPurchaseOrderSummaryCents = (
         .get(purchaseOrderId) as { paid_amount_cents: number };
 
     const goodsAmountCents = Number(itemSummary.goods_amount_cents || 0);
+    const merchantRefundSummary = getPurchaseMerchantRefundSummaryCents(db, purchaseOrderId);
     const payableAmountCents = Math.max(
         goodsAmountCents + Number(orderFees?.misc_fee_cents || 0),
         0
@@ -151,7 +164,7 @@ export const getPurchaseOrderSummaryCents = (
     const paidAmountCents = Number(paymentSummary.paid_amount_cents || 0);
     const returnAmountCents = 0;
     const refundedAmountCents = 0;
-    const netPaidCents = paidAmountCents;
+    const netPaidCents = paidAmountCents + merchantRefundSummary.offsetAmountCents;
     const pendingPaymentCents = Math.max(payableAmountCents - netPaidCents, 0);
     const pendingRefundCents = 0;
 
@@ -175,6 +188,17 @@ export const getPurchaseOrderSummaryCents = (
         payableAmountCents,
         paidAmountCents,
         refundedAmountCents,
+        merchantRefundAmountCents: merchantRefundSummary.amountCents,
+        merchantRefundSettledAmountCents: merchantRefundSummary.settledAmountCents,
+        merchantRefundPendingAmountCents: merchantRefundSummary.pendingAmountCents,
+        merchantRefundCashAmountCents: merchantRefundSummary.cashAmountCents,
+        merchantRefundOffsetAmountCents: merchantRefundSummary.offsetAmountCents,
+        rebateAmountCents: merchantRefundSummary.rebateAmountCents,
+        priceProtectionAmountCents: merchantRefundSummary.priceProtectionAmountCents,
+        adjustedGoodsAmountCents: Math.max(
+            goodsAmountCents - merchantRefundSummary.priceProtectionAmountCents,
+            0
+        ),
         netPaidCents,
         pendingPaymentCents,
         pendingRefundCents,
@@ -221,6 +245,14 @@ const serializeSummary = (summary: SummaryCents) => ({
     payable_amount: toYuan(summary.payableAmountCents),
     paid_amount: toYuan(summary.paidAmountCents),
     refunded_amount: toYuan(summary.refundedAmountCents),
+    merchant_refund_amount: toYuan(summary.merchantRefundAmountCents),
+    merchant_refund_settled_amount: toYuan(summary.merchantRefundSettledAmountCents),
+    merchant_refund_pending_amount: toYuan(summary.merchantRefundPendingAmountCents),
+    merchant_refund_cash_amount: toYuan(summary.merchantRefundCashAmountCents),
+    merchant_refund_offset_amount: toYuan(summary.merchantRefundOffsetAmountCents),
+    rebate_amount: toYuan(summary.rebateAmountCents),
+    price_protection_amount: toYuan(summary.priceProtectionAmountCents),
+    adjusted_goods_amount: toYuan(summary.adjustedGoodsAmountCents),
     net_paid: toYuan(summary.netPaidCents),
     pending_payment: toYuan(summary.pendingPaymentCents),
     pending_refund: toYuan(summary.pendingRefundCents),
@@ -367,6 +399,9 @@ export const serializePurchaseOrder = (
             ? listPurchaseReturns(db, { purchaseOrderId: row.id })
             : undefined,
         refunds: options.includePayments ? getPurchaseOrderRefunds(db, row.id) : undefined,
+        merchant_refunds: options.includePayments
+            ? listPurchaseMerchantRefunds(db, { purchaseOrderId: row.id })
+            : undefined,
         logistics_record: getLogisticsRecordByRelated(db, 'purchase_order', row.id, 'purchase'),
         inbound_orders: options.includeInboundOrders
             ? listInboundOrders(db, { purchaseOrderId: row.id })

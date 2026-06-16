@@ -380,6 +380,107 @@ export interface PurchaseRefund {
     updated_at?: string;
 }
 
+export type PurchaseMerchantRefundType = 'rebate' | 'price_protection';
+export type PurchaseMerchantRefundStatus = 'pending' | 'partial_settled' | 'settled' | 'voided';
+export type PurchaseMerchantRefundSettlementType = 'cash' | 'payable_offset';
+
+export interface PurchaseMerchantRefundSettlement {
+    id: number;
+    merchant_refund_id: number;
+    settlement_type: PurchaseMerchantRefundSettlementType;
+    amount: number;
+    account?: string | null;
+    settled_at: string;
+    status: PurchasePaymentStatus;
+    voided_at?: string | null;
+    void_reason?: string | null;
+    note?: string | null;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface PurchaseMerchantRefundItem {
+    id: number;
+    merchant_refund_id: number;
+    purchase_order_item_id?: number | null;
+    inbound_order_item_id?: number | null;
+    product_id?: number | null;
+    quantity: number;
+    original_unit_cost?: number | null;
+    adjusted_unit_cost?: number | null;
+    amount: number;
+    note?: string | null;
+    created_at?: string;
+    product?: Product;
+}
+
+export interface PurchaseMerchantRefund {
+    id: number;
+    purchase_order_id: number;
+    supplier_id: number;
+    type: PurchaseMerchantRefundType;
+    status: PurchaseMerchantRefundStatus;
+    amount: number;
+    settled_amount: number;
+    pending_amount: number;
+    cash_amount: number;
+    offset_amount: number;
+    occurred_at: string;
+    reason?: string | null;
+    note?: string | null;
+    voided_at?: string | null;
+    void_reason?: string | null;
+    created_at?: string;
+    updated_at?: string;
+    supplier?: Supplier;
+    items?: PurchaseMerchantRefundItem[];
+    settlements?: PurchaseMerchantRefundSettlement[];
+}
+
+export interface PurchaseMerchantRefundContext {
+    purchase_order: {
+        id: number;
+        supplier_id: number;
+        status: PurchaseOrderStatus;
+    };
+    supplier?: Supplier;
+    payable_balance: number;
+    merchant_refund_summary: {
+        amount: number;
+        settled_amount: number;
+        pending_amount: number;
+        cash_amount: number;
+        offset_amount: number;
+        rebate_amount: number;
+        price_protection_amount: number;
+    };
+    groups: Array<{
+        purchase_order_item_id: number;
+        inbound_order_item_id: number;
+        product_id: number;
+        purchase_price: number;
+        serial_tracking_enabled: boolean;
+        inbound_quantity: number;
+        in_stock_quantity: number;
+        sold_quantity: number;
+        returned_quantity: number;
+        product: Product;
+        inventory_items: Array<{
+            id: number;
+            product_id: number;
+            inbound_order_id?: number | null;
+            inbound_order_item_id?: number | null;
+            cost_price: number;
+            serial_number?: string | null;
+            status: 'in_stock' | 'sold' | 'returned';
+            selectable: boolean;
+            sales_order_id?: number | null;
+            order_no?: string | null;
+            customer_name?: string | null;
+        }>;
+    }>;
+}
+
 export interface PurchaseOrderSummary {
     line_count: number;
     total_ordered_quantity: number;
@@ -390,6 +491,14 @@ export interface PurchaseOrderSummary {
     payable_amount: number;
     paid_amount: number;
     refunded_amount: number;
+    merchant_refund_amount: number;
+    merchant_refund_settled_amount: number;
+    merchant_refund_pending_amount: number;
+    merchant_refund_cash_amount: number;
+    merchant_refund_offset_amount: number;
+    rebate_amount: number;
+    price_protection_amount: number;
+    adjusted_goods_amount: number;
     net_paid: number;
     pending_payment: number;
     pending_refund: number;
@@ -426,6 +535,7 @@ export interface PurchaseOrder {
     payments?: PurchasePayment[];
     returns?: PurchaseReturn[];
     refunds?: PurchaseRefund[];
+    merchant_refunds?: PurchaseMerchantRefund[];
     logistics_record?: LogisticsRecord | null;
     inbound_orders?: InboundOrder[];
     summary: PurchaseOrderSummary;

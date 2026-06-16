@@ -92,8 +92,8 @@ export const getInboundOrderSummaryCents = (
     const goodsRow = db
         .prepare(
             `
-            SELECT COALESCE(SUM(quantity * purchase_price_cents), 0) AS goods_amount_cents
-            FROM inbound_order_items
+            SELECT COALESCE(SUM(cost_price_cents), 0) AS goods_amount_cents
+            FROM inventory_items
             WHERE inbound_order_id = ?
         `
         )

@@ -1,5 +1,6 @@
 import { getDb } from '@/lib/db';
 import { listLogisticsPayableAccounts, listLogisticsPayableRecords } from '@/lib/db/logistics';
+import { listPurchaseMerchantRefunds } from '@/lib/db/purchaseMerchantRefunds';
 import { listPurchaseOrders } from '@/lib/db/purchaseOrders';
 import { listPurchaseReturns } from '@/lib/db/purchaseReturns';
 import {
@@ -11,6 +12,7 @@ import { toYuan } from '@/lib/db/serializers';
 import { error, success } from '@/lib/request/apiResponse';
 
 type PayableDetail = ReturnType<typeof buildPayableDetail>;
+type MerchantRefundDetail = ReturnType<typeof buildMerchantRefundDetail>;
 type PurchaseReturnRefundDetail = ReturnType<typeof buildPurchaseReturnRefundDetail>;
 type ReceivableDetail = ReturnType<typeof buildReceivableDetail>;
 
@@ -26,10 +28,17 @@ interface SupplierAccount {
     refunded_amount: number;
     pending_payment: number;
     pending_refund: number;
+    merchant_refund_amount: number;
+    merchant_refund_settled_amount: number;
+    merchant_refund_pending_amount: number;
+    merchant_refund_cash_amount: number;
+    merchant_refund_offset_amount: number;
     latest_ordered_at?: string;
     latest_return_at?: string;
+    latest_merchant_refund_at?: string;
     orders: PayableDetail[];
     returns: PurchaseReturnRefundDetail[];
+    merchant_refunds: MerchantRefundDetail[];
 }
 
 interface CustomerAccount {
@@ -62,6 +71,11 @@ const buildPayableDetail = (order: ReturnType<typeof listPurchaseOrders>[number]
     payable_amount: order.summary.payable_amount,
     paid_amount: order.summary.paid_amount,
     refunded_amount: order.summary.refunded_amount,
+    merchant_refund_amount: order.summary.merchant_refund_amount,
+    merchant_refund_settled_amount: order.summary.merchant_refund_settled_amount,
+    merchant_refund_pending_amount: order.summary.merchant_refund_pending_amount,
+    merchant_refund_cash_amount: order.summary.merchant_refund_cash_amount,
+    merchant_refund_offset_amount: order.summary.merchant_refund_offset_amount,
     net_paid: order.summary.net_paid,
     pending_payment: order.summary.pending_payment,
     pending_refund: 0,
@@ -70,6 +84,27 @@ const buildPayableDetail = (order: ReturnType<typeof listPurchaseOrders>[number]
     ordered_at: order.ordered_at,
     note: order.note,
     created_at: order.created_at,
+});
+
+const buildMerchantRefundDetail = (
+    item: ReturnType<typeof listPurchaseMerchantRefunds>[number]
+) => ({
+    id: item.id,
+    purchase_order_id: item.purchase_order_id,
+    supplier_id: item.supplier?.id || item.supplier_id,
+    supplier_name: item.supplier?.name || '未命名商家',
+    contact_name: item.supplier?.contact_name || null,
+    phone: item.supplier?.phone || null,
+    type: item.type,
+    status: item.status,
+    amount: item.amount,
+    settled_amount: item.settled_amount,
+    pending_amount: item.pending_amount,
+    cash_amount: item.cash_amount,
+    offset_amount: item.offset_amount,
+    reason: item.reason,
+    occurred_at: item.occurred_at,
+    created_at: item.created_at,
 });
 
 const buildPurchaseReturnRefundDetail = (item: ReturnType<typeof listPurchaseReturns>[number]) => ({
@@ -135,6 +170,7 @@ export async function GET() {
         const db = getDb();
         const purchaseOrders = listPurchaseOrders(db, { status: 'all' });
         const purchaseReturns = listPurchaseReturns(db);
+        const merchantRefunds = listPurchaseMerchantRefunds(db, { pendingOnly: true });
         const logisticsPayables = listLogisticsPayableRecords(db);
         const logisticsAccounts = listLogisticsPayableAccounts(db);
 
@@ -196,6 +232,7 @@ export async function GET() {
         const purchaseReturnRefunds = purchaseReturns
             .filter((item) => item.goods_status !== 'cancelled' && item.pending_refund > 0)
             .map(buildPurchaseReturnRefundDetail);
+        const purchaseMerchantRefunds = merchantRefunds.map(buildMerchantRefundDetail);
 
         const receivables = receivableRows.map(buildReceivableDetail);
         const supplierAccountMap = payables.reduce((map, order) => {
@@ -214,10 +251,17 @@ export async function GET() {
                     refunded_amount: 0,
                     pending_payment: 0,
                     pending_refund: 0,
+                    merchant_refund_amount: 0,
+                    merchant_refund_settled_amount: 0,
+                    merchant_refund_pending_amount: 0,
+                    merchant_refund_cash_amount: 0,
+                    merchant_refund_offset_amount: 0,
                     latest_ordered_at: order.ordered_at,
                     latest_return_at: undefined,
+                    latest_merchant_refund_at: undefined,
                     orders: [],
                     returns: [],
+                    merchant_refunds: [],
                 } as SupplierAccount);
 
             current.order_count += 1;
@@ -252,10 +296,17 @@ export async function GET() {
                     refunded_amount: 0,
                     pending_payment: 0,
                     pending_refund: 0,
+                    merchant_refund_amount: 0,
+                    merchant_refund_settled_amount: 0,
+                    merchant_refund_pending_amount: 0,
+                    merchant_refund_cash_amount: 0,
+                    merchant_refund_offset_amount: 0,
                     latest_ordered_at: undefined,
                     latest_return_at: item.created_at,
+                    latest_merchant_refund_at: undefined,
                     orders: [],
                     returns: [],
+                    merchant_refunds: [],
                 } as SupplierAccount);
 
             current.pending_refund += item.pending_refund;
@@ -269,8 +320,55 @@ export async function GET() {
             supplierAccountMap.set(key, current);
         });
 
+        purchaseMerchantRefunds.forEach((item) => {
+            const key = String(item.supplier_id || item.supplier_name);
+            const current =
+                supplierAccountMap.get(key) ||
+                ({
+                    supplier_id: item.supplier_id,
+                    supplier_name: item.supplier_name,
+                    contact_name: item.contact_name,
+                    phone: item.phone,
+                    order_count: 0,
+                    line_count: 0,
+                    payable_amount: 0,
+                    paid_amount: 0,
+                    refunded_amount: 0,
+                    pending_payment: 0,
+                    pending_refund: 0,
+                    merchant_refund_amount: 0,
+                    merchant_refund_settled_amount: 0,
+                    merchant_refund_pending_amount: 0,
+                    merchant_refund_cash_amount: 0,
+                    merchant_refund_offset_amount: 0,
+                    latest_ordered_at: undefined,
+                    latest_return_at: undefined,
+                    latest_merchant_refund_at: item.occurred_at,
+                    orders: [],
+                    returns: [],
+                    merchant_refunds: [],
+                } as SupplierAccount);
+
+            current.merchant_refund_amount += item.amount;
+            current.merchant_refund_settled_amount += item.settled_amount;
+            current.merchant_refund_pending_amount += item.pending_amount;
+            current.merchant_refund_cash_amount += item.cash_amount;
+            current.merchant_refund_offset_amount += item.offset_amount;
+            current.latest_merchant_refund_at =
+                !current.latest_merchant_refund_at ||
+                (item.occurred_at && item.occurred_at > current.latest_merchant_refund_at)
+                    ? item.occurred_at
+                    : current.latest_merchant_refund_at;
+            current.merchant_refunds.push(item);
+            supplierAccountMap.set(key, current);
+        });
+
         const supplierAccounts = Array.from(supplierAccountMap.values()).sort(
-            (a, b) => b.pending_payment + b.pending_refund - (a.pending_payment + a.pending_refund)
+            (a, b) =>
+                b.pending_payment +
+                b.pending_refund +
+                b.merchant_refund_pending_amount -
+                (a.pending_payment + a.pending_refund + a.merchant_refund_pending_amount)
         );
         const customerAccounts = Array.from(
             receivables
@@ -314,6 +412,7 @@ export async function GET() {
                 payables,
                 logistics_payables: logisticsPayables,
                 purchase_return_refunds: purchaseReturnRefunds,
+                merchant_refunds: purchaseMerchantRefunds,
                 receivables,
                 summary: {
                     merchant_payable_count: payables.filter((item) => item.pending_payment > 0)
@@ -329,10 +428,15 @@ export async function GET() {
                     ),
                     payable_count: payables.filter((item) => item.pending_payment > 0).length,
                     refund_count: purchaseReturnRefunds.length,
+                    merchant_refund_count: purchaseMerchantRefunds.length,
                     receivable_count: receivables.length,
                     payable_amount: payables.reduce((sum, item) => sum + item.pending_payment, 0),
                     refund_amount: purchaseReturnRefunds.reduce(
                         (sum, item) => sum + item.pending_refund,
+                        0
+                    ),
+                    merchant_refund_amount: purchaseMerchantRefunds.reduce(
+                        (sum, item) => sum + item.pending_amount,
                         0
                     ),
                     receivable_amount: receivables.reduce((sum, item) => sum + item.amount, 0),

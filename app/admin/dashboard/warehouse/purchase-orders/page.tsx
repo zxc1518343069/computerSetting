@@ -5,6 +5,8 @@ import {
     InboundOrder,
     LogisticsCompany,
     Product,
+    PurchaseMerchantRefund,
+    PurchaseMerchantRefundContext,
     PurchaseOrder,
     PurchaseOrderItem,
     PurchasePayment,
@@ -46,12 +48,15 @@ import {
     cancelPurchaseReturn,
     confirmPurchaseOrder,
     createPurchasePayment,
+    createPurchaseMerchantRefund,
+    createPurchaseMerchantRefundSettlement,
     createPurchaseReturn,
     createPurchaseReturnRefund,
     fetchDashboardProducts,
     fetchInboundOrderReturnableItems,
     fetchInboundOrders,
     fetchLogisticsCompanies,
+    fetchPurchaseMerchantRefundContext,
     fetchPurchaseOrders,
     fetchPurchaseReturns,
     fetchSuppliers,
@@ -59,6 +64,7 @@ import {
     savePurchaseOrder,
     shipPurchaseReturn,
     updatePurchaseReturn,
+    voidPurchaseMerchantRefund,
     voidPurchasePayment,
 } from '../../services';
 
@@ -90,6 +96,14 @@ interface ReturnableData {
     purchase_order?: PurchaseOrder;
     supplier?: Supplier;
     groups: ReturnableGroup[];
+}
+
+interface MerchantRefundFormItem {
+    purchase_order_item_id: number;
+    inbound_order_item_id: number;
+    product_id: number;
+    inventory_item_ids?: number[];
+    adjusted_unit_cost?: number;
 }
 
 type TabKey = 'purchase' | 'returns';
@@ -134,6 +148,24 @@ const shippingBearerMap: Record<PurchaseReturn['shipping_fee_bearer'], string> =
     self: '我方',
     merchant: '商家',
     shared: '平摊',
+};
+
+const merchantRefundTypeMap: Record<
+    PurchaseMerchantRefund['type'],
+    { label: string; color: string }
+> = {
+    rebate: { label: '返利', color: 'purple' },
+    price_protection: { label: '价格保护', color: 'cyan' },
+};
+
+const merchantRefundStatusMap: Record<
+    PurchaseMerchantRefund['status'],
+    { label: string; color: string }
+> = {
+    pending: { label: '待结算', color: 'orange' },
+    partial_settled: { label: '部分结算', color: 'blue' },
+    settled: { label: '已结算', color: 'green' },
+    voided: { label: '已作废', color: 'red' },
 };
 
 type FormInstance = ReturnType<typeof Form.useForm>[0];
@@ -184,6 +216,9 @@ export default function PurchaseOrdersPage() {
     const [editReturnVisible, setEditReturnVisible] = useState(false);
     const [shipVisible, setShipVisible] = useState(false);
     const [returnRefundVisible, setReturnRefundVisible] = useState(false);
+    const [merchantRefundVisible, setMerchantRefundVisible] = useState(false);
+    const [merchantSettlementVisible, setMerchantSettlementVisible] = useState(false);
+    const [merchantRefundVoidVisible, setMerchantRefundVoidVisible] = useState(false);
     const [editingOrder, setEditingOrder] = useState<PurchaseOrder | null>(null);
     const [paymentOrder, setPaymentOrder] = useState<PurchaseOrder | null>(null);
     const [voidTarget, setVoidTarget] = useState<{
@@ -194,6 +229,17 @@ export default function PurchaseOrdersPage() {
     const [shippingReturn, setShippingReturn] = useState<PurchaseReturn | null>(null);
     const [refundReturn, setRefundReturn] = useState<PurchaseReturn | null>(null);
     const [returnableData, setReturnableData] = useState<ReturnableData | null>(null);
+    const [merchantRefundOrder, setMerchantRefundOrder] = useState<PurchaseOrder | null>(null);
+    const [merchantRefundContext, setMerchantRefundContext] =
+        useState<PurchaseMerchantRefundContext | null>(null);
+    const [merchantSettlementTarget, setMerchantSettlementTarget] = useState<{
+        order: PurchaseOrder;
+        refund: PurchaseMerchantRefund;
+    } | null>(null);
+    const [merchantRefundVoidTarget, setMerchantRefundVoidTarget] = useState<{
+        order: PurchaseOrder;
+        refund: PurchaseMerchantRefund;
+    } | null>(null);
     const [form] = Form.useForm();
     const [paymentForm] = Form.useForm();
     const [voidForm] = Form.useForm();
@@ -201,6 +247,9 @@ export default function PurchaseOrdersPage() {
     const [editReturnForm] = Form.useForm();
     const [shipForm] = Form.useForm();
     const [returnRefundForm] = Form.useForm();
+    const [merchantRefundForm] = Form.useForm();
+    const [merchantSettlementForm] = Form.useForm();
+    const [merchantRefundVoidForm] = Form.useForm();
 
     const {
         data: purchaseOrders = [],
@@ -252,10 +301,26 @@ export default function PurchaseOrdersPage() {
         fetchInboundOrderReturnableItems,
         { manual: true }
     );
+    const { runAsync: loadMerchantRefundContext, loading: merchantRefundContextLoading } =
+        useRequest(fetchPurchaseMerchantRefundContext, { manual: true });
 
     const watchedItems = Form.useWatch('items', form) as PurchaseFormItem[] | undefined;
     const watchedShippingFee = Form.useWatch('shipping_fee', form);
     const watchedMiscFee = Form.useWatch('misc_fee', form);
+    const watchedMerchantRefundType = Form.useWatch('type', merchantRefundForm) as
+        | PurchaseMerchantRefund['type']
+        | undefined;
+    const watchedMerchantRefundItems = Form.useWatch('items', merchantRefundForm) as
+        | MerchantRefundFormItem[]
+        | undefined;
+    const watchedMerchantRefundAmount = Form.useWatch('amount', merchantRefundForm);
+    const watchedMerchantSettlementType = Form.useWatch('settlement_type', merchantRefundForm) as
+        | string
+        | undefined;
+    const watchedMerchantSettlementOnlyType = Form.useWatch(
+        'settlement_type',
+        merchantSettlementForm
+    ) as string | undefined;
     const supplierOptions = useMemo(
         () => suppliers.map((supplier: Supplier) => ({ label: supplier.name, value: supplier.id })),
         [suppliers]
@@ -345,6 +410,38 @@ export default function PurchaseOrdersPage() {
         }),
         [purchaseOrders]
     );
+
+    const merchantRefundComputedAmount = useMemo(() => {
+        if (watchedMerchantRefundType !== 'price_protection') return 0;
+        const groups = merchantRefundContext?.groups || [];
+        const itemList = watchedMerchantRefundItems || [];
+
+        return itemList.reduce((sum, item, index) => {
+            const group = groups[index];
+            if (!group) return sum;
+            const adjustedUnitCost = Number(item?.adjusted_unit_cost || 0);
+            const selectedIds = Array.isArray(item?.inventory_item_ids)
+                ? item.inventory_item_ids.map(Number)
+                : [];
+
+            const itemAmount = selectedIds.reduce((itemSum, inventoryId) => {
+                const inventoryItem = group.inventory_items.find(
+                    (candidate) => candidate.id === inventoryId
+                );
+                if (!inventoryItem || inventoryItem.status === 'returned') return itemSum;
+                return (
+                    itemSum + Math.max(Number(inventoryItem.cost_price || 0) - adjustedUnitCost, 0)
+                );
+            }, 0);
+
+            return sum + itemAmount;
+        }, 0);
+    }, [merchantRefundContext?.groups, watchedMerchantRefundItems, watchedMerchantRefundType]);
+
+    const merchantRefundBaseAmount =
+        watchedMerchantRefundType === 'price_protection'
+            ? merchantRefundComputedAmount
+            : Number(watchedMerchantRefundAmount || 0);
 
     const refreshAll = () => {
         refreshPurchaseOrders();
@@ -686,6 +783,148 @@ export default function PurchaseOrdersPage() {
         }
     );
 
+    const { runAsync: submitMerchantRefund, loading: creatingMerchantRefund } = useRequest(
+        async () => {
+            if (!merchantRefundOrder) return;
+            const values = await merchantRefundForm.validateFields();
+            const type = values.type as PurchaseMerchantRefund['type'];
+            const settlementType = values.settlement_type || 'none';
+            const baseAmount =
+                type === 'price_protection'
+                    ? merchantRefundComputedAmount
+                    : Number(values.amount || 0);
+            if (baseAmount <= 0) {
+                throw new Error(
+                    type === 'price_protection'
+                        ? '请选择库存件并输入低于当前成本的调整后单价'
+                        : '请输入返利金额'
+                );
+            }
+
+            const settlement =
+                settlementType === 'none'
+                    ? null
+                    : {
+                          settlement_type: settlementType,
+                          amount: values.settlement_amount || baseAmount,
+                          account: values.settlement_account || null,
+                          settled_at: values.settled_at?.toISOString(),
+                          note: values.settlement_note || null,
+                      };
+
+            const priceProtectionItems =
+                type === 'price_protection'
+                    ? (values.items || [])
+                          .map((item: MerchantRefundFormItem) => ({
+                              purchase_order_item_id: item.purchase_order_item_id,
+                              inbound_order_item_id: item.inbound_order_item_id,
+                              adjusted_unit_cost: item.adjusted_unit_cost,
+                              inventory_item_ids: Array.isArray(item.inventory_item_ids)
+                                  ? item.inventory_item_ids.map(Number).filter(Boolean)
+                                  : [],
+                          }))
+                          .filter(
+                              (item: {
+                                  inventory_item_ids: number[];
+                                  adjusted_unit_cost?: number;
+                              }) =>
+                                  item.inventory_item_ids.length > 0 &&
+                                  item.adjusted_unit_cost !== undefined
+                          )
+                    : [];
+
+            if (type === 'price_protection' && priceProtectionItems.length === 0) {
+                throw new Error('请选择参与价保的库存件');
+            }
+
+            const payload =
+                type === 'rebate'
+                    ? {
+                          type,
+                          amount: values.amount,
+                          occurred_at: values.occurred_at?.toISOString(),
+                          reason: values.reason || null,
+                          note: values.note || null,
+                          rebate_basis_quantity: values.rebate_basis_quantity || null,
+                          settlement,
+                      }
+                    : {
+                          type,
+                          occurred_at: values.occurred_at?.toISOString(),
+                          reason: values.reason || null,
+                          note: values.note || null,
+                          settlement,
+                          items: priceProtectionItems,
+                      };
+
+            await createPurchaseMerchantRefund(merchantRefundOrder.id, payload);
+        },
+        {
+            manual: true,
+            onSuccess: () => {
+                message.success('商家返款已登记');
+                setMerchantRefundVisible(false);
+                setMerchantRefundOrder(null);
+                setMerchantRefundContext(null);
+                merchantRefundForm.resetFields();
+                refreshPurchaseOrders();
+            },
+            onError: (e) => message.error(e.message),
+        }
+    );
+
+    const { runAsync: submitMerchantSettlement, loading: settlingMerchantRefund } = useRequest(
+        async () => {
+            if (!merchantSettlementTarget) return;
+            const values = await merchantSettlementForm.validateFields();
+            await createPurchaseMerchantRefundSettlement(
+                merchantSettlementTarget.order.id,
+                merchantSettlementTarget.refund.id,
+                {
+                    settlement_type: values.settlement_type,
+                    amount: values.amount,
+                    account: values.account || null,
+                    settled_at: values.settled_at?.toISOString(),
+                    note: values.note || null,
+                }
+            );
+        },
+        {
+            manual: true,
+            onSuccess: () => {
+                message.success('商家返款结算已登记');
+                setMerchantSettlementVisible(false);
+                setMerchantSettlementTarget(null);
+                merchantSettlementForm.resetFields();
+                refreshPurchaseOrders();
+            },
+            onError: (e) => message.error(e.message),
+        }
+    );
+
+    const { runAsync: submitVoidMerchantRefund, loading: voidingMerchantRefund } = useRequest(
+        async () => {
+            if (!merchantRefundVoidTarget) return;
+            const values = await merchantRefundVoidForm.validateFields();
+            await voidPurchaseMerchantRefund(
+                merchantRefundVoidTarget.order.id,
+                merchantRefundVoidTarget.refund.id,
+                values.void_reason
+            );
+        },
+        {
+            manual: true,
+            onSuccess: () => {
+                message.success('商家返款已作废');
+                setMerchantRefundVoidVisible(false);
+                setMerchantRefundVoidTarget(null);
+                merchantRefundVoidForm.resetFields();
+                refreshPurchaseOrders();
+            },
+            onError: (e) => message.error(e.message),
+        }
+    );
+
     const openCreate = () => {
         setEditingOrder(null);
         form.resetFields();
@@ -800,6 +1039,51 @@ export default function PurchaseOrdersPage() {
         setReturnRefundVisible(true);
     };
 
+    const openMerchantRefund = async (order: PurchaseOrder) => {
+        setMerchantRefundOrder(order);
+        setMerchantRefundVisible(true);
+        setMerchantRefundContext(null);
+        merchantRefundForm.resetFields();
+        merchantRefundForm.setFieldsValue({
+            type: 'rebate',
+            occurred_at: dayjs(),
+            amount: undefined,
+            settlement_type: 'none',
+            settled_at: dayjs(),
+        });
+
+        const context = (await loadMerchantRefundContext(
+            order.id
+        )) as PurchaseMerchantRefundContext;
+        setMerchantRefundContext(context);
+        merchantRefundForm.setFieldsValue({
+            items: context.groups.map((group) => ({
+                purchase_order_item_id: group.purchase_order_item_id,
+                inbound_order_item_id: group.inbound_order_item_id,
+                product_id: group.product_id,
+                inventory_item_ids: [],
+                adjusted_unit_cost: undefined,
+            })),
+        });
+    };
+
+    const openMerchantSettlement = (order: PurchaseOrder, refund: PurchaseMerchantRefund) => {
+        setMerchantSettlementTarget({ order, refund });
+        merchantSettlementForm.resetFields();
+        merchantSettlementForm.setFieldsValue({
+            settlement_type: 'cash',
+            amount: refund.pending_amount,
+            settled_at: dayjs(),
+        });
+        setMerchantSettlementVisible(true);
+    };
+
+    const openVoidMerchantRefund = (order: PurchaseOrder, refund: PurchaseMerchantRefund) => {
+        setMerchantRefundVoidTarget({ order, refund });
+        merchantRefundVoidForm.resetFields();
+        setMerchantRefundVoidVisible(true);
+    };
+
     const goInbound = (order: PurchaseOrder, create: boolean) => {
         const params = new URLSearchParams({ purchaseOrderId: String(order.id) });
         if (create) params.set('action', 'create');
@@ -900,6 +1184,19 @@ export default function PurchaseOrdersPage() {
                             查看入库记录
                         </Button>
                     )}
+                    {record.summary.total_received_quantity > 0 &&
+                        record.status !== 'cancelled' && (
+                            <Button
+                                type="link"
+                                onClick={() =>
+                                    openMerchantRefund(record).catch((e) =>
+                                        message.error(e.message)
+                                    )
+                                }
+                            >
+                                商家返款
+                            </Button>
+                        )}
                     {record.summary.pending_payment > 0 &&
                         record.summary.total_received_quantity > 0 &&
                         record.status !== 'cancelled' && (
@@ -1213,6 +1510,12 @@ export default function PurchaseOrdersPage() {
                                                         onViewInbound={() =>
                                                             goInbound(record, false)
                                                         }
+                                                        onMerchantSettlement={(refund) =>
+                                                            openMerchantSettlement(record, refund)
+                                                        }
+                                                        onVoidMerchantRefund={(refund) =>
+                                                            openVoidMerchantRefund(record, refund)
+                                                        }
                                                     />
                                                 ),
                                             }}
@@ -1502,6 +1805,311 @@ export default function PurchaseOrdersPage() {
                 width={560}
             >
                 <Form form={voidForm} layout="vertical" className="pt-4">
+                    <Form.Item
+                        name="void_reason"
+                        label="作废原因"
+                        rules={[{ required: true, message: '请填写作废原因' }]}
+                    >
+                        <Input.TextArea rows={3} />
+                    </Form.Item>
+                </Form>
+            </Modal>
+
+            <Modal
+                title={
+                    merchantRefundOrder
+                        ? `登记 JH-${merchantRefundOrder.id} 商家返款`
+                        : '登记商家返款'
+                }
+                open={merchantRefundVisible}
+                onCancel={() => {
+                    setMerchantRefundVisible(false);
+                    setMerchantRefundOrder(null);
+                    setMerchantRefundContext(null);
+                    merchantRefundForm.resetFields();
+                }}
+                footer={null}
+                destroyOnHidden
+                width={980}
+            >
+                <Form form={merchantRefundForm} layout="vertical" className="pt-4">
+                    {merchantRefundOrder && (
+                        <div className="mb-4 rounded-2xl border border-gray-100 bg-gray-50/70 p-4 text-sm dark:border-gray-800 dark:bg-black/20">
+                            <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+                                <ReadonlyCell
+                                    label="商家"
+                                    value={merchantRefundOrder.supplier?.name || '-'}
+                                />
+                                <ReadonlyCell
+                                    label="已入库商品"
+                                    value={formatPrice(merchantRefundOrder.summary.goods_amount)}
+                                />
+                                <ReadonlyCell
+                                    label="已付"
+                                    value={formatPrice(merchantRefundOrder.summary.paid_amount)}
+                                />
+                                <ReadonlyCell
+                                    label="待付款"
+                                    value={formatPrice(merchantRefundOrder.summary.pending_payment)}
+                                    strong
+                                />
+                                <ReadonlyCell
+                                    label="可抵扣"
+                                    value={formatPrice(
+                                        merchantRefundContext?.payable_balance ??
+                                            merchantRefundOrder.summary.pending_payment
+                                    )}
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                        <Form.Item
+                            name="type"
+                            label="返款类型"
+                            rules={[{ required: true, message: '请选择返款类型' }]}
+                        >
+                            <Select
+                                options={[
+                                    { label: '返利', value: 'rebate' },
+                                    { label: '价格保护', value: 'price_protection' },
+                                ]}
+                            />
+                        </Form.Item>
+                        <Form.Item
+                            name="occurred_at"
+                            label="发生时间"
+                            rules={[{ required: true, message: '请选择发生时间' }]}
+                        >
+                            <DatePicker showTime className="w-full" />
+                        </Form.Item>
+                        {watchedMerchantRefundType === 'rebate' ? (
+                            <Form.Item
+                                name="amount"
+                                label="返利金额"
+                                rules={[{ required: true, message: '请输入返利金额' }]}
+                            >
+                                <InputNumber
+                                    min={0.01}
+                                    precision={2}
+                                    prefix="¥"
+                                    className="w-full"
+                                />
+                            </Form.Item>
+                        ) : (
+                            <Form.Item label="价保金额">
+                                <div className="flex h-8 items-center rounded-md bg-gray-50 px-3 font-mono font-black text-cyan-600 dark:bg-black/20">
+                                    {formatPrice(merchantRefundComputedAmount)}
+                                </div>
+                            </Form.Item>
+                        )}
+                    </div>
+
+                    {watchedMerchantRefundType === 'rebate' && (
+                        <Form.Item name="rebate_basis_quantity" label="返利依据数量">
+                            <InputNumber min={0} precision={0} className="w-full" />
+                        </Form.Item>
+                    )}
+
+                    {watchedMerchantRefundType === 'price_protection' && (
+                        <div className="space-y-4">
+                            {merchantRefundContextLoading && (
+                                <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-8 text-center text-sm text-gray-400 dark:border-gray-800 dark:bg-black/20">
+                                    正在加载可价保库存...
+                                </div>
+                            )}
+                            <Form.List name="items">
+                                {(fields) => (
+                                    <div className="space-y-4">
+                                        {fields.length === 0 && !merchantRefundContextLoading && (
+                                            <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-8 text-center text-sm text-gray-400 dark:border-gray-800 dark:bg-black/20">
+                                                当前进货单暂无已入库库存可价保
+                                            </div>
+                                        )}
+                                        {fields.map((field, index) => (
+                                            <MerchantRefundPriceProtectionItem
+                                                key={field.key}
+                                                fieldName={field.name}
+                                                group={merchantRefundContext?.groups[index]}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+                            </Form.List>
+                        </div>
+                    )}
+
+                    <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <Form.Item name="reason" label="原因/政策说明">
+                            <Input />
+                        </Form.Item>
+                        <Form.Item name="settlement_type" label="结算方式">
+                            <Select
+                                options={[
+                                    { label: '暂不结算', value: 'none' },
+                                    { label: '实际收款', value: 'cash' },
+                                    { label: '抵扣应付', value: 'payable_offset' },
+                                ]}
+                            />
+                        </Form.Item>
+                    </div>
+
+                    {watchedMerchantSettlementType !== 'none' && (
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                            <Form.Item
+                                name="settlement_amount"
+                                label="本次结算金额"
+                                rules={[{ required: true, message: '请输入本次结算金额' }]}
+                            >
+                                <InputNumber
+                                    min={0.01}
+                                    max={
+                                        watchedMerchantSettlementType === 'payable_offset'
+                                            ? Math.min(
+                                                  merchantRefundBaseAmount || 0,
+                                                  merchantRefundContext?.payable_balance ||
+                                                      merchantRefundOrder?.summary
+                                                          .pending_payment ||
+                                                      0
+                                              )
+                                            : merchantRefundBaseAmount || undefined
+                                    }
+                                    precision={2}
+                                    prefix="¥"
+                                    className="w-full"
+                                />
+                            </Form.Item>
+                            {watchedMerchantSettlementType === 'cash' && (
+                                <Form.Item name="settlement_account" label="收款账号">
+                                    <Input />
+                                </Form.Item>
+                            )}
+                            <Form.Item
+                                name="settled_at"
+                                label="结算时间"
+                                rules={[{ required: true, message: '请选择结算时间' }]}
+                            >
+                                <DatePicker showTime className="w-full" />
+                            </Form.Item>
+                        </div>
+                    )}
+
+                    <Form.Item name="note" label="备注">
+                        <Input.TextArea rows={2} />
+                    </Form.Item>
+
+                    <div className="flex justify-end gap-3">
+                        <Button onClick={() => setMerchantRefundVisible(false)}>取消</Button>
+                        <Button
+                            type="primary"
+                            loading={creatingMerchantRefund}
+                            onClick={submitMerchantRefund}
+                        >
+                            保存商家返款
+                        </Button>
+                    </div>
+                </Form>
+            </Modal>
+
+            <Modal
+                title={
+                    merchantSettlementTarget
+                        ? `登记 FK-${merchantSettlementTarget.refund.id} 结算`
+                        : '登记商家返款结算'
+                }
+                open={merchantSettlementVisible}
+                onCancel={() => setMerchantSettlementVisible(false)}
+                onOk={submitMerchantSettlement}
+                confirmLoading={settlingMerchantRefund}
+                destroyOnHidden
+                width={620}
+            >
+                <Form form={merchantSettlementForm} layout="vertical" className="pt-4">
+                    {merchantSettlementTarget && (
+                        <div className="mb-4 rounded-2xl border border-gray-100 bg-gray-50/70 p-4 text-sm dark:border-gray-800 dark:bg-black/20">
+                            <div className="grid grid-cols-2 gap-3">
+                                <ReadonlyCell
+                                    label="待结算"
+                                    value={formatPrice(
+                                        merchantSettlementTarget.refund.pending_amount
+                                    )}
+                                    strong
+                                />
+                                <ReadonlyCell
+                                    label="进货待付款"
+                                    value={formatPrice(
+                                        merchantSettlementTarget.order.summary.pending_payment
+                                    )}
+                                />
+                            </div>
+                        </div>
+                    )}
+                    <Form.Item
+                        name="settlement_type"
+                        label="结算方式"
+                        rules={[{ required: true, message: '请选择结算方式' }]}
+                    >
+                        <Select
+                            options={[
+                                { label: '实际收款', value: 'cash' },
+                                { label: '抵扣应付', value: 'payable_offset' },
+                            ]}
+                        />
+                    </Form.Item>
+                    <Form.Item
+                        name="amount"
+                        label="本次结算金额"
+                        rules={[{ required: true, message: '请输入本次结算金额' }]}
+                    >
+                        <InputNumber
+                            min={0.01}
+                            max={
+                                watchedMerchantSettlementOnlyType === 'payable_offset'
+                                    ? Math.min(
+                                          merchantSettlementTarget?.refund.pending_amount || 0,
+                                          merchantSettlementTarget?.order.summary.pending_payment ||
+                                              0
+                                      )
+                                    : merchantSettlementTarget?.refund.pending_amount
+                            }
+                            precision={2}
+                            prefix="¥"
+                            className="w-full"
+                        />
+                    </Form.Item>
+                    {watchedMerchantSettlementOnlyType === 'cash' && (
+                        <Form.Item name="account" label="收款账号">
+                            <Input />
+                        </Form.Item>
+                    )}
+                    <Form.Item
+                        name="settled_at"
+                        label="结算时间"
+                        rules={[{ required: true, message: '请选择结算时间' }]}
+                    >
+                        <DatePicker showTime className="w-full" />
+                    </Form.Item>
+                    <Form.Item name="note" label="备注">
+                        <Input.TextArea rows={3} />
+                    </Form.Item>
+                </Form>
+            </Modal>
+
+            <Modal
+                title={
+                    merchantRefundVoidTarget
+                        ? `作废 FK-${merchantRefundVoidTarget.refund.id}`
+                        : '作废商家返款'
+                }
+                open={merchantRefundVoidVisible}
+                onCancel={() => setMerchantRefundVoidVisible(false)}
+                onOk={submitVoidMerchantRefund}
+                confirmLoading={voidingMerchantRefund}
+                destroyOnHidden
+                width={560}
+            >
+                <Form form={merchantRefundVoidForm} layout="vertical" className="pt-4">
                     <Form.Item
                         name="void_reason"
                         label="作废原因"
@@ -1860,6 +2468,85 @@ function ReturnItemSelector({ fieldName, group }: { fieldName: number; group?: R
     );
 }
 
+function MerchantRefundPriceProtectionItem({
+    fieldName,
+    group,
+}: {
+    fieldName: number;
+    group?: PurchaseMerchantRefundContext['groups'][number];
+}) {
+    if (!group) return null;
+
+    const selectableCount = group.inventory_items.filter((item) => item.selectable).length;
+
+    return (
+        <div className="rounded-2xl border border-gray-100 bg-gray-50/70 p-4 dark:border-gray-800 dark:bg-black/20">
+            <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                <div>
+                    <div className="font-bold text-gray-900 dark:text-gray-100">
+                        {group.product?.name || `物品 ${group.product_id}`}
+                    </div>
+                    <div className="mt-1 text-xs text-gray-400">
+                        入库 {group.inbound_quantity} / 在库 {group.in_stock_quantity} / 已售{' '}
+                        {group.sold_quantity} / 已退 {group.returned_quantity}
+                    </div>
+                </div>
+                <div className="text-sm md:text-right">
+                    <div className="font-mono font-black text-gray-900 dark:text-gray-100">
+                        {formatPrice(group.purchase_price)}
+                    </div>
+                    <div className="text-xs text-gray-400">进货单价</div>
+                </div>
+            </div>
+            <Form.Item name={[fieldName, 'purchase_order_item_id']} hidden>
+                <Input />
+            </Form.Item>
+            <Form.Item name={[fieldName, 'inbound_order_item_id']} hidden>
+                <Input />
+            </Form.Item>
+            <Form.Item name={[fieldName, 'product_id']} hidden>
+                <Input />
+            </Form.Item>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <Form.Item name={[fieldName, 'inventory_item_ids']} label="参与价保库存件">
+                    <Select
+                        mode="multiple"
+                        placeholder={
+                            selectableCount > 0
+                                ? '选择需要调整成本的库存件'
+                                : '没有可参与价保的库存件'
+                        }
+                        options={group.inventory_items.map((item) => ({
+                            label: [
+                                `#${item.id}`,
+                                item.serial_number || null,
+                                formatPrice(item.cost_price),
+                                item.status === 'sold'
+                                    ? `已售 ${item.order_no || ''}`
+                                    : item.status === 'returned'
+                                      ? '已退货'
+                                      : '在库',
+                            ]
+                                .filter(Boolean)
+                                .join(' / '),
+                            value: item.id,
+                            disabled: !item.selectable,
+                        }))}
+                    />
+                </Form.Item>
+                <Form.Item name={[fieldName, 'adjusted_unit_cost']} label="调整后单价">
+                    <InputNumber min={0} precision={2} prefix="¥" className="w-full" />
+                </Form.Item>
+            </div>
+            {group.inventory_items.some((item) => item.status === 'sold') && (
+                <div className="text-xs text-orange-500">
+                    选择已售库存件后，会同步重算关联销售单利润。
+                </div>
+            )}
+        </div>
+    );
+}
+
 function ReturnBaseForm({
     form,
     logisticsCompanyOptions,
@@ -1965,11 +2652,15 @@ function PurchaseOrderDetails({
     onPayment,
     onVoidPayment,
     onViewInbound,
+    onMerchantSettlement,
+    onVoidMerchantRefund,
 }: {
     order: PurchaseOrder;
     onPayment: () => void;
     onVoidPayment: (payment: PurchasePayment) => void;
     onViewInbound: () => void;
+    onMerchantSettlement: (refund: PurchaseMerchantRefund) => void;
+    onVoidMerchantRefund: (refund: PurchaseMerchantRefund) => void;
 }) {
     return (
         <div className="space-y-5 bg-gray-50/70 p-4 dark:bg-black/20">
@@ -1991,6 +2682,10 @@ function PurchaseOrderDetails({
                     strong
                 />
                 <ReadonlyCell label="已付款" value={formatPrice(order.summary.paid_amount)} />
+                <ReadonlyCell
+                    label="返款抵扣"
+                    value={formatPrice(order.summary.merchant_refund_offset_amount)}
+                />
                 <ReadonlyCell
                     label="待付款"
                     value={formatPrice(order.summary.pending_payment)}
@@ -2091,6 +2786,24 @@ function PurchaseOrderDetails({
                         <div className="space-y-3">
                             {(order.returns || []).map((item) => (
                                 <ReturnRecord key={item.id} item={item} />
+                            ))}
+                        </div>
+                    )}
+
+                    <div className="font-bold text-gray-900 dark:text-gray-100 pt-3">
+                        商家返款记录
+                    </div>
+                    {(order.merchant_refunds || []).length === 0 ? (
+                        <EmptyRecord text="暂无商家返款记录" />
+                    ) : (
+                        <div className="space-y-3">
+                            {(order.merchant_refunds || []).map((refund) => (
+                                <MerchantRefundRecord
+                                    key={refund.id}
+                                    refund={refund}
+                                    onSettlement={() => onMerchantSettlement(refund)}
+                                    onVoid={() => onVoidMerchantRefund(refund)}
+                                />
                             ))}
                         </div>
                     )}
@@ -2266,6 +2979,67 @@ function ReturnRecord({ item }: { item: PurchaseReturn }) {
                 </div>
             </div>
             <div className="mt-2 text-xs text-gray-500">原因：{item.reason}</div>
+        </div>
+    );
+}
+
+function MerchantRefundRecord({
+    refund,
+    onSettlement,
+    onVoid,
+}: {
+    refund: PurchaseMerchantRefund;
+    onSettlement: () => void;
+    onVoid: () => void;
+}) {
+    const type = merchantRefundTypeMap[refund.type];
+    const status = merchantRefundStatusMap[refund.status];
+
+    return (
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 dark:border-gray-800 dark:bg-[#141414]">
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div>
+                    <div className="font-mono text-lg font-black text-cyan-600 dark:text-cyan-400">
+                        {formatPrice(refund.amount)}
+                    </div>
+                    <div className="mt-1 text-xs text-gray-400">
+                        FK-{refund.id} / {formatDate(refund.occurred_at)}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                        <Tag color={type.color}>{type.label}</Tag>
+                        <Tag color={status.color}>{status.label}</Tag>
+                        {refund.cash_amount > 0 && (
+                            <Tag color="green">收款 {formatPrice(refund.cash_amount)}</Tag>
+                        )}
+                        {refund.offset_amount > 0 && (
+                            <Tag color="blue">抵扣 {formatPrice(refund.offset_amount)}</Tag>
+                        )}
+                    </div>
+                </div>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                    <div className="text-right text-xs text-gray-500">
+                        <div>已结算 {formatPrice(refund.settled_amount)}</div>
+                        <div>待结算 {formatPrice(refund.pending_amount)}</div>
+                    </div>
+                    {refund.status !== 'voided' && refund.pending_amount > 0 && (
+                        <Button size="small" onClick={onSettlement}>
+                            登记结算
+                        </Button>
+                    )}
+                    {refund.status !== 'voided' && (
+                        <Button danger size="small" onClick={onVoid}>
+                            作废
+                        </Button>
+                    )}
+                </div>
+            </div>
+            {refund.reason && (
+                <div className="mt-2 text-xs text-gray-500">原因：{refund.reason}</div>
+            )}
+            {refund.note && <div className="mt-1 text-xs text-gray-500">备注：{refund.note}</div>}
+            {refund.void_reason && (
+                <div className="mt-2 text-xs text-red-500">作废原因：{refund.void_reason}</div>
+            )}
         </div>
     );
 }

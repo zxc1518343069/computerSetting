@@ -506,6 +506,90 @@ CREATE INDEX IF NOT EXISTS idx_purchase_refunds_order_status
 CREATE INDEX IF NOT EXISTS idx_purchase_refunds_return_status
     ON purchase_refunds(purchase_return_id, status);
 
+CREATE TABLE IF NOT EXISTS purchase_merchant_refunds
+(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    purchase_order_id INTEGER NOT NULL REFERENCES purchase_orders (id) ON DELETE CASCADE,
+    supplier_id INTEGER NOT NULL REFERENCES suppliers (id),
+    type TEXT NOT NULL CHECK (type IN ('rebate', 'price_protection')),
+    status TEXT NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('pending', 'partial_settled', 'settled', 'voided')),
+    amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+    settled_amount_cents INTEGER NOT NULL DEFAULT 0,
+    occurred_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    reason TEXT,
+    note TEXT,
+    voided_at TEXT,
+    void_reason TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_purchase_merchant_refunds_order_status
+    ON purchase_merchant_refunds(purchase_order_id, status);
+CREATE INDEX IF NOT EXISTS idx_purchase_merchant_refunds_supplier_status
+    ON purchase_merchant_refunds(supplier_id, status);
+CREATE INDEX IF NOT EXISTS idx_purchase_merchant_refunds_type_time
+    ON purchase_merchant_refunds(type, occurred_at);
+
+CREATE TABLE IF NOT EXISTS purchase_merchant_refund_items
+(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    merchant_refund_id INTEGER NOT NULL REFERENCES purchase_merchant_refunds (id) ON DELETE CASCADE,
+    purchase_order_item_id INTEGER REFERENCES purchase_order_items (id),
+    inbound_order_item_id INTEGER REFERENCES inbound_order_items (id),
+    product_id INTEGER REFERENCES products (id),
+    quantity INTEGER NOT NULL DEFAULT 0,
+    original_unit_cost_cents INTEGER,
+    adjusted_unit_cost_cents INTEGER,
+    amount_cents INTEGER NOT NULL DEFAULT 0,
+    note TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_purchase_merchant_refund_items_refund
+    ON purchase_merchant_refund_items(merchant_refund_id);
+CREATE INDEX IF NOT EXISTS idx_purchase_merchant_refund_items_order_item
+    ON purchase_merchant_refund_items(purchase_order_item_id);
+
+CREATE TABLE IF NOT EXISTS purchase_merchant_refund_inventory_items
+(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    merchant_refund_item_id INTEGER NOT NULL
+        REFERENCES purchase_merchant_refund_items (id) ON DELETE CASCADE,
+    inventory_item_id INTEGER NOT NULL REFERENCES inventory_items (id),
+    inventory_status_at_adjustment TEXT NOT NULL,
+    order_inventory_item_id INTEGER REFERENCES order_inventory_items (id),
+    sales_order_id INTEGER REFERENCES sales_orders (id),
+    old_cost_price_cents INTEGER NOT NULL,
+    new_cost_price_cents INTEGER NOT NULL,
+    old_order_cost_price_cents INTEGER,
+    new_order_cost_price_cents INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_purchase_merchant_refund_inventory_items_item
+    ON purchase_merchant_refund_inventory_items(inventory_item_id);
+
+CREATE TABLE IF NOT EXISTS purchase_merchant_refund_settlements
+(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    merchant_refund_id INTEGER NOT NULL REFERENCES purchase_merchant_refunds (id) ON DELETE CASCADE,
+    settlement_type TEXT NOT NULL CHECK (settlement_type IN ('cash', 'payable_offset')),
+    amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+    account TEXT,
+    settled_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'voided')),
+    voided_at TEXT,
+    void_reason TEXT,
+    note TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_purchase_merchant_refund_settlements_refund_status
+    ON purchase_merchant_refund_settlements(merchant_refund_id, status);
+
 CREATE TABLE IF NOT EXISTS inbound_orders
 (
     id

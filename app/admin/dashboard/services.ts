@@ -5,6 +5,8 @@ import {
     InventoryItem,
     OperatingCost,
     Product,
+    PurchaseMerchantRefund,
+    PurchaseMerchantRefundContext,
     PurchaseOrder,
     PurchaseReturn,
     LogisticsCompany,
@@ -234,6 +236,46 @@ export const voidPurchasePayment = (id: number, paymentId: number, void_reason: 
     });
 };
 
+export const fetchPurchaseMerchantRefundContext = (id: number) => {
+    return api.get<any, PurchaseMerchantRefundContext>(
+        `/purchase-orders/${id}/merchant-refunds/context`
+    );
+};
+
+export const fetchPurchaseMerchantRefunds = (id: number) => {
+    return api.get<any, PurchaseMerchantRefund[]>(`/purchase-orders/${id}/merchant-refunds`);
+};
+
+export const createPurchaseMerchantRefund = (id: number, data: any) => {
+    return api.post<any, PurchaseMerchantRefund>(`/purchase-orders/${id}/merchant-refunds`, data);
+};
+
+export const createPurchaseMerchantRefundSettlement = (id: number, refundId: number, data: any) => {
+    return api.post<any, PurchaseMerchantRefund>(
+        `/purchase-orders/${id}/merchant-refunds/${refundId}/settlements`,
+        data
+    );
+};
+
+export const voidPurchaseMerchantRefundSettlement = (
+    id: number,
+    refundId: number,
+    settlementId: number,
+    void_reason: string
+) => {
+    return api.post<any, PurchaseMerchantRefund>(
+        `/purchase-orders/${id}/merchant-refunds/${refundId}/settlements/${settlementId}/void`,
+        { void_reason }
+    );
+};
+
+export const voidPurchaseMerchantRefund = (id: number, refundId: number, void_reason: string) => {
+    return api.post<any, PurchaseMerchantRefund>(
+        `/purchase-orders/${id}/merchant-refunds/${refundId}/void`,
+        { void_reason }
+    );
+};
+
 export const fetchPurchaseReturns = (params?: {
     search?: string;
     purchase_order_id?: number;
@@ -323,6 +365,11 @@ export interface AccountPayableDetail {
     payable_amount: number;
     paid_amount: number;
     refunded_amount: number;
+    merchant_refund_amount: number;
+    merchant_refund_settled_amount: number;
+    merchant_refund_pending_amount: number;
+    merchant_refund_cash_amount: number;
+    merchant_refund_offset_amount: number;
     net_paid: number;
     pending_payment: number;
     pending_refund: number;
@@ -330,6 +377,25 @@ export interface AccountPayableDetail {
     payment_status: string;
     ordered_at?: string;
     note?: string | null;
+    created_at?: string;
+}
+
+export interface AccountMerchantRefundDetail {
+    id: number;
+    purchase_order_id: number;
+    supplier_id?: number;
+    supplier_name: string;
+    contact_name?: string | null;
+    phone?: string | null;
+    type: PurchaseMerchantRefund['type'];
+    status: PurchaseMerchantRefund['status'];
+    amount: number;
+    settled_amount: number;
+    pending_amount: number;
+    cash_amount: number;
+    offset_amount: number;
+    reason?: string | null;
+    occurred_at?: string;
     created_at?: string;
 }
 
@@ -389,10 +455,17 @@ export interface AccountsOverview {
         refunded_amount: number;
         pending_payment: number;
         pending_refund: number;
+        merchant_refund_amount: number;
+        merchant_refund_settled_amount: number;
+        merchant_refund_pending_amount: number;
+        merchant_refund_cash_amount: number;
+        merchant_refund_offset_amount: number;
         latest_ordered_at?: string;
         latest_return_at?: string;
+        latest_merchant_refund_at?: string;
         orders: AccountPayableDetail[];
         returns: AccountPurchaseReturnRefundDetail[];
+        merchant_refunds: AccountMerchantRefundDetail[];
     }>;
     logistics_accounts: Array<{
         company_id?: number | null;
@@ -418,6 +491,7 @@ export interface AccountsOverview {
     payables: AccountPayableDetail[];
     logistics_payables: AccountLogisticsPayableDetail[];
     purchase_return_refunds: AccountPurchaseReturnRefundDetail[];
+    merchant_refunds: AccountMerchantRefundDetail[];
     receivables: AccountReceivableDetail[];
     summary: {
         merchant_payable_count: number;
@@ -426,9 +500,11 @@ export interface AccountsOverview {
         logistics_payable_amount: number;
         payable_count: number;
         refund_count: number;
+        merchant_refund_count: number;
         receivable_count: number;
         payable_amount: number;
         refund_amount: number;
+        merchant_refund_amount: number;
         receivable_amount: number;
     };
 }
