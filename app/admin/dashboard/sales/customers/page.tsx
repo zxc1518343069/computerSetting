@@ -23,7 +23,7 @@ import {
     fetchCustomerOrders,
     fetchCustomers,
     saveCustomer,
-} from '../../services';
+} from './services';
 
 export default function CustomersPage() {
     const [search, setSearch] = useState('');

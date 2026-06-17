@@ -1,7 +1,7 @@
 import { useRequest } from 'ahooks';
 import { Button, Tabs } from 'antd';
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
-import { fetchAccountsOverview } from '../../../../../../services';
+import { fetchAccountsOverview } from '@/app/admin/dashboard/finance/accounts/services';
 import { emptyAccountsOverview } from '../../../../types';
 import type { AccountNavigationActions, AccountSummaryType } from './types';
 import { CustomerAccountsTable } from './components/CustomerAccountsTable';

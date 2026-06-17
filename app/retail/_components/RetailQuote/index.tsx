@@ -2,11 +2,9 @@
 
 import { useAuth } from '@/app/_components/AuthProvider';
 import { ExportButton } from '@/app/_components/PCPartsTable/Content/components/ExportButton';
-import {
-    fetchActiveAdminUsers,
-    fetchCustomers,
-    saveRetailOrder,
-} from '@/app/admin/dashboard/services';
+import { fetchActiveAdminUsers } from '@/app/services/adminUsers';
+import { fetchCustomers } from '@/app/services/customers';
+import { saveRetailOrder } from '@/app/services/orders';
 import { usePackageCalculator } from '@/app/admin/dashboard/packages/components/EditablePackageTable/hooks/usePackageCalculator';
 import { usePackageTableData } from '@/app/admin/dashboard/packages/components/EditablePackageTable/hooks/usePackageTableData';
 import { fetchProductCategories } from '@/app/services/categories';
@@ -54,11 +52,7 @@ export default function RetailQuote() {
         }
     );
 
-    const { getItemMetrics, totalPrice } = usePackageCalculator(
-        products,
-        pricingConfig,
-        tableData
-    );
+    const { getItemMetrics, totalPrice } = usePackageCalculator(products, pricingConfig, tableData);
 
     const categoryLabelMap = useMemo(
         () =>
@@ -66,10 +60,7 @@ export default function RetailQuote() {
                 categories.flatMap((category) => {
                     const value = getCategoryValue(category);
                     const label = category.label || category.name;
-                    return [
-                        [value, label] as const,
-                        [String(category.id), label] as const,
-                    ];
+                    return [[value, label] as const, [String(category.id), label] as const];
                 })
             ),
         [categories]

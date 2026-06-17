@@ -5,7 +5,7 @@ import type { TableProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useState } from 'react';
-import { createPurchasePayment } from '../../../../../../../services';
+import { createPurchasePayment } from '@/app/admin/dashboard/finance/accounts/services';
 import { PurchasePaymentModal } from './PurchasePaymentModal';
 import type { Payable } from '../../../../../types';
 

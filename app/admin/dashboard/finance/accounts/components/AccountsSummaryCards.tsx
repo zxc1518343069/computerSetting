@@ -2,7 +2,7 @@ import { formatPrice } from '@/utils';
 import { CarOutlined, ShoppingCartOutlined, WalletOutlined } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
 import { forwardRef, useImperativeHandle, type ReactNode } from 'react';
-import { fetchAccountsOverview } from '../../../services';
+import { fetchAccountsOverview } from '../services';
 import { emptyAccountsOverview } from '../types';
 
 export interface AccountsSummaryCardsRef {

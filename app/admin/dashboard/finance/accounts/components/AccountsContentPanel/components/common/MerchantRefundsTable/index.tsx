@@ -5,7 +5,7 @@ import type { TableProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useState } from 'react';
-import { createPurchaseMerchantRefundSettlement } from '../../../../../../../services';
+import { createPurchaseMerchantRefundSettlement } from '@/app/admin/dashboard/finance/accounts/services';
 import { MerchantRefundSettlementModal } from './MerchantRefundSettlementModal';
 import type { MerchantRefund } from '../../../../../types';
 

@@ -52,7 +52,7 @@ import {
     saveLogisticsCompany,
     saveLogisticsRecord,
     voidLogisticsRecord,
-} from '../../services';
+} from './services';
 
 const recordTypeOptions = [
     { value: 'purchase', label: '进货物流', color: 'blue' },

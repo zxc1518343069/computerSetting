@@ -1,4 +1,4 @@
-import type { AccountsOverview } from '../../services';
+import type { AccountsOverview } from './services';
 
 export type Payable = AccountsOverview['payables'][number];
 export type MerchantRefund = AccountsOverview['merchant_refunds'][number];

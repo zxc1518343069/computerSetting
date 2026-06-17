@@ -16,7 +16,8 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import Link from 'next/link';
 import React, { useMemo, useState } from 'react';
-import { fetchLogisticsStats, fetchOperatingCosts, fetchOrders } from '../../services';
+import { fetchLogisticsStats, fetchOrders } from '../../_services';
+import { fetchOperatingCosts } from '../_services/operatingCosts';
 
 export default function FinanceSalesPage() {
     const [month, setMonth] = useState(dayjs().format('YYYY-MM'));
@@ -167,7 +168,9 @@ export default function FinanceSalesPage() {
             dataIndex: 'delivery_status',
             width: 120,
             render: (_status, record) => (
-                <Tag color="green">{record.source_type === 'after_sales' ? '已完成' : '已交付'}</Tag>
+                <Tag color="green">
+                    {record.source_type === 'after_sales' ? '已完成' : '已交付'}
+                </Tag>
             ),
         },
     ];

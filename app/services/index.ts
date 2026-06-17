@@ -5,3 +5,6 @@ export * from './categories';
 export * from './games';
 export * from './auth';
 export * from './afterSales';
+export * from './adminUsers';
+export * from './customers';
+export * from './orders';

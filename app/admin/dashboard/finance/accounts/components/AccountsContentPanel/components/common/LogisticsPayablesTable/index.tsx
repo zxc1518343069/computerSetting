@@ -5,7 +5,7 @@ import type { TableProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useState } from 'react';
-import { payLogisticsRecord } from '../../../../../../../services';
+import { payLogisticsRecord } from '@/app/admin/dashboard/finance/accounts/services';
 import { LogisticsPaymentModal } from './LogisticsPaymentModal';
 import type { LogisticsPayable } from '../../../../../types';
 

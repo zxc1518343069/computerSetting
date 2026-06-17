@@ -42,7 +42,7 @@ import {
     settleOrder,
     updateOrder,
     updateAfterSalesOrderAdjustment,
-} from '../../services';
+} from './services';
 import { fetchAdminAfterSalesServices } from '@/app/services/afterSales';
 import { ConfigAdjustmentModal } from './components/ConfigAdjustmentModal';
 
@@ -668,9 +668,7 @@ export default function OrdersPage() {
                         allowClear
                         placeholder="订单来源"
                         value={query.source_type}
-                        onChange={(source_type) =>
-                            setQuery((prev) => ({ ...prev, source_type }))
-                        }
+                        onChange={(source_type) => setQuery((prev) => ({ ...prev, source_type }))}
                         className="w-40"
                         options={sourceTypeOptions.map((item) => ({
                             value: item.value,
@@ -1049,7 +1047,10 @@ function AfterSalesAdjustmentModal({
         currentServices[fieldName] = {
             ...currentServices[fieldName],
             service_id: serviceId,
-            sale_price: service?.price_type === 'fixed' ? service.price || 0 : currentServices[fieldName]?.sale_price,
+            sale_price:
+                service?.price_type === 'fixed'
+                    ? service.price || 0
+                    : currentServices[fieldName]?.sale_price,
         };
         form.setFieldValue('services', currentServices);
     };
@@ -1103,7 +1104,12 @@ function AfterSalesAdjustmentModal({
                                             label="成交单价"
                                             rules={[{ required: true, message: '请输入成交单价' }]}
                                         >
-                                            <InputNumber min={0} precision={2} prefix="¥" className="w-full" />
+                                            <InputNumber
+                                                min={0}
+                                                precision={2}
+                                                prefix="¥"
+                                                className="w-full"
+                                            />
                                         </Form.Item>
                                         <div className="flex items-end pb-6">
                                             <Button danger onClick={() => remove(field.name)}>

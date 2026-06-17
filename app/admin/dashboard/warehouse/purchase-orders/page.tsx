@@ -66,7 +66,7 @@ import {
     updatePurchaseReturn,
     voidPurchaseMerchantRefund,
     voidPurchasePayment,
-} from '../../services';
+} from './services';
 
 interface PurchaseFormItem {
     id?: number;

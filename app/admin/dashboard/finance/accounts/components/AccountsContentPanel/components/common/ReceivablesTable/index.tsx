@@ -5,7 +5,7 @@ import { Button, message, Popconfirm, Table, Tooltip } from 'antd';
 import type { TableProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import Link from 'next/link';
-import { updateAccountPayment } from '../../../../../../../services';
+import { updateAccountPayment } from '@/app/admin/dashboard/finance/accounts/services';
 import { DeliveryStatusTag, SourceTypeTag } from './AccountTags';
 import type { Receivable } from '../../../../../types';
 

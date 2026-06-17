@@ -1,10 +1,6 @@
 'use client';
 
-import {
-    SalesProduct,
-    fetchSalesProducts,
-    updateOrderConfigAdjustment,
-} from '@/app/admin/dashboard/services';
+import { SalesProduct, fetchSalesProducts, updateOrderConfigAdjustment } from '../services';
 import { categoryNameMap, categoryOptions } from '@/const';
 import { OrderSettlementItem, SalesOrder } from '@/const/types';
 import { formatDate, formatPrice } from '@/utils';

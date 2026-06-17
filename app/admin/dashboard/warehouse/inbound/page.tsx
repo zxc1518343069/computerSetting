@@ -47,7 +47,7 @@ import {
     receivePurchaseOrder,
     saveInboundOrder,
     updateInboundOrder,
-} from '../../services';
+} from './services';
 
 type InboundSourceType = 'purchase_order' | 'opening_stock';
 

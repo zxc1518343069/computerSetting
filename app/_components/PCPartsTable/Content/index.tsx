@@ -17,11 +17,9 @@ import { ExportButton } from './components/ExportButton';
 import { InfoSection } from './components/InfoSection';
 import { TestConfigModal } from './components/TestConfigModal';
 import { useTableControl } from './hooks/useTableControl';
-import {
-    fetchActiveAdminUsers,
-    fetchCustomers,
-    saveDiyOrder,
-} from '@/app/admin/dashboard/services';
+import { fetchActiveAdminUsers } from '@/app/services/adminUsers';
+import { fetchCustomers } from '@/app/services/customers';
+import { saveDiyOrder } from '@/app/services/orders';
 import { useRequest } from 'ahooks';
 import { useAuth } from '@/app/_components/AuthProvider';
 

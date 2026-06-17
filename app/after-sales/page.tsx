@@ -2,11 +2,8 @@
 
 import SiteHeader from '@/app/_components/SiteHeader';
 import { useAuth } from '@/app/_components/AuthProvider';
-import { fetchActiveAdminUsers } from '@/app/admin/dashboard/services';
-import {
-    fetchPublicAfterSalesServices,
-    submitAfterSalesCheckout,
-} from '@/app/services/afterSales';
+import { fetchActiveAdminUsers } from '@/app/services/adminUsers';
+import { fetchPublicAfterSalesServices, submitAfterSalesCheckout } from '@/app/services/afterSales';
 import type { AfterSalesCategory, AfterSalesService } from '@/const/types';
 import {
     CheckCircleOutlined,
@@ -623,7 +620,11 @@ function CheckoutModal({
                         {formatYuan(total)}
                     </div>
                 </div>
-                <Form form={form} layout="vertical" className="grid grid-cols-1 gap-x-4 md:grid-cols-2">
+                <Form
+                    form={form}
+                    layout="vertical"
+                    className="grid grid-cols-1 gap-x-4 md:grid-cols-2"
+                >
                     <Form.Item
                         name="customer_name"
                         label="客户姓名"
@@ -668,7 +669,11 @@ function CheckoutModal({
                     >
                         <InputNumber min={0} precision={2} prefix="¥" className="w-full" />
                     </Form.Item>
-                    <Form.Item name="save_customer" valuePropName="checked" className="md:col-span-2">
+                    <Form.Item
+                        name="save_customer"
+                        valuePropName="checked"
+                        className="md:col-span-2"
+                    >
                         <Checkbox>保存客户信息</Checkbox>
                     </Form.Item>
                     <Form.Item name="device_model" label="设备型号">

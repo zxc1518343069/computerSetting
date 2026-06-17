@@ -1,4 +1,4 @@
-import { fetchInventoryItems } from '@/app/admin/dashboard/services';
+import { fetchInventoryItems } from '@/app/admin/dashboard/_services/inventory';
 import { InventoryItem } from '@/const/types';
 import { formatDate, formatPrice } from '@/utils';
 import { InfoCircleOutlined } from '@ant-design/icons';

@@ -28,7 +28,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import React, { useMemo, useState } from 'react';
-import { deleteOperatingCost, fetchOperatingCosts, saveOperatingCost } from '../../services';
+import { deleteOperatingCost, fetchOperatingCosts, saveOperatingCost } from './services';
 
 const costTypeOptions = [
     { value: 'rent', label: '房租', color: 'blue' },

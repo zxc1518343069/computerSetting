@@ -1,5 +1,5 @@
 import { Customer } from '@/const/types';
-import { OrderHandlerUser } from '@/app/admin/dashboard/services';
+import { OrderHandlerUser } from '@/app/services/adminUsers';
 import { Checkbox, Form, FormInstance, Input, InputNumber, Modal, Segmented, Select } from 'antd';
 import React from 'react';
 

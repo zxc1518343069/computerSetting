@@ -5,7 +5,7 @@ import type { TableProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useState } from 'react';
-import { createPurchaseReturnRefund } from '../../../../../../../services';
+import { createPurchaseReturnRefund } from '@/app/admin/dashboard/finance/accounts/services';
 import { ReturnRefundModal } from './ReturnRefundModal';
 import type { ReturnRefund } from '../../../../../types';
 

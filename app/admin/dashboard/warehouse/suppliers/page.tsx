@@ -16,7 +16,7 @@ import { Button, Form, Input, message, Modal, Popconfirm, Table, Tooltip } from 
 import type { ColumnsType } from 'antd/es/table';
 import Link from 'next/link';
 import React, { useMemo, useState } from 'react';
-import { deleteSupplier, fetchAccountsOverview, fetchSuppliers, saveSupplier } from '../../services';
+import { deleteSupplier, fetchAccountsOverview, fetchSuppliers, saveSupplier } from './services';
 
 export default function SuppliersPage() {
     const [search, setSearch] = useState('');
